@@ -5,7 +5,8 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { QuestionForm } from "@/components/studies/question-form";
 import { getViewer } from "@/lib/auth/viewer";
-import { getQuestion } from "@/lib/studies/queries";
+import { getSupabaseEnv } from "@/lib/env";
+import { decodeSlug, getQuestion } from "@/lib/studies/queries";
 import { editQuestion } from "../../actions";
 
 export const metadata: Metadata = { title: "Editar pergunta · Devsync" };
@@ -23,8 +24,9 @@ export default function EditQuestionPage({ params }: { params: Params }) {
 }
 
 async function EditQuestion({ params }: { params: Params }) {
-  const slug = decodeURIComponent((await params).slug);
+  const slug = decodeSlug((await params).slug);
   await connection();
+  if (!getSupabaseEnv() || !slug) notFound();
   const viewer = await getViewer();
   if (!viewer) redirect(`/entrar?next=${encodeURIComponent(`/estudos/${slug}/editar`)}`);
   const question = await getQuestion(slug);

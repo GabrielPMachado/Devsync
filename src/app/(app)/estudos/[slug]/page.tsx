@@ -13,7 +13,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { buttonClasses } from "@/components/ui/button";
 import { getViewer } from "@/lib/auth/viewer";
 import { getSupabaseEnv } from "@/lib/env";
-import { getAnswers, getQuestion, hasRequestedDetails } from "@/lib/studies/queries";
+import { decodeSlug, getAnswers, getQuestion, hasRequestedDetails } from "@/lib/studies/queries";
 import { pickRecentTop } from "@/lib/studies/rules";
 import { postAnswer, toggleDetailRequest } from "../actions";
 
@@ -22,7 +22,7 @@ type Params = PageProps<"/estudos/[slug]">["params"];
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   // O título real vem do banco; o slug já é o título em formato de URL.
-  const readable = decodeURIComponent(slug).replace(/-[a-z0-9]{6}$/, "").replaceAll("-", " ");
+  const readable = (decodeSlug(slug) ?? "").replace(/-[a-z0-9]{6}$/, "").replaceAll("-", " ");
   return { title: `${readable} · Estudos · Devsync` };
 }
 
@@ -39,8 +39,8 @@ export default function QuestionPage({ params }: { params: Params }) {
 async function Question({ params }: { params: Params }) {
   const { slug: raw } = await params;
   await connection();
-  if (!getSupabaseEnv()) notFound();
-  const slug = decodeURIComponent(raw);
+  const slug = decodeSlug(raw);
+  if (!getSupabaseEnv() || !slug) notFound();
   const [question, viewer] = await Promise.all([getQuestion(slug), getViewer()]);
   if (!question) notFound();
 

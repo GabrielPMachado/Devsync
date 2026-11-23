@@ -14,9 +14,13 @@ test("perguntar, responder, votar, pedir detalhes, aceitar e ver o histórico", 
 
   // Validação antes de gravar.
   await ana.page.getByLabel("Título").fill("Curto");
+  await ana.page.getByLabel("Tags").fill("react, Ação");
   await ana.page.getByRole("button", { name: "Publicar pergunta" }).click();
   await expect(ana.page.getByText("Use pelo menos 10 caracteres no título.")).toBeVisible();
-  await expect(ana.page.getByText("Escolha pelo menos 1 tag.")).toBeVisible();
+  await expect(ana.page.getByText(/Tags usam letras minúsculas.*: Ação/)).toBeVisible();
+  // O erro não apaga o que foi digitado.
+  await expect(ana.page.getByLabel("Título")).toHaveValue("Curto");
+  await expect(ana.page.getByLabel("Tags")).toHaveValue("react, Ação");
 
   await ana.page.getByLabel("Título").fill(title);
   await ana.page.getByLabel("Detalhes").fill("Coloquei um log:\n\n```tsx\nuseEffect(() => console.log('oi'), [])\n```");
@@ -53,7 +57,7 @@ test("perguntar, responder, votar, pedir detalhes, aceitar e ver o histórico", 
   await carla.page.goto(questionUrl, { waitUntil: "networkidle" });
   const seen = carla.page.getByRole("article", { name: "Resposta de Bruno" });
   await seen.getByRole("button", { name: "Votar a favor" }).click();
-  await expect(seen.getByLabel("Pontuação")).toHaveText("1");
+  await expect(seen.getByText("Pontuação:").locator("..")).toHaveText("Pontuação: 1");
   await expect(seen.getByRole("button", { name: "Retirar voto" })).toBeVisible();
   await carla.page.getByRole("button", { name: "Precisa de mais detalhes" }).click();
   await expect(carla.page.getByRole("button", { name: "Pedido de detalhes enviado" })).toBeVisible();

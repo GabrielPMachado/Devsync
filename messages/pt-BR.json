@@ -115,7 +115,7 @@
     "tipsTitle": "Como perguntar bem",
     "tip1": "Diga o que tentou e o que esperava.",
     "tip2": "Cole o código mínimo que mostra o erro.",
-    "tip3": "Use de 1 a 5 tags, como react ou nextjs.",
+    "tip3": "Use de 1 a 5 tags, como react ou next.js.",
     "beginnerTitle": "Tag iniciante",
     "beginnerText": "Perguntas de quem está começando aparecem com destaque. Responda com paciência.",
     "breadcrumb": "Trilha",
@@ -169,7 +169,7 @@
     "fieldBodyHelp": "Diga o que tentou, o que esperava e o que aconteceu. Use blocos de código com ```.",
     "fieldTags": "Tags",
     "fieldTagsHelp": "De 1 a 5, separadas por vírgula. A tag iniciante avisa quem responde para ter mais paciência.",
-    "fieldTagsPlaceholder": "react, nextjs, iniciante",
+    "fieldTagsPlaceholder": "react, next.js, iniciante",
     "write": "Escrever",
     "preview": "Visualizar",
     "previewEmpty": "Nada para visualizar ainda.",
@@ -198,6 +198,9 @@
     "historyVersion": "Versão substituída em {when}",
     "historyEmpty": "Ainda não houve edições.",
     "backToQuestion": "← Voltar para a pergunta",
-    "answerBy": "Resposta de {name}"
+    "answerBy": "Resposta de {name}",
+    "errorTagsInvalid": "Tags usam letras minúsculas sem acento, números e + # . - (até 30 caracteres): {tags}",
+    "footnotes": "Notas",
+    "footnoteBack": "Voltar ao texto"
   }
 }

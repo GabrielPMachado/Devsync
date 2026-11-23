@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth/viewer";
-import { normalizeTagSlugs, validateAnswer, validateQuestion, type AnswerErrors, type QuestionErrors } from "@/lib/studies/rules";
+import { splitTags, validateAnswer, validateQuestion, type AnswerErrors, type QuestionErrors } from "@/lib/studies/rules";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
  * para dar mensagens boas antes de bater no banco.
  */
 
-export type QuestionFormState = { errors?: QuestionErrors & { form?: "unknown" } };
+export type QuestionFormState = { errors?: QuestionErrors & { form?: "unknown" }; invalidTags?: string[] };
 export type AnswerFormState = { errors?: AnswerErrors & { form?: "unknown" }; ok?: number };
 
 const questionPath = (slug: string) => `/estudos/${slug}`;
@@ -27,25 +27,33 @@ async function requireMember(next: string) {
 function readQuestion(formData: FormData) {
   const title = (formData.get("title")?.toString() ?? "").trim();
   const body = formData.get("body")?.toString() ?? "";
-  const tags = normalizeTagSlugs(formData.get("tags")?.toString() ?? "");
-  return { title, body, tags };
+  const { slugs: tags, invalid: invalidTags } = splitTags(formData.get("tags")?.toString() ?? "");
+  return { title, body, tags, invalidTags };
+}
+
+type Client = Awaited<ReturnType<typeof createClient>>;
+
+/** ids das tags pelo slug, criando as que ainda não existem (sem corrida: ON CONFLICT DO NOTHING). */
+async function tagIds(supabase: Client, slugs: string[]): Promise<Map<string, string> | null> {
+  const { data: existing, error: readError } = await supabase.from("tags").select("id, slug").in("slug", slugs);
+  if (readError) return null;
+  const found = new Map((existing ?? []).map((t) => [t.slug as string, t.id as string]));
+  const missing = slugs.filter((s) => !found.has(s));
+  if (missing.length === 0) return found;
+  const { error } = await supabase
+    .from("tags")
+    .upsert(missing.map((slug) => ({ slug, name: slug })), { onConflict: "slug", ignoreDuplicates: true });
+  if (error) return null;
+  const { data: created } = await supabase.from("tags").select("id, slug").in("slug", missing);
+  for (const t of created ?? []) found.set(t.slug as string, t.id as string);
+  return slugs.every((s) => found.has(s)) ? found : null;
 }
 
 /** Liga a pergunta às tags, criando as que ainda não existem. */
-async function setQuestionTags(supabase: Awaited<ReturnType<typeof createClient>>, questionId: string, slugs: string[]) {
-  const { data: existing, error: readError } = await supabase.from("tags").select("id, slug").in("slug", slugs);
-  if (readError) return false;
-  const found = new Map((existing ?? []).map((t) => [t.slug as string, t.id as string]));
-  const missing = slugs.filter((s) => !found.has(s));
-  if (missing.length > 0) {
-    const { data: created, error } = await supabase
-      .from("tags")
-      .insert(missing.map((slug) => ({ slug, name: slug })))
-      .select("id, slug");
-    if (error) return false;
-    for (const t of created ?? []) found.set(t.slug as string, t.id as string);
-  }
-  const { error } = await supabase.from("question_tags").insert(slugs.map((s) => ({ question_id: questionId, tag_id: found.get(s) })));
+async function addQuestionTags(supabase: Client, questionId: string, slugs: string[]) {
+  const ids = await tagIds(supabase, slugs);
+  if (!ids) return false;
+  const { error } = await supabase.from("question_tags").insert(slugs.map((s) => ({ question_id: questionId, tag_id: ids.get(s) })));
   return !error;
 }
 
@@ -53,13 +61,13 @@ export async function askQuestion(_prev: QuestionFormState, formData: FormData):
   await requireMember("/estudos/perguntar");
   const input = readQuestion(formData);
   const errors = validateQuestion(input);
-  if (Object.keys(errors).length > 0) return { errors };
+  if (Object.keys(errors).length > 0) return { errors, invalidTags: input.invalidTags };
 
   const supabase = await createClient();
   const { data, error } = await supabase.from("questions").insert({ title: input.title, body_md: input.body }).select("id, slug").single();
   if (error || !data) return { errors: { form: "unknown" } };
 
-  if (!(await setQuestionTags(supabase, data.id as string, input.tags))) {
+  if (!(await addQuestionTags(supabase, data.id as string, input.tags))) {
     // Sem tags a pergunta não aparece direito nos filtros: desfaz.
     await supabase.from("questions").delete().eq("id", data.id as string);
     return { errors: { form: "unknown" } };
@@ -71,20 +79,30 @@ export async function editQuestion(questionId: string, slug: string, _prev: Ques
   await requireMember(`${questionPath(slug)}/editar`);
   const input = readQuestion(formData);
   const errors = validateQuestion(input);
-  if (Object.keys(errors).length > 0) return { errors };
+  if (Object.keys(errors).length > 0) return { errors, invalidTags: input.invalidTags };
 
   const supabase = await createClient();
-  const { data, error } = await supabase.from("questions").update({ title: input.title, body_md: input.body }).eq("id", questionId).select("id");
-  if (error || !data?.length) return { errors: { form: "unknown" } };
-
-  const { data: current } = await supabase.from("question_tags").select("tag_id, tags(slug)").eq("question_id", questionId);
+  const { data: current, error: readError } = await supabase.from("question_tags").select("tag_id, tags(slug)").eq("question_id", questionId);
+  if (readError) return { errors: { form: "unknown" } };
   const currentSlugs = new Map(
     (current ?? []).flatMap((row) => [row.tags].flat().flatMap((t) => (t ? [[(t as { slug: string }).slug, row.tag_id as string] as const] : []))),
   );
   const removed = [...currentSlugs.entries()].filter(([s]) => !input.tags.includes(s)).map(([, id]) => id);
   const added = input.tags.filter((s) => !currentSlugs.has(s));
-  if (removed.length > 0) await supabase.from("question_tags").delete().eq("question_id", questionId).in("tag_id", removed);
-  if (added.length > 0 && !(await setQuestionTags(supabase, questionId, added))) return { errors: { form: "unknown" } };
+
+  // Tags primeiro (tira as velhas para caber no limite de 5, põe as novas). Se algo
+  // falhar, devolve as velhas e não mexe no texto: nada fica salvo pela metade.
+  if (removed.length > 0) {
+    const { error } = await supabase.from("question_tags").delete().eq("question_id", questionId).in("tag_id", removed);
+    if (error) return { errors: { form: "unknown" } };
+  }
+  if (added.length > 0 && !(await addQuestionTags(supabase, questionId, added))) {
+    if (removed.length > 0) await supabase.from("question_tags").insert(removed.map((tag_id) => ({ question_id: questionId, tag_id })));
+    return { errors: { form: "unknown" } };
+  }
+
+  const { data, error } = await supabase.from("questions").update({ title: input.title, body_md: input.body }).eq("id", questionId).select("id");
+  if (error || !data?.length) return { errors: { form: "unknown" } };
 
   redirect(questionPath(slug));
 }

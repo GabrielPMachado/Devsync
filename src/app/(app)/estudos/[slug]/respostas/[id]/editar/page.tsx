@@ -6,7 +6,8 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { AnswerForm } from "@/components/studies/answer-form";
 import { getViewer } from "@/lib/auth/viewer";
-import { getAnswer, getQuestion } from "@/lib/studies/queries";
+import { getSupabaseEnv } from "@/lib/env";
+import { decodeSlug, getAnswer, getQuestion } from "@/lib/studies/queries";
 import { editAnswer } from "../../../../actions";
 
 export const metadata: Metadata = { title: "Editar resposta · Devsync" };
@@ -25,8 +26,9 @@ export default function EditAnswerPage({ params }: { params: Params }) {
 
 async function EditAnswer({ params }: { params: Params }) {
   const { slug: raw, id } = await params;
-  const slug = decodeURIComponent(raw);
+  const slug = decodeSlug(raw);
   await connection();
+  if (!getSupabaseEnv() || !slug) notFound();
   const viewer = await getViewer();
   if (!viewer) redirect(`/entrar?next=${encodeURIComponent(`/estudos/${slug}/respostas/${id}/editar`)}`);
   const [question, answer] = await Promise.all([getQuestion(slug), getAnswer(id)]);

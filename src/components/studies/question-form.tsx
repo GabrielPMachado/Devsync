@@ -24,7 +24,11 @@ const TAG_ERRORS = { min: "errorTagsMin", max: "errorTagsMax" } as const;
 export function QuestionForm({ action, initial, cancelHref, mode }: Props) {
   const t = useTranslations("Studies");
   const [state, formAction, pending] = useActionState(action, {});
+  // Campos controlados: o React 19 limpa campos não controlados a cada envio, e um
+  // erro de validação apagaria o que a pessoa digitou.
+  const [title, setTitle] = useState(initial?.title ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
+  const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
   const errors = state.errors ?? {};
 
   return (
@@ -33,7 +37,8 @@ export function QuestionForm({ action, initial, cancelHref, mode }: Props) {
         <TextField
           label={t("fieldTitle")}
           name="title"
-          defaultValue={initial?.title}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           maxLength={TITLE_MAX}
           help={t("fieldTitleHelp")}
           error={errors.title ? t(TITLE_ERRORS[errors.title]) : undefined}
@@ -51,10 +56,17 @@ export function QuestionForm({ action, initial, cancelHref, mode }: Props) {
         <TextField
           label={t("fieldTags")}
           name="tags"
-          defaultValue={initial?.tags.join(", ")}
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
           placeholder={t("fieldTagsPlaceholder")}
           help={t("fieldTagsHelp")}
-          error={errors.tags ? t(TAG_ERRORS[errors.tags]) : undefined}
+          error={
+            errors.tags === "invalid"
+              ? t("errorTagsInvalid", { tags: (state.invalidTags ?? []).join(", ") })
+              : errors.tags
+                ? t(TAG_ERRORS[errors.tags])
+                : undefined
+          }
           autoCapitalize="none"
           autoComplete="off"
           spellCheck={false}

@@ -18,6 +18,23 @@ export const TECH_VERSION_MAX = 40;
 
 const TAG_PATTERN = /^[a-z0-9][a-z0-9+#.-]{0,29}$/;
 
+/** Grafias comuns que viram a tag que já existe (evita "nextjs" e "next.js" separadas). */
+const TAG_ALIASES: Record<string, string> = {
+  nextjs: "next.js",
+  next: "next.js",
+  nodejs: "node.js",
+  node: "node.js",
+  ts: "typescript",
+  js: "javascript",
+  tailwind: "tailwindcss",
+  postgres: "postgresql",
+  reactnative: "react-native",
+  csharp: "c#",
+  cpp: "c++",
+  golang: "go",
+  k8s: "kubernetes",
+};
+
 /**
  * A resposta que ganha o selo "mais votada recentemente": publicada depois da
  * aceita, com pontuação >= 5 e >= o dobro da aceita, sem 3 marcações. Se houver
@@ -53,28 +70,49 @@ export function displayScore(score: number): number {
   return Math.max(score, 0);
 }
 
+/** Separa as tags digitadas em válidas (normalizadas, sem repetição) e inválidas (como foram digitadas). */
+export function splitTags(raw: string): { slugs: string[]; invalid: string[] } {
+  const slugs: string[] = [];
+  const invalid: string[] = [];
+  for (const token of raw.split(/[\s,]+/).map((t) => t.trim()).filter(Boolean)) {
+    const lower = token.toLowerCase().replace(/^#+/, "");
+    const slug = TAG_ALIASES[lower] ?? lower;
+    if (TAG_PATTERN.test(slug)) {
+      if (!slugs.includes(slug)) slugs.push(slug);
+    } else if (!invalid.includes(token)) invalid.push(token);
+  }
+  return { slugs, invalid };
+}
+
 export function normalizeTagSlugs(raw: string): string[] {
-  const slugs = raw
-    .split(/[\s,]+/)
-    .map((t) => t.trim().toLowerCase().replace(/^#+/, ""))
-    .filter((t) => TAG_PATTERN.test(t));
-  return [...new Set(slugs)];
+  return splitTags(raw).slugs;
 }
 
 export type QuestionErrors = {
   title?: "short" | "long";
   body?: "required" | "long";
-  tags?: "min" | "max";
+  tags?: "min" | "max" | "invalid";
 };
 
-export function validateQuestion({ title, body, tags }: { title: string; body: string; tags: string[] }): QuestionErrors {
+export function validateQuestion({
+  title,
+  body,
+  tags,
+  invalidTags = [],
+}: {
+  title: string;
+  body: string;
+  tags: string[];
+  invalidTags?: string[];
+}): QuestionErrors {
   const errors: QuestionErrors = {};
   const t = title.trim();
   if (t.length < TITLE_MIN) errors.title = "short";
   else if (t.length > TITLE_MAX) errors.title = "long";
   if (!body.trim()) errors.body = "required";
   else if (body.length > BODY_MAX) errors.body = "long";
-  if (tags.length < TAGS_MIN) errors.tags = "min";
+  if (invalidTags.length > 0) errors.tags = "invalid";
+  else if (tags.length < TAGS_MIN) errors.tags = "min";
   else if (tags.length > TAGS_MAX) errors.tags = "max";
   return errors;
 }

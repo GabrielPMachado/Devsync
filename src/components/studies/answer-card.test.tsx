@@ -40,7 +40,7 @@ function show(answer: Partial<AnswerView>, opts: { viewerId?: string | null; rec
 describe("AnswerCard", () => {
   it("placar negativo aparece como 0", () => {
     show({ score: -4 });
-    expect(screen.getByLabelText("Pontuação")).toHaveTextContent("0");
+    expect(screen.getByText("Pontuação:").parentElement).toHaveTextContent(/^Pontuação: 0$/);
   });
 
   it("selos de aceita e de mais votada recentemente", () => {

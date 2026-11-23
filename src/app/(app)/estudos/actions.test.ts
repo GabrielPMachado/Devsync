@@ -7,12 +7,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 type Call = { table: string; op: string; payload?: unknown; filters: [string, string, unknown][] };
 let calls: Call[] = [];
-let results: Record<string, { data?: unknown; error?: unknown }> = {};
+type Result = { data?: unknown; error?: unknown };
+/** Um resultado fixo, ou uma lista consumida chamada a chamada. */
+let results: Record<string, Result | Result[]> = {};
 
 function chain(table: string, op: string, payload?: unknown) {
   const call: Call = { table, op, payload, filters: [] };
   calls.push(call);
-  const result = () => Promise.resolve({ data: null, error: null, ...results[`${table}.${op}`] });
+  const configured = results[`${table}.${op}`];
+  const r = Array.isArray(configured) ? configured.shift() : configured;
+  const result = () => Promise.resolve({ data: null, error: null, ...r });
   const builder: Record<string, unknown> = {
     eq: (c: string, v: unknown) => (call.filters.push(["eq", c, v]), builder),
     in: (c: string, v: unknown) => (call.filters.push(["in", c, v]), builder),
@@ -28,6 +32,7 @@ const supabase = {
   from: (table: string) => ({
     select: () => chain(table, "select"),
     insert: (p: unknown) => chain(table, "insert", p),
+    upsert: (p: unknown, opts: unknown) => chain(table, "upsert", { rows: p, opts }),
     update: (p: unknown) => chain(table, "update", p),
     delete: () => chain(table, "delete"),
   }),
@@ -53,7 +58,7 @@ function form(data: Record<string, string>) {
   return f;
 }
 
-const goodQuestion = { title: "Como invalidar o cache de uma rota?", body: "Detalhes com `código`", tags: "nextjs, cache" };
+const goodQuestion = { title: "Como invalidar o cache de uma rota?", body: "Detalhes com `código`", tags: "next.js, cache" };
 
 beforeEach(() => {
   calls = [];
@@ -76,11 +81,14 @@ describe("askQuestion", () => {
 
   it("grava a pergunta, cria tags que faltam e vai para a página dela", async () => {
     results["questions.insert"] = { data: { id: "q1", slug: "como-invalidar-abc123" } };
-    results["tags.select"] = { data: [{ id: "t1", slug: "nextjs" }] };
-    results["tags.insert"] = { data: [{ id: "t2", slug: "cache" }] };
+    results["tags.select"] = [{ data: [{ id: "t1", slug: "next.js" }] }, { data: [{ id: "t2", slug: "cache" }] }];
     await expect(actions.askQuestion({}, form(goodQuestion))).rejects.toThrow("REDIRECT /estudos/como-invalidar-abc123");
     expect(calls.find((c) => c.table === "questions")?.payload).toEqual({ title: goodQuestion.title, body_md: goodQuestion.body });
-    expect(calls.find((c) => c.table === "tags" && c.op === "insert")?.payload).toEqual([{ slug: "cache", name: "cache" }]);
+    // Cria só a que falta, sem brigar com quem criou a mesma tag ao mesmo tempo.
+    expect(calls.find((c) => c.table === "tags" && c.op === "upsert")?.payload).toEqual({
+      rows: [{ slug: "cache", name: "cache" }],
+      opts: { onConflict: "slug", ignoreDuplicates: true },
+    });
     expect(calls.find((c) => c.table === "question_tags")?.payload).toEqual([
       { question_id: "q1", tag_id: "t1" },
       { question_id: "q1", tag_id: "t2" },
@@ -89,12 +97,41 @@ describe("askQuestion", () => {
 
   it("se as tags falham, apaga a pergunta para não ficar órfã", async () => {
     results["questions.insert"] = { data: { id: "q1", slug: "x" } };
-    results["tags.select"] = { data: [{ id: "t1", slug: "nextjs" }, { id: "t2", slug: "cache" }] };
+    results["tags.select"] = { data: [{ id: "t1", slug: "next.js" }, { id: "t2", slug: "cache" }] };
     results["question_tags.insert"] = { error: { code: "42501" } };
     const state = await actions.askQuestion({}, form(goodQuestion));
     expect(state.errors).toEqual({ form: "unknown" });
     const del = calls.find((c) => c.table === "questions" && c.op === "delete");
     expect(del?.filters).toEqual([["eq", "id", "q1"]]);
+  });
+});
+
+describe("editQuestion", () => {
+  const edit = (data: Record<string, string>) => actions.editQuestion("q1", "minha", {}, form(data));
+
+  it("troca as tags e depois o texto", async () => {
+    results["question_tags.select"] = { data: [{ tag_id: "t-old", tags: { slug: "react" } }, { tag_id: "t1", tags: { slug: "next.js" } }] };
+    results["tags.select"] = { data: [{ id: "t2", slug: "cache" }] };
+    results["questions.update"] = { data: [{ id: "q1" }] };
+    await expect(edit(goodQuestion)).rejects.toThrow("REDIRECT /estudos/minha");
+    expect(calls.map((c) => `${c.table}.${c.op}`)).toEqual([
+      "question_tags.select",
+      "question_tags.delete",
+      "tags.select",
+      "question_tags.insert",
+      "questions.update",
+    ]);
+    expect(calls[1].filters).toContainEqual(["in", "tag_id", ["t-old"]]);
+  });
+
+  it("se as tags novas falham, devolve as antigas e não salva o texto", async () => {
+    results["question_tags.select"] = { data: [{ tag_id: "t-old", tags: { slug: "react" } }] };
+    results["tags.select"] = { data: [{ id: "t1", slug: "next.js" }, { id: "t2", slug: "cache" }] };
+    results["question_tags.insert"] = [{ error: { code: "P0001" } }, {}];
+    const state = await edit(goodQuestion);
+    expect(state.errors).toEqual({ form: "unknown" });
+    expect(calls.filter((c) => c.table === "question_tags" && c.op === "insert").at(-1)?.payload).toEqual([{ question_id: "q1", tag_id: "t-old" }]);
+    expect(calls.some((c) => c.table === "questions")).toBe(false);
   });
 });
 

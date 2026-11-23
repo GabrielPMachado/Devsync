@@ -14,6 +14,8 @@ export const metadata: Metadata = { title: "Estudos · Devsync" };
 
 type SearchParams = PageProps<"/estudos">["searchParams"];
 
+const MAX_PAGE = 20;
+
 const TABS: { key: ListTab; param: string | null; label: "tabRecent" | "tabUnanswered" | "tabFollowing" }[] = [
   { key: "recent", param: null, label: "tabRecent" },
   { key: "unanswered", param: "sem-resposta", label: "tabUnanswered" },
@@ -83,7 +85,7 @@ async function QuestionList({ searchParams }: { searchParams: SearchParams }) {
   const tabParam = first(params.aba) ?? null;
   const tab = TABS.find((x) => x.param === tabParam) ?? TABS[0];
   const tag = first(params.tag)?.toLowerCase() || null;
-  const page = Math.min(Math.max(Number.parseInt(first(params.pagina) ?? "1", 10) || 1, 1), 20);
+  const page = Math.min(Math.max(Number.parseInt(first(params.pagina) ?? "1", 10) || 1, 1), MAX_PAGE);
 
   const viewer = getSupabaseEnv() ? await getViewer() : null;
   const tabs = viewer?.username ? TABS : TABS.filter((x) => x.key !== "following");
@@ -140,7 +142,7 @@ async function QuestionList({ searchParams }: { searchParams: SearchParams }) {
           ))}
         </div>
       )}
-      {hasMore ? (
+      {hasMore && page < MAX_PAGE ? (
         <div className="flex justify-center">
           <Link href={hrefFor({ tab: tab.param, tag, page: page + 1 })} scroll={false} className={buttonClasses({ variant: "secondary" })}>
             {t("loadMore")}

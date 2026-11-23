@@ -4,6 +4,7 @@ import {
   displayScore,
   normalizeTagSlugs,
   pickRecentTop,
+  splitTags,
   validateAnswer,
   validateQuestion,
   type RankedAnswer,
@@ -63,9 +64,18 @@ describe("displayScore", () => {
   });
 });
 
+describe("splitTags", () => {
+  it("devolve as inválidas como foram digitadas", () => {
+    expect(splitTags("react, Ação, ação, -x")).toEqual({ slugs: ["react"], invalid: ["Ação", "ação", "-x"] });
+  });
+});
+
 describe("normalizeTagSlugs", () => {
   it("separa por vírgula e espaço, minúsculas, sem # e sem repetição", () => {
-    expect(normalizeTagSlugs("React, #nextjs  react\nC#  node.js")).toEqual(["react", "nextjs", "c#", "node.js"]);
+    expect(normalizeTagSlugs("React, #vue  react\nC#  node.js")).toEqual(["react", "vue", "c#", "node.js"]);
+  });
+  it("grafias comuns viram a tag que já existe", () => {
+    expect(normalizeTagSlugs("nextjs, Next.js, nodejs, ts")).toEqual(["next.js", "node.js", "typescript"]);
   });
   it("descarta o que não é slug válido", () => {
     expect(normalizeTagSlugs("ação, -x, ok, " + "a".repeat(31))).toEqual(["ok"]);
@@ -85,6 +95,9 @@ describe("validateQuestion", () => {
   it("corpo obrigatório e até 30000", () => {
     expect(validateQuestion({ ...ok, body: "  " }).body).toBe("required");
     expect(validateQuestion({ ...ok, body: "x".repeat(30001) }).body).toBe("long");
+  });
+  it("tag inválida vira erro em vez de sumir", () => {
+    expect(validateQuestion({ ...ok, invalidTags: ["ação"] }).tags).toBe("invalid");
   });
   it("de 1 a 5 tags", () => {
     expect(validateQuestion({ ...ok, tags: [] }).tags).toBe("min");

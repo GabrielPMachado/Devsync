@@ -8,6 +8,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export const PAGE_SIZE = 20;
 
+/** decodeURIComponent que não estoura com URL malformada (%E0%A4%A): null vira 404. */
+export function decodeSlug(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
+
 export type Author = { username: string | null; displayName: string | null; avatarUrl: string | null };
 
 export type QuestionSummary = {

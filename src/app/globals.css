@@ -35,12 +35,11 @@
     @apply flex flex-col gap-3 text-[15px] leading-relaxed text-text-secondary;
     overflow-wrap: anywhere;
   }
-  .devsync-markdown :where(h1, h2, h3, h4) {
+  .devsync-markdown :where(h3, h4, h5, h6) {
     @apply font-display font-bold text-text-primary;
   }
-  .devsync-markdown h1 { @apply text-xl; }
-  .devsync-markdown h2 { @apply text-lg; }
-  .devsync-markdown :where(h3, h4) { @apply text-base; }
+  .devsync-markdown h3 { @apply text-lg; }
+  .devsync-markdown :where(h4, h5, h6) { @apply text-base; }
   .devsync-markdown :where(ul) { @apply list-disc pl-6; }
   .devsync-markdown :where(ol) { @apply list-decimal pl-6; }
   .devsync-markdown :where(blockquote) { @apply border-l-2 border-border-strong pl-4 text-text-muted; }

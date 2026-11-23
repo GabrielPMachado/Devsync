@@ -65,7 +65,8 @@ export function AnswerCard({ answer, question, viewerId, recentTop, now }: Props
     >
       <div className="flex w-8 shrink-0 flex-col items-center gap-1">
         {vote(1)}
-        <span className={`font-display text-lg font-bold ${answer.score < 0 ? "text-text-subtle" : "text-text-primary"}`} aria-label={t("score")}>
+        <span className={`font-display text-lg font-bold ${answer.score < 0 ? "text-text-subtle" : "text-text-primary"}`}>
+          <span className="sr-only">{t("score")}: </span>
           {shown}
         </span>
         {vote(-1)}

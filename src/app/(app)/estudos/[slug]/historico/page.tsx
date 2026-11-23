@@ -6,7 +6,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { Markdown } from "@/components/studies/markdown";
 import { getSupabaseEnv } from "@/lib/env";
-import { getAnswer, getQuestion, getRevisions } from "@/lib/studies/queries";
+import { decodeSlug, getAnswer, getQuestion, getRevisions } from "@/lib/studies/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Histórico · Devsync" };
@@ -24,11 +24,11 @@ export default function HistoryPage(props: Props) {
 }
 
 async function History({ params, searchParams }: Props) {
-  const slug = decodeURIComponent((await params).slug);
+  const slug = decodeSlug((await params).slug);
   const answerParam = (await searchParams).resposta;
   const answerId = typeof answerParam === "string" ? answerParam : null;
   await connection();
-  if (!getSupabaseEnv()) notFound();
+  if (!getSupabaseEnv() || !slug) notFound();
   const question = await getQuestion(slug);
   if (!question) notFound();
   const t = await getTranslations("Studies");
