@@ -97,7 +97,7 @@ Toda demo enviada é servida em `<slug>.devsync-demos.app`, um domínio registra
 - O iframe usa `sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"` (sem `allow-top-navigation`). O `allow-same-origin` é necessário para SPAs funcionarem (localStorage, IndexedDB, fetch). Ele é seguro aqui porque a origem da demo é outro domínio, nunca `devsync.app`.
 - Cada demo tem subdomínio próprio, para o armazenamento de uma demo não ser lido por outra.
 - O Worker envia CSP com `frame-ancestors https://devsync.app` e só serve o HTML principal quando o pedido vem de um iframe (`Sec-Fetch-Dest: iframe`). Aberta direto no navegador, a URL da demo redireciona para `devsync.app/demo/<id>`, uma página da Devsync em tela cheia com a demo embutida e o aviso "conteúdo enviado por usuário". Assim `devsync-demos.app` não vira hospedagem livre para páginas de phishing.
-- O botão "Abrir em nova aba" abre essa página `devsync.app/demo/<id>`, não a URL crua.
+- Dentro da Devsync, a demo **sempre abre por cima da rede** (camada sobre o feed), nunca em outra guia. A página `devsync.app/demo/<id>` existe só para quem recebe um link compartilhado ou acessa a URL da demo diretamente.
 - Envio de demo exige conta com e-mail verificado ou login pelo GitHub, e tem limite de envios por dia (inicial: 5).
 
 ### 5.3 Demos
@@ -106,7 +106,10 @@ Toda demo enviada é servida em `<slug>.devsync-demos.app`, um domínio registra
 
 **Link (`web_link`):**
 - O autor cola uma URL https.
-- Uma verificação no servidor checa se o site aceita ser embutido (cabeçalhos `X-Frame-Options` e `frame-ancestors`). Muitos sites bloqueiam. Nesse caso, a demo mostra a imagem de capa enviada pelo autor (campo obrigatório no projeto) com o botão "Abrir em nova aba", que abre o site dele. Captura de tela automática fica para depois.
+- Uma verificação no servidor checa, na hora de publicar, se o site aceita ser embutido (cabeçalhos `X-Frame-Options` e `frame-ancestors`). Muitos sites bloqueiam, e isso não tem como ser contornado do nosso lado.
+- Se o site bloquear, o link **não é aceito como demo**. O autor vê uma explicação e duas saídas: liberar o embed no próprio site (com instruções para Vercel e Netlify) ou enviar os arquivos (`web_upload`). Assim toda demo publicada abre por cima da Devsync.
+- O link continua podendo ser cadastrado como "site do projeto" (campo comum, fora da demo).
+- A verificação roda de novo uma vez por dia. Se um site passar a bloquear, a demo fica marcada como indisponível e o autor é avisado.
 - A URL passa por uma checagem de site perigoso (Google Safe Browsing) antes de publicar.
 
 **Arquivos enviados (`web_upload`):**
@@ -115,7 +118,7 @@ Toda demo enviada é servida em `<slug>.devsync-demos.app`, um domínio registra
 - O fluxo: envio direto para o R2 por URL assinada → um Cloudflare Worker (via fila) valida e descompacta, porque Edge Functions do Supabase têm limite de CPU e memória baixo para isso → os arquivos ficam em `demos/<demo_id>/<versão>/` → o Worker avisa o Supabase e a demo é publicada.
 - Cada novo envio cria uma versão nova. A anterior pode ser apagada depois de um tempo.
 
-**Experiência:** o botão "Ver demo" abre uma camada sobre o feed (sobreposição em tela quase cheia) com o iframe, o link "Abrir em nova aba", o link do código (repositório) e o acesso aos comentários e às perguntas relacionadas.
+**Experiência:** o botão "Ver demo" abre uma camada sobre o feed (sobreposição em tela quase cheia) com o iframe, um botão de tela cheia (ainda dentro da Devsync), o link do código (repositório) e o acesso aos comentários e às perguntas relacionadas. Não há botão de abrir em nova guia.
 
 **Moderação de demos:** botão de denúncia, possibilidade de suspender a demo na hora (o Worker deixa de servir o conteúdo) e lista de bloqueio de domínios.
 
@@ -175,7 +178,7 @@ tags(id, slug, name, description)
 profile_tags(profile_id, tag_id)
 tag_follows(profile_id, tag_id)
 
-projects(id, author_id, title, slug, description_md, repo_url, cover_url,
+projects(id, author_id, title, slug, description_md, repo_url, site_url, cover_url,
          demo_id, lang, created_at, updated_at)
 project_tags(project_id, tag_id)
 likes(profile_id, project_id, created_at)
@@ -239,7 +242,7 @@ reports(id, reporter_id, target_type, target_id, reason, status, created_at)
 ## 7. Decisões tomadas pelo Gabriel
 - Produto real com ambição mundial, não projeto de portfólio.
 - Centro: demos, estudos estilo Stack Overflow (sem poluição, sem respostas antigas no topo, sem grosseria) e comentários.
-- Demo nível 2: link embutido ou arquivos enviados, abrindo por cima da rede. Mobile fica para o futuro.
+- Demo nível 2: link embutido ou arquivos enviados, sempre abrindo por cima da Devsync, nunca em outra guia. Mobile fica para o futuro.
 - Supabase como backend.
 - App Windows com Tauri.
 - Nasce em pt-BR.
@@ -257,7 +260,7 @@ reports(id, reporter_id, target_type, target_id, reason, status, created_at)
 - Descompactar demos num Cloudflare Worker, não numa Edge Function.
 - Moderação pelo Gabriel numa página `/admin` simples.
 - Web Push só na fase 2.
-- Imagem de capa do projeto enviada pelo autor, usada quando o site não aceita ser embutido.
+- Link que bloqueia embed não é aceito como demo (o autor libera o embed ou envia os arquivos).
 - Só o autor edita, com histórico de revisões.
 - URLs sem prefixo para português.
 
