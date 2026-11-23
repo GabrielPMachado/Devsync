@@ -2,7 +2,8 @@
 export const DEMO_SANDBOX = "allow-scripts allow-same-origin allow-forms allow-popups allow-modals";
 
 /** O iframe isolado onde a demo roda. */
-export function DemoFrame({ src, title, reloadKey = 0, className = "" }: { src: string; title: string; reloadKey?: number; className?: string }) {
+/** `preview`: miniatura que não recebe foco nem clique (a demo de verdade abre na camada). */
+export function DemoFrame({ src, title, reloadKey = 0, className = "", preview = false }: { src: string; title: string; reloadKey?: number; className?: string; preview?: boolean }) {
   return (
     <iframe
       key={reloadKey}
@@ -10,7 +11,10 @@ export function DemoFrame({ src, title, reloadKey = 0, className = "" }: { src: 
       title={title}
       sandbox={DEMO_SANDBOX}
       referrerPolicy="strict-origin-when-cross-origin"
-      className={`size-full border-0 bg-white ${className}`}
+      loading={preview ? "lazy" : undefined}
+      tabIndex={preview ? -1 : undefined}
+      aria-hidden={preview || undefined}
+      className={`size-full border-0 bg-white ${preview ? "pointer-events-none" : ""} ${className}`}
     />
   );
 }

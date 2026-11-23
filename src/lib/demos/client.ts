@@ -20,7 +20,13 @@ async function call<T>(o: DemoServiceOptions, path: string, body?: unknown): Pro
   if (body !== undefined) headers["content-type"] = "application/json";
   const res = await f(new URL(path, o.base), { method: "POST", headers, body: body === undefined ? undefined : JSON.stringify(body) });
   const text = await res.text();
-  const data = text ? (JSON.parse(text) as T & { error?: string }) : ({} as T & { error?: string });
+  let data = {} as T & { error?: string };
+  try {
+    if (text) data = JSON.parse(text) as T & { error?: string };
+  } catch {
+    // Resposta que não é JSON (ex.: página de erro 502 de um proxy).
+    throw new DemoServiceError(res.status, `Erro ${res.status} no serviço de demos. Tente de novo.`);
+  }
   if (!res.ok) throw new DemoServiceError(res.status, data.error ?? `Erro ${res.status} no serviço de demos`);
   return data;
 }

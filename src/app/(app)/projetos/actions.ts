@@ -2,14 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { safeNext } from "@/lib/auth/safe-next";
 import { getViewer } from "@/lib/auth/viewer";
 import { COMMENT_MAX, validateProject, type ProjectErrors, type ProjectInput } from "@/lib/projects/rules";
 import { createClient } from "@/lib/supabase/server";
 
+/** Só páginas de projeto podem ser revalidadas e usadas como volta do login. */
+function projectPath(path: string) {
+  return /^\/projetos\/[a-z0-9-]{1,140}$/.test(path) ? path : "/projetos";
+}
+
 async function requireViewer(path: string) {
   const viewer = await getViewer();
-  if (!viewer) redirect(`/entrar?next=${encodeURIComponent(safeNext(path, "/projetos"))}`);
+  if (!viewer) redirect(`/entrar?next=${encodeURIComponent(path)}`);
   return viewer;
 }
 
@@ -17,41 +21,54 @@ export type PublishResult = { error: "invalid"; errors: ProjectErrors } | { erro
 
 /** Cria o projeto depois que a demo validou e abre a página dele. */
 export async function publishProject(input: ProjectInput & { demoId: string }): Promise<PublishResult> {
-  await requireViewer("/projetos/novo");
+  const viewer = await requireViewer("/projetos/novo");
   const check = validateProject(input);
   if (!check.ok) return { error: "invalid", errors: check.errors };
   const v = check.value;
 
   const supabase = await createClient();
+  // A demo tem que ser da pessoa e já estar no ar (o banco só confere o dono).
+  const { data: demo } = await supabase.from("demos").select("owner_id, status").eq("id", input.demoId).maybeSingle();
+  if (!demo || demo.owner_id !== viewer.id || demo.status !== "live") return { error: "demo" };
+
+  const { data: tags } = await supabase.from("tags").select("id").in("slug", v.tags);
+  if (!tags || tags.length !== v.tags.length) return { error: "invalid", errors: { tags: "min" } };
+
   const { data: project, error } = await supabase
     .from("projects")
     .insert({ title: v.title, description_md: v.description, repo_url: v.repoUrl || null, site_url: v.siteUrl || null, demo_id: input.demoId })
     .select("id, slug")
     .single();
-  if (error?.code === "42501") return { error: "demo" };
   if (error || !project) return { error: "unknown" };
 
-  const { data: tags } = await supabase.from("tags").select("id").in("slug", v.tags);
-  const rows = (tags ?? []).map((t: { id: string }) => ({ project_id: project.id, tag_id: t.id }));
-  if (rows.length > 0) await supabase.from("project_tags").insert(rows);
+  const { error: tagError } = await supabase.from("project_tags").insert(tags.map((t: { id: string }) => ({ project_id: project.id, tag_id: t.id })));
+  if (tagError) {
+    // Sem as tags o projeto fica fora das regras: desfaz e deixa tentar de novo (a demo é reaproveitada).
+    await supabase.from("projects").delete().eq("id", project.id);
+    return { error: "unknown" };
+  }
 
   revalidatePath("/projetos");
   redirect(`/projetos/${project.slug}?publicado=1`);
 }
 
-/** Curte ou descurte. Devolve o estado novo e o contador do banco. */
-export async function toggleLike(projectId: string, path: string): Promise<{ liked: boolean; count: number }> {
+/** Curte ou descurte. Devolve o estado novo e o contador do banco; lança erro se o banco recusar. */
+export async function toggleLike(projectId: string, rawPath: string): Promise<{ liked: boolean; count: number }> {
+  const path = projectPath(rawPath);
   const viewer = await requireViewer(path);
   const supabase = await createClient();
   const { data: existing } = await supabase.from("likes").select("project_id").eq("project_id", projectId).eq("profile_id", viewer.id).maybeSingle();
-  if (existing) await supabase.from("likes").delete().eq("project_id", projectId).eq("profile_id", viewer.id);
-  else await supabase.from("likes").insert({ project_id: projectId });
+  const { error } = existing
+    ? await supabase.from("likes").delete().eq("project_id", projectId).eq("profile_id", viewer.id)
+    : await supabase.from("likes").insert({ project_id: projectId });
+  if (error) throw new Error("Não deu para curtir agora.");
   const { data } = await supabase.from("projects").select("likes_count").eq("id", projectId).single();
   revalidatePath(path);
   return { liked: !existing, count: data?.likes_count ?? 0 };
 }
 
-export async function addComment(projectId: string, body: string, parentId: string | null, path: string): Promise<{ error?: "empty" | "tooLong" | "unknown" }> {
+export async function addComment(projectId: string, body: string, parentId: string | null, rawPath: string): Promise<{ error?: "empty" | "tooLong" | "unknown" }> {
+  const path = projectPath(rawPath);
   await requireViewer(path);
   const text = body.trim();
   if (!text) return { error: "empty" };
@@ -63,7 +80,8 @@ export async function addComment(projectId: string, body: string, parentId: stri
   return {};
 }
 
-export async function deleteComment(id: string, path: string): Promise<{ error?: "unknown" }> {
+export async function deleteComment(id: string, rawPath: string): Promise<{ error?: "unknown" }> {
+  const path = projectPath(rawPath);
   await requireViewer(path);
   const supabase = await createClient();
   const { error } = await supabase.from("comments").delete().eq("id", id);

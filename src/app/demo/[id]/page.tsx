@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { DemoStandalone } from "@/components/demo/demo-standalone";
 
-export const metadata: Metadata = { title: "Demo · Devsync", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Demo");
+  return { title: t("metaTitle"), robots: { index: false } };
+}
 
 /**
  * Destino do serviço de demos quando alguém abre a URL da demo direto no

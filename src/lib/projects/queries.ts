@@ -1,5 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
+import { cache } from "react";
 import type { CommentAuthor, CommentRow } from "@/lib/comments/tree";
 import type { DemoKind, DemoStatus } from "@/lib/demos/url";
 import { getSupabaseEnv } from "@/lib/env";
@@ -78,13 +79,14 @@ export async function listProjects(limit = 30): Promise<ProjectCardData[]> {
   return ((data ?? []) as unknown as Row[]).map(toPage);
 }
 
-export async function getProject(slug: string): Promise<ProjectPageData | null> {
+/** Memorizada por pedido: a página e o generateMetadata leem o mesmo projeto. */
+export const getProject = cache(async (slug: string): Promise<ProjectPageData | null> => {
   const supabase = await client();
   if (!supabase) return null;
   const { data, error } = await supabase.from("projects").select(CARD).eq("slug", slug).maybeSingle();
   if (error) throw new Error(`Falha ao ler o projeto: ${error.message}`);
   return data ? toPage(data as unknown as Row) : null;
-}
+});
 
 export async function getComments(projectId: string): Promise<CommentRow[]> {
   const supabase = await client();

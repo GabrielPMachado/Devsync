@@ -39,6 +39,8 @@ export async function loadDemoView(demoId: string): Promise<DemoView | null> {
 const WIDTHS = { desktop: null, tablet: "820px", phone: "390px" } as const;
 type Width = keyof typeof WIDTHS;
 const PENDING_POLL_MS = 2_000;
+/** Depois disso para de consultar e fica em "Preparando" (a pessoa pode recarregar). */
+const PENDING_MAX_MS = 90_000;
 
 type Props = { demoId: string; onClose: () => void; load?: (demoId: string) => Promise<DemoView | null> };
 
@@ -59,11 +61,12 @@ export function DemoOverlay({ demoId, onClose, load = loadDemoView }: Props) {
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const started = Date.now();
     const run = async () => {
       const view = await load(demoId).catch(() => null);
       if (!alive) return;
       setState({ loading: false, view });
-      if (view?.status === "pending") timer = setTimeout(run, PENDING_POLL_MS);
+      if (view?.status === "pending" && Date.now() - started < PENDING_MAX_MS) timer = setTimeout(run, PENDING_POLL_MS);
     };
     void run();
     return () => {
@@ -152,7 +155,7 @@ export function DemoOverlay({ demoId, onClose, load = loadDemoView }: Props) {
               {fullscreen ? <Minimize2 className="size-4" aria-hidden="true" /> : <Maximize2 className="size-4" aria-hidden="true" />}
             </button>
             {view?.project ? (
-              <Link href={`/projetos/${view.project.slug}#comentarios`} className={icon} aria-label={t("comments")} onClick={onClose}>
+              <Link href={`/projetos/${view.project.slug}#comentarios`} className={icon} aria-label={t("comments")}>
                 <MessageCircle className="size-4" aria-hidden="true" />
               </Link>
             ) : null}
@@ -179,7 +182,7 @@ export function DemoOverlay({ demoId, onClose, load = loadDemoView }: Props) {
               text={view?.status === "blocked" ? t("blockedText") : view ? t("unavailableText") : t("missingText")}
             >
               {view?.project ? (
-                <Link href={`/projetos/${view.project.slug}`} className={buttonClasses({ variant: "secondary" })} onClick={onClose}>
+                <Link href={`/projetos/${view.project.slug}`} className={buttonClasses({ variant: "secondary" })}>
                   {t("projectPage")}
                 </Link>
               ) : null}

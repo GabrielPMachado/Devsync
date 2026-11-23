@@ -22,8 +22,8 @@ type Props = PageProps<"/projetos/[slug]">;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const project = await getProject(slug);
-  return { title: project ? `${project.title} · Devsync` : "Devsync" };
+  const [project, t] = await Promise.all([getProject(slug), getTranslations("Projects")]);
+  return { title: project ? t("metaProject", { title: project.title }) : t("notFoundTitle") };
 }
 
 export default function ProjectPage({ params, searchParams }: Props) {
@@ -108,7 +108,7 @@ async function Project({ params, searchParams }: Pick<Props, "params" | "searchP
             </div>
             <div className="aspect-[16/9] bg-bg-base">
               {src ? (
-                <DemoFrame src={src} title={demoT("frameTitle", { title: project.title })} className="pointer-events-none" />
+                <DemoFrame src={src} title={demoT("frameTitle", { title: project.title })} preview />
               ) : (
                 <p className="flex size-full items-center justify-center px-6 text-center text-sm text-text-muted">{t("noDemo")}</p>
               )}

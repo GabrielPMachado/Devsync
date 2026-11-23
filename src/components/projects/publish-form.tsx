@@ -26,11 +26,18 @@ export type PublishServices = {
   createLinkDemo: (url: string) => Promise<string>;
   publish: (input: ProjectInput & { demoId: string }) => Promise<PublishResult>;
   sleep?: (ms: number) => Promise<void>;
+  /** Tempo máximo esperando a validação do zip (padrão: 90 s). */
+  timeoutMs?: number;
 };
 
 type Mode = "upload" | "link";
 type Phase = "idle" | "uploading" | "validating" | "checkingLink" | "publishing";
 type Errors = ProjectErrors & { zip?: string; link?: string; linkBlocked?: boolean; form?: string };
+
+function isRedirect(err: unknown) {
+  const digest = (err as { digest?: unknown } | null)?.digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT;");
+}
 
 function formatSize(bytes: number) {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -49,6 +56,8 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
   const [siteUrl, setSiteUrl] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [errors, setErrors] = useState<Errors>({});
+  // Demo já criada numa tentativa anterior: tentar de novo reaproveita, sem gastar outro envio do dia.
+  const [created, setCreated] = useState<{ demoId: string; file?: File; url?: string } | null>(null);
   const descId = useId();
   const zipId = useId();
   const busy = phase !== "idle";
@@ -61,7 +70,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
     // Deu certo: a ação redireciona para a página do projeto e não volta aqui.
     setPhase("idle");
     if (result.error === "invalid") setErrors(result.errors);
-    else setErrors({ form: result.error === "demo" ? t("demoNotYours") : t("unknown") });
+    else setErrors({ form: result.error === "demo" ? t("demoNotReady") : t("unknown") });
   }
 
   async function onSubmit(e: FormEvent) {
@@ -83,32 +92,48 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
 
     try {
       if (mode === "upload" && file) {
-        setPhase("uploading");
-        const { demoId, uploadUrl } = await services.createUpload(o);
-        await services.putZip(uploadUrl, file);
-        await services.completeUpload(o, demoId);
+        let demoId = created?.file === file ? created.demoId : null;
+        if (!demoId) {
+          setPhase("uploading");
+          const upload = await services.createUpload(o);
+          await services.putZip(upload.uploadUrl, file);
+          await services.completeUpload(o, upload.demoId);
+          demoId = upload.demoId;
+          setCreated({ demoId, file });
+        }
         setPhase("validating");
-        const result = await waitForDemo(() => services.readDemo(demoId), { sleep: services.sleep });
-        if (result.status === "timeout") throw new Error(t("timeout"));
+        const id = demoId;
+        const result = await waitForDemo(() => services.readDemo(id), { sleep: services.sleep, timeoutMs: services.timeoutMs });
+        if (result.status === "timeout") {
+          setPhase("idle");
+          return setErrors({ form: t("timeout") });
+        }
         if (result.status === "unavailable") {
+          setCreated(null);
           setPhase("idle");
           return setErrors({ zip: reasons(reasonKey(result.reason)) });
         }
-        await finish(check.value, demoId);
+        await finish(check.value, id);
       } else {
         setPhase("checkingLink");
         const url = link.trim();
-        const pre = await services.embedCheck(o, url);
-        if (!pre.embeddable) return linkRejected(pre.reason);
-        const demoId = await services.createLinkDemo(url);
+        let demoId = created?.url === url ? created.demoId : null;
+        if (!demoId) {
+          const pre = await services.embedCheck(o, url);
+          if (!pre.embeddable) return linkRejected(pre.reason);
+          demoId = await services.createLinkDemo(url);
+          setCreated({ demoId, url });
+        }
         const verified = await services.verifyDemo(o, demoId);
         if (!verified.embeddable) return linkRejected(verified.reason);
         await finish(check.value, demoId);
       }
     } catch (err) {
+      // Publicou: a ação redireciona, o Next já está navegando e rejeita a promessa com o
+      // redirecionamento. Não é erro: o botão segue em "Publicando…" até a página trocar.
+      if (isRedirect(err)) return;
       setPhase("idle");
-      const message = err instanceof DemoServiceError || err instanceof Error ? err.message : t("unknown");
-      setErrors({ form: message || t("unknown") });
+      setErrors({ form: err instanceof DemoServiceError ? err.message : t("unknown") });
     }
   }
 

@@ -51,9 +51,13 @@ test("publicar com zip e abrir a demo na camada", async ({ page }) => {
 
 test("zip sem index.html é recusado e não vira projeto", async ({ page }) => {
   await signUp(page, "rec", "Rita Dev");
-  await publishWithZip(page, "Sem index", { "pagina.html": "<h1>oi</h1>", "outra/coisa.html": "<p>x</p>" });
+  const title = `Sem index ${Date.now().toString(36)}`;
+  await publishWithZip(page, title, { "pagina.html": "<h1>oi</h1>", "outra/coisa.html": "<p>x</p>" });
   await expect(page.getByText("Não achamos o index.html na raiz do .zip (nem numa única pasta).")).toBeVisible({ timeout: 60_000 });
   await expect(page).toHaveURL(/\/projetos\/novo$/);
+  await page.goto("/projetos");
+  await expect(page.getByRole("heading", { name: "Projetos", level: 1 })).toBeVisible();
+  await expect(page.getByText(title)).toHaveCount(0);
 });
 
 test("curtir, comentar e responder", async ({ page, browser }) => {
@@ -86,4 +90,10 @@ test("curtir, comentar e responder", async ({ page, browser }) => {
   await page.getByRole("button", { name: "Enviar resposta" }).click();
   await expect(page.getByText("Valeu!")).toBeVisible();
   await expect(page.getByRole("heading", { name: "2 comentários" })).toBeVisible();
+
+  // Da camada de demo, o botão de comentários leva à página do projeto, sem reabrir a camada.
+  await page.getByRole("link", { name: "Abrir demo" }).last().click();
+  await page.getByRole("dialog").getByRole("link", { name: "Comentários do projeto" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page).toHaveURL(/\/projetos\/[a-z0-9-]+#comentarios$/);
 });

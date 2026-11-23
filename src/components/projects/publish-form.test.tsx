@@ -112,4 +112,44 @@ describe("PublishForm", () => {
     expect(services.createLinkDemo).toHaveBeenCalledWith("https://meu-kanban.dev");
     expect(services.verifyDemo).toHaveBeenCalledWith(expect.objectContaining({ token: "tok" }), "d2");
   });
+
+  it("publicou: o redirecionamento do Next não vira erro na tela", async () => {
+    const redirect = Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT;push;/projetos/kanban-abc;307;" });
+    services.publish = vi.fn(async () => {
+      throw redirect;
+    });
+    renderForm();
+    fillAbout();
+    chooseZip(zip());
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    await waitFor(() => expect(services.publish).toHaveBeenCalled());
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("button", { name: "Publicando…" })).toBeDisabled();
+  });
+
+  it("validação demorada: avisa e, ao tentar de novo, reaproveita a demo enviada", async () => {
+    services.readDemo = vi.fn(async () => ({ status: "pending" as const, rejection_reason: null }));
+    services.timeoutMs = 0;
+    renderForm();
+    fillAbout();
+    chooseZip(zip());
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    expect(await screen.findByText(/A validação está demorando/)).toBeInTheDocument();
+
+    services.readDemo = vi.fn(async () => ({ status: "live" as const, rejection_reason: null }));
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    await waitFor(() => expect(services.publish).toHaveBeenCalledWith(expect.objectContaining({ demoId: "d1" })));
+    expect(services.createUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it("erro de rede mostra texto em português, não a mensagem técnica", async () => {
+    services.createUpload = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    renderForm();
+    fillAbout();
+    chooseZip(zip());
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    expect(await screen.findByText("Não deu para publicar agora. Tente de novo.")).toBeInTheDocument();
+  });
 });

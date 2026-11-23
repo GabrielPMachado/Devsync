@@ -2,6 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const db = {
+  demo: vi.fn(),
+  deleteProject: vi.fn(),
   insertProject: vi.fn(),
   tags: vi.fn(),
   insertTags: vi.fn(),
@@ -19,7 +21,9 @@ const supabase = {
       return {
         insert: (values: unknown) => ({ select: () => ({ single: () => db.insertProject(values) }) }),
         select: () => ({ eq: (_c: string, id: string) => ({ single: () => db.likesCount(id) }) }),
+        delete: () => ({ eq: (_c: string, id: string) => db.deleteProject(id) }),
       };
+    if (table === "demos") return { select: () => ({ eq: (_c: string, id: string) => ({ maybeSingle: () => db.demo(id) }) }) };
     if (table === "tags") return { select: () => ({ in: (_c: string, slugs: string[]) => db.tags(slugs) }) };
     if (table === "project_tags") return { insert: (rows: unknown) => db.insertTags(rows) };
     if (table === "likes")
@@ -55,6 +59,8 @@ const input = { title: "Kanban colaborativo", description: "Um quadro.", tags: [
 beforeEach(() => {
   vi.clearAllMocks();
   getViewer.mockResolvedValue(viewer);
+  db.demo.mockResolvedValue({ data: { owner_id: "u1", status: "live" }, error: null });
+  db.deleteProject.mockResolvedValue({ error: null });
   db.insertProject.mockResolvedValue({ data: { id: "p1", slug: "kanban-colaborativo-abc123" }, error: null });
   db.tags.mockImplementation(async (slugs: string[]) => ({ data: slugs.map((s) => ({ id: `id-${s}` })), error: null }));
   db.insertTags.mockResolvedValue({ error: null });
@@ -87,9 +93,24 @@ describe("publishProject", () => {
     ]);
   });
 
-  it("demo de outra pessoa é recusada", async () => {
-    db.insertProject.mockResolvedValue({ data: null, error: { code: "42501" } });
-    await expect(publishProject(input)).resolves.toEqual({ error: "demo" });
+  it("demo de outra pessoa, ainda validando ou recusada não publica", async () => {
+    for (const demo of [{ owner_id: "u2", status: "live" }, { owner_id: "u1", status: "pending" }, { owner_id: "u1", status: "unavailable" }, null]) {
+      db.demo.mockResolvedValue({ data: demo, error: null });
+      await expect(publishProject(input)).resolves.toEqual({ error: "demo" });
+    }
+    expect(db.insertProject).not.toHaveBeenCalled();
+  });
+
+  it("tag que não existe não publica", async () => {
+    db.tags.mockResolvedValue({ data: [{ id: "id-react" }], error: null });
+    await expect(publishProject(input)).resolves.toEqual({ error: "invalid", errors: { tags: "min" } });
+    expect(db.insertProject).not.toHaveBeenCalled();
+  });
+
+  it("falha ao marcar as tags desfaz o projeto", async () => {
+    db.insertTags.mockResolvedValue({ error: { code: "DS003" } });
+    await expect(publishProject(input)).resolves.toEqual({ error: "unknown" });
+    expect(db.deleteProject).toHaveBeenCalledWith("p1");
   });
 
   it("sem login vai para /entrar", async () => {
@@ -107,6 +128,16 @@ describe("toggleLike", () => {
   it("curte quando ainda não curtiu", async () => {
     await expect(toggleLike("p1", "/projetos/x")).resolves.toEqual({ liked: true, count: 1 });
     expect(db.insertLike).toHaveBeenCalledWith({ project_id: "p1" });
+  });
+
+  it("banco recusando a curtida vira erro (o botão volta)", async () => {
+    db.insertLike.mockResolvedValue({ error: { code: "42501" } });
+    await expect(toggleLike("p1", "/projetos/x")).rejects.toThrow();
+  });
+
+  it("caminho fora das páginas de projeto não é usado", async () => {
+    getViewer.mockResolvedValue(null);
+    await expect(toggleLike("p1", "//mal.com")).rejects.toThrow("REDIRECT /entrar?next=%2Fprojetos");
   });
 
   it("descurte quando já curtiu", async () => {
