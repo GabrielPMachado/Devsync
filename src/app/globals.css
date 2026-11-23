@@ -28,3 +28,40 @@
     outline-offset: 2px;
   }
 }
+
+/* Markdown de perguntas e respostas (src/components/studies/markdown.tsx). */
+@layer components {
+  .devsync-markdown {
+    @apply flex flex-col gap-3 text-[15px] leading-relaxed text-text-secondary;
+    overflow-wrap: anywhere;
+  }
+  .devsync-markdown :where(h3, h4, h5, h6) {
+    @apply font-display font-bold text-text-primary;
+  }
+  .devsync-markdown h3 { @apply text-lg; }
+  .devsync-markdown :where(h4, h5, h6) { @apply text-base; }
+  .devsync-markdown :where(ul) { @apply list-disc pl-6; }
+  .devsync-markdown :where(ol) { @apply list-decimal pl-6; }
+  .devsync-markdown :where(blockquote) { @apply border-l-2 border-border-strong pl-4 text-text-muted; }
+  .devsync-markdown :where(strong) { @apply text-text-primary; }
+  .devsync-markdown :where(:not(pre) > code) {
+    @apply rounded-sm border border-border-default bg-bg-elevated px-1 py-0.5 font-mono text-[13px] text-brand-accent;
+  }
+  .devsync-markdown :where(pre) {
+    @apply overflow-x-auto rounded-lg border border-border-default bg-bg-base p-4 font-mono text-[13px] leading-6 text-text-secondary;
+  }
+  .devsync-markdown :where(table) { @apply w-full border-collapse text-sm; }
+  .devsync-markdown :where(th, td) { @apply border border-border-default px-3 py-1.5 text-left; }
+  .devsync-markdown :where(hr) { @apply border-border-default; }
+
+  /* Destaque de código (classes do highlight.js), nas cores da marca. */
+  .devsync-markdown .hljs-comment, .devsync-markdown .hljs-quote { color: var(--color-text-subtle); font-style: italic; }
+  .devsync-markdown .hljs-keyword, .devsync-markdown .hljs-selector-tag, .devsync-markdown .hljs-built_in { color: var(--color-blue-400, #60a5fa); }
+  .devsync-markdown .hljs-string, .devsync-markdown .hljs-attr, .devsync-markdown .hljs-template-tag { color: var(--color-brand-accent); }
+  .devsync-markdown .hljs-number, .devsync-markdown .hljs-literal { color: var(--color-amber-300, #fcd34d); }
+  .devsync-markdown .hljs-title, .devsync-markdown .hljs-function .hljs-title, .devsync-markdown .hljs-title.class_ { color: var(--color-text-primary); font-weight: 600; }
+  .devsync-markdown .hljs-type, .devsync-markdown .hljs-params { color: var(--color-text-secondary); }
+  .devsync-markdown .hljs-meta, .devsync-markdown .hljs-tag, .devsync-markdown .hljs-name { color: var(--color-text-muted); }
+  .devsync-markdown .hljs-addition { color: var(--color-status-success-text); }
+  .devsync-markdown .hljs-deletion { color: var(--color-status-danger-text); }
+}

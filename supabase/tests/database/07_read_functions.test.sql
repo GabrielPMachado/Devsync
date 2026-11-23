@@ -1,6 +1,6 @@
 begin;
 \ir ../helpers.psql
-select plan(22);
+select plan(25);
 
 select tests.create_user('ana@x.dev', 'ana') as ana \gset
 select tests.create_user('bruno@x.dev', 'bruno') as bruno \gset
@@ -55,6 +55,23 @@ select tests.accept(:'q', tests.mka(:'q', 'A', 1, 60));
 select tests.mka(:'q', 'N1', 6, 40);
 select tests.mka(:'q', 'N2', 8, 30);
 select is(tests.order_of(:'q'), array['N2', 'A', 'N1'], 'only the strongest challenger overtakes');
+
+select tests.mkq(:'ana') as q \gset
+select tests.accept(:'q', tests.mka(:'q', 'A', 1, 60));
+select tests.mka(:'q', 'N', 9, 30, 3);
+select is(tests.order_of(:'q'), array['A', 'N'], 'flagged challenger does not overtake and sinks');
+
+select tests.mkq(:'ana') as q \gset
+select tests.accept(:'q', tests.mka(:'q', 'A', 1, 60));
+select tests.mka(:'q', 'N1', 8, 40);
+select tests.mka(:'q', 'N2', 8, 30);
+select is(tests.order_of(:'q'), array['N2', 'A', 'N1'], 'challenger tie goes to newer');
+
+select tests.mkq(:'ana') as q \gset
+select tests.accept(:'q', tests.mka(:'q', 'A', 0, 60));
+select tests.mka(:'q', 'D', -2, 50);
+select tests.mka(:'q', 'E', 0, 40);
+select is(tests.order_of(:'q'), array['A', 'E', 'D'], 'negative score sorts last among unflagged');
 
 select tests.mkq(:'ana') as q \gset
 select tests.mka(:'q', 'X', 1, 60);
