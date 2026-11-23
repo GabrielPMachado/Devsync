@@ -111,16 +111,16 @@ alter table public.comments enable row level security;
 create policy "comentários visíveis" on public.comments
   for select using (
     (hidden_at is null and public.content_is_visible(target_type::text, target_id))
-    or author_id = auth.uid() or public.is_admin());
+    or author_id = (select auth.uid()) or (select public.is_admin()));
 create policy "usuário ativo comenta conteúdo visível" on public.comments
   for insert to authenticated with check (
-    author_id = auth.uid() and public.is_active_user()
+    author_id = (select auth.uid()) and (select public.is_active_user())
     and public.content_is_visible(target_type::text, target_id));
 create policy "autor edita comentário" on public.comments
   for update to authenticated
-  using (author_id = auth.uid() and public.is_active_user()) with check (author_id = auth.uid());
+  using (author_id = (select auth.uid()) and (select public.is_active_user())) with check (author_id = (select auth.uid()));
 create policy "autor apaga comentário" on public.comments
-  for delete to authenticated using (author_id = auth.uid());
+  for delete to authenticated using (author_id = (select auth.uid()));
 
 revoke insert, update, delete on public.comments from anon;
 revoke insert, update on public.comments from authenticated;

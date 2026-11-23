@@ -30,7 +30,7 @@ trap cleanup EXIT
 "$PG_BIN/pg_ctl" -D "$TMP/data" -o "-k $TMP -p $PORT -c listen_addresses='' -c wal_level=logical" -l "$TMP/log" -w start >/dev/null
 
 PSQL=(psql -X -q -v ON_ERROR_STOP=1)
-"${PSQL[@]}" -f "$ROOT/supabase/tests/local/supabase_shim.sql" >/dev/null
+"${PSQL[@]}" -f "$ROOT/supabase/tests/local/supabase_shim.psql" >/dev/null
 for f in "$ROOT"/supabase/migrations/*.sql; do
   "${PSQL[@]}" -f "$f" >/dev/null || { echo "Falhou ao aplicar $f"; exit 1; }
 done

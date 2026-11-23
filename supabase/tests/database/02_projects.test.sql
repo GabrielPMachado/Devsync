@@ -1,6 +1,6 @@
 begin;
-\ir ../helpers.sql
-select plan(24);
+\ir ../helpers.psql
+select plan(27);
 
 select tests.create_user('ana@x.dev', 'ana') as ana \gset
 select tests.create_user('bruno@x.dev', 'bruno') as bruno \gset
@@ -45,6 +45,19 @@ reset role;
 update demos set status = 'blocked' where id = :'link_demo';
 select tests.as_anon();
 select is((select count(*)::int from demos where id = :'link_demo'), 0, 'blocked demo invisible');
+
+-- Demo bloqueada pela moderação continua bloqueada se o dono trocar a URL.
+select tests.login_as(:'ana');
+update demos set url = 'https://ana.dev/outra' where id = :'link_demo';
+reset role;
+select is((select status::text from demos where id = :'link_demo'), 'blocked', 'blocked demo stays blocked after url change');
+select tests.login_as(:'bruno');
+select throws_ok($$ insert into demos (kind, url) values ('web_upload', 'https://x.dev') $$, '23514', null, 'web_upload demo has no url');
+
+-- Apagar demos não zera o limite diário.
+select tests.login_as(:'ana');
+delete from demos where kind = 'web_upload';
+select throws_ok($$ insert into demos (kind) values ('web_upload') $$, 'DS001', null, 'deleting demos does not reset daily limit');
 
 -- Projetos --------------------------------------------------------------------
 select tests.login_as(:'ana');

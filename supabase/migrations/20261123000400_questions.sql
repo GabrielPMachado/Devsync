@@ -30,6 +30,9 @@ create index questions_author_idx on public.questions (author_id, created_at des
 create index questions_created_idx on public.questions (created_at desc);
 create index questions_unanswered_idx on public.questions (created_at desc) where answers_count = 0;
 create index questions_search_idx on public.questions using gin (search);
+create index questions_project_idx on public.questions (project_id);
+create index questions_duplicate_of_idx on public.questions (duplicate_of_id);
+create index questions_accepted_answer_idx on public.questions (accepted_answer_id);
 
 create trigger questions_set_slug before insert on public.questions
   for each row execute function public.set_slug();
@@ -39,14 +42,14 @@ create trigger questions_updated_at before update on public.questions
 alter table public.questions enable row level security;
 
 create policy "perguntas visíveis" on public.questions
-  for select using (hidden_at is null or author_id = auth.uid() or public.is_admin());
+  for select using (hidden_at is null or author_id = (select auth.uid()) or (select public.is_admin()));
 create policy "usuário ativo pergunta" on public.questions
-  for insert to authenticated with check (author_id = auth.uid() and public.is_active_user());
+  for insert to authenticated with check (author_id = (select auth.uid()) and (select public.is_active_user()));
 create policy "autor edita pergunta" on public.questions
   for update to authenticated
-  using (author_id = auth.uid() and public.is_active_user()) with check (author_id = auth.uid());
+  using (author_id = (select auth.uid()) and (select public.is_active_user())) with check (author_id = (select auth.uid()));
 create policy "autor apaga pergunta" on public.questions
-  for delete to authenticated using (author_id = auth.uid());
+  for delete to authenticated using (author_id = (select auth.uid()));
 
 revoke insert, update, delete on public.questions from anon;
 revoke insert, update on public.questions from authenticated;
@@ -71,11 +74,11 @@ create policy "tags de pergunta visíveis" on public.question_tags
   for select using (exists (select 1 from public.questions q where q.id = question_id));
 create policy "autor marca tags da pergunta" on public.question_tags
   for insert to authenticated with check (
-    public.is_active_user()
-    and exists (select 1 from public.questions q where q.id = question_id and q.author_id = auth.uid()));
+    (select public.is_active_user())
+    and exists (select 1 from public.questions q where q.id = question_id and q.author_id = (select auth.uid())));
 create policy "autor desmarca tags da pergunta" on public.question_tags
   for delete to authenticated using (
-    exists (select 1 from public.questions q where q.id = question_id and q.author_id = auth.uid()));
+    exists (select 1 from public.questions q where q.id = question_id and q.author_id = (select auth.uid())));
 
 revoke insert, update, delete on public.question_tags from anon;
 revoke update on public.question_tags from authenticated;
@@ -101,6 +104,7 @@ create table public.answers (
 );
 create index answers_question_idx on public.answers (question_id, score desc, created_at desc);
 create index answers_author_idx on public.answers (author_id, created_at desc);
+create index answers_demo_idx on public.answers (demo_id);
 
 alter table public.questions
   add constraint questions_accepted_answer_fk
@@ -144,16 +148,16 @@ alter table public.answers enable row level security;
 create policy "respostas visíveis" on public.answers
   for select using (
     (hidden_at is null and exists (select 1 from public.questions q where q.id = question_id))
-    or author_id = auth.uid() or public.is_admin());
+    or author_id = (select auth.uid()) or (select public.is_admin()));
 create policy "usuário ativo responde pergunta visível" on public.answers
   for insert to authenticated with check (
-    author_id = auth.uid() and public.is_active_user()
+    author_id = (select auth.uid()) and (select public.is_active_user())
     and exists (select 1 from public.questions q where q.id = question_id and q.hidden_at is null));
 create policy "autor edita resposta" on public.answers
   for update to authenticated
-  using (author_id = auth.uid() and public.is_active_user()) with check (author_id = auth.uid());
+  using (author_id = (select auth.uid()) and (select public.is_active_user())) with check (author_id = (select auth.uid()));
 create policy "autor apaga resposta" on public.answers
-  for delete to authenticated using (author_id = auth.uid());
+  for delete to authenticated using (author_id = (select auth.uid()));
 
 revoke insert, update, delete on public.answers from anon;
 revoke insert, update on public.answers from authenticated;
@@ -190,17 +194,17 @@ create trigger answer_votes_score after insert or update of value or delete on p
 alter table public.answer_votes enable row level security;
 
 create policy "cada um vê os próprios votos" on public.answer_votes
-  for select to authenticated using (profile_id = auth.uid());
+  for select to authenticated using (profile_id = (select auth.uid()));
 create policy "usuário ativo vota em resposta alheia" on public.answer_votes
   for insert to authenticated with check (
-    profile_id = auth.uid() and public.is_active_user()
+    profile_id = (select auth.uid()) and (select public.is_active_user())
     and exists (select 1 from public.answers a
-                where a.id = answer_id and a.author_id <> auth.uid() and a.hidden_at is null));
+                where a.id = answer_id and a.author_id <> (select auth.uid()) and a.hidden_at is null));
 create policy "cada um troca o próprio voto" on public.answer_votes
   for update to authenticated
-  using (profile_id = auth.uid() and public.is_active_user()) with check (profile_id = auth.uid());
+  using (profile_id = (select auth.uid()) and (select public.is_active_user())) with check (profile_id = (select auth.uid()));
 create policy "cada um retira o próprio voto" on public.answer_votes
-  for delete to authenticated using (profile_id = auth.uid());
+  for delete to authenticated using (profile_id = (select auth.uid()));
 
 revoke insert, update, delete on public.answer_votes from anon;
 revoke insert, update on public.answer_votes from authenticated;
@@ -247,13 +251,13 @@ create trigger answers_reset_flags after update of body_md on public.answers
 alter table public.outdated_flags enable row level security;
 
 create policy "cada um vê as próprias marcações" on public.outdated_flags
-  for select to authenticated using (profile_id = auth.uid());
+  for select to authenticated using (profile_id = (select auth.uid()));
 create policy "usuário ativo marca resposta alheia" on public.outdated_flags
   for insert to authenticated with check (
-    profile_id = auth.uid() and public.is_active_user()
-    and exists (select 1 from public.answers a where a.id = answer_id and a.author_id <> auth.uid()));
+    profile_id = (select auth.uid()) and (select public.is_active_user())
+    and exists (select 1 from public.answers a where a.id = answer_id and a.author_id <> (select auth.uid())));
 create policy "cada um desmarca" on public.outdated_flags
-  for delete to authenticated using (profile_id = auth.uid());
+  for delete to authenticated using (profile_id = (select auth.uid()));
 
 revoke insert, update, delete on public.outdated_flags from anon;
 revoke insert, update on public.outdated_flags from authenticated;
@@ -286,13 +290,13 @@ create trigger detail_requests_counter after insert or delete on public.detail_r
 alter table public.detail_requests enable row level security;
 
 create policy "cada um vê os próprios pedidos" on public.detail_requests
-  for select to authenticated using (profile_id = auth.uid());
+  for select to authenticated using (profile_id = (select auth.uid()));
 create policy "usuário ativo pede detalhes em pergunta alheia" on public.detail_requests
   for insert to authenticated with check (
-    profile_id = auth.uid() and public.is_active_user()
-    and exists (select 1 from public.questions q where q.id = question_id and q.author_id <> auth.uid()));
+    profile_id = (select auth.uid()) and (select public.is_active_user())
+    and exists (select 1 from public.questions q where q.id = question_id and q.author_id <> (select auth.uid())));
 create policy "cada um retira o pedido" on public.detail_requests
-  for delete to authenticated using (profile_id = auth.uid());
+  for delete to authenticated using (profile_id = (select auth.uid()));
 
 revoke insert, update, delete on public.detail_requests from anon;
 revoke insert, update on public.detail_requests from authenticated;

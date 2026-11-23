@@ -1,5 +1,5 @@
 -- Funções auxiliares dos testes pgTAP. Incluído no começo de cada teste com
--- \ir ../helpers.sql, dentro da transação do teste (some no rollback).
+-- \ir ../helpers.psql, dentro da transação do teste (some no rollback).
 
 create extension if not exists pgtap with schema extensions;
 create schema tests;

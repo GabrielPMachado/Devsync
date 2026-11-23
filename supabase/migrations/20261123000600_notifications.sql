@@ -17,15 +17,16 @@ create table public.notifications (
 create index notifications_recipient_idx on public.notifications (recipient_id, created_at desc);
 create index notifications_unread_idx on public.notifications (recipient_id) where read_at is null;
 create index notifications_target_idx on public.notifications (target_id);
+create index notifications_actor_idx on public.notifications (actor_id);
 
 alter table public.notifications enable row level security;
 
 create policy "cada um vê as próprias notificações" on public.notifications
-  for select to authenticated using (recipient_id = auth.uid());
+  for select to authenticated using (recipient_id = (select auth.uid()));
 create policy "cada um marca as próprias como lidas" on public.notifications
-  for update to authenticated using (recipient_id = auth.uid()) with check (recipient_id = auth.uid());
+  for update to authenticated using (recipient_id = (select auth.uid())) with check (recipient_id = (select auth.uid()));
 create policy "cada um apaga as próprias" on public.notifications
-  for delete to authenticated using (recipient_id = auth.uid());
+  for delete to authenticated using (recipient_id = (select auth.uid()));
 
 revoke insert, update, delete on public.notifications from anon;
 revoke insert, update on public.notifications from authenticated;
@@ -216,14 +217,15 @@ create table public.reports (
   unique (reporter_id, target_type, target_id)
 );
 create index reports_open_idx on public.reports (created_at) where status = 'open';
+create index reports_resolved_by_idx on public.reports (resolved_by);
 
 alter table public.reports enable row level security;
 
 create policy "quem denunciou e admins veem a denúncia" on public.reports
-  for select to authenticated using (reporter_id = auth.uid() or public.is_admin());
+  for select to authenticated using (reporter_id = (select auth.uid()) or (select public.is_admin()));
 create policy "usuário ativo denuncia conteúdo visível" on public.reports
   for insert to authenticated with check (
-    reporter_id = auth.uid() and public.is_active_user()
+    reporter_id = (select auth.uid()) and (select public.is_active_user())
     and public.content_is_visible(target_type::text, target_id));
 
 revoke insert, update, delete on public.reports from anon;

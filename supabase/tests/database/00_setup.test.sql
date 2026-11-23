@@ -1,5 +1,5 @@
 begin;
-\ir ../helpers.sql
+\ir ../helpers.psql
 select plan(12);
 
 select has_type('public', 'user_role', 'enum user_role existe');

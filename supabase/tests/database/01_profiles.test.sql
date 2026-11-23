@@ -1,5 +1,5 @@
 begin;
-\ir ../helpers.sql
+\ir ../helpers.psql
 select plan(23);
 
 -- Perfil automático a partir do login (GitHub manda name e avatar_url).

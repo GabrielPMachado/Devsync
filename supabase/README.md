@@ -17,7 +17,7 @@ scripts/test-db.sh supabase/tests/database/03_questions.test.sql   # um arquivo
 
 Precisa de PostgreSQL 15+ com `pgtap` e `unaccent`, e do `pg_prove`
 (Debian/Ubuntu: `postgresql-16-pgtap` e `libtap-parser-sourcehandler-pgtap-perl`).
-O arquivo `tests/local/supabase_shim.sql` imita o que o Supabase já traz
+O arquivo `tests/local/supabase_shim.psql` imita o que o Supabase já traz
 (`auth.users`, `auth.uid()`, os papéis `anon`, `authenticated` e `service_role`).
 
 Com o Supabase CLI e Docker: `supabase start`, `supabase db reset` e `supabase test db`.

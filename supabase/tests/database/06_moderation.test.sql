@@ -1,5 +1,5 @@
 begin;
-\ir ../helpers.sql
+\ir ../helpers.psql
 select plan(15);
 
 select tests.create_user('admin@x.dev', 'gabriel') as adm \gset

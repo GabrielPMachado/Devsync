@@ -73,8 +73,8 @@ create policy "perfis são públicos" on public.profiles
   for select using (true);
 create policy "cada um edita o próprio perfil" on public.profiles
   for update to authenticated
-  using (id = auth.uid() and public.is_active_user())
-  with check (id = auth.uid());
+  using (id = (select auth.uid()) and (select public.is_active_user()))
+  with check (id = (select auth.uid()));
 
 revoke insert, update, delete on public.profiles from anon, authenticated;
 grant update (username, display_name, avatar_url, bio, links, locale) on public.profiles to authenticated;
@@ -89,17 +89,18 @@ create table public.tags (
   created_by uuid default auth.uid() references public.profiles (id) on delete set null,
   created_at timestamptz not null default now()
 );
+create index tags_created_by_idx on public.tags (created_by);
 
 alter table public.tags enable row level security;
 
 create policy "tags são públicas" on public.tags for select using (true);
 create policy "usuário ativo cria tag" on public.tags
   for insert to authenticated
-  with check (public.is_active_user() and created_by = auth.uid());
+  with check ((select public.is_active_user()) and created_by = (select auth.uid()));
 create policy "admin edita tag" on public.tags
-  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+  for update to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
 create policy "admin apaga tag" on public.tags
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using ((select public.is_admin()));
 
 revoke insert, update, delete on public.tags from anon;
 revoke insert, update on public.tags from authenticated;
@@ -128,16 +129,16 @@ alter table public.tag_follows enable row level security;
 
 create policy "tecnologias do perfil são públicas" on public.profile_tags for select using (true);
 create policy "cada um escolhe as próprias tecnologias" on public.profile_tags
-  for insert to authenticated with check (profile_id = auth.uid() and public.is_active_user());
+  for insert to authenticated with check (profile_id = (select auth.uid()) and (select public.is_active_user()));
 create policy "cada um remove as próprias tecnologias" on public.profile_tags
-  for delete to authenticated using (profile_id = auth.uid());
+  for delete to authenticated using (profile_id = (select auth.uid()));
 
 create policy "cada um vê as tags que acompanha" on public.tag_follows
-  for select to authenticated using (profile_id = auth.uid());
+  for select to authenticated using (profile_id = (select auth.uid()));
 create policy "cada um acompanha tags" on public.tag_follows
-  for insert to authenticated with check (profile_id = auth.uid() and public.is_active_user());
+  for insert to authenticated with check (profile_id = (select auth.uid()) and (select public.is_active_user()));
 create policy "cada um deixa de acompanhar" on public.tag_follows
-  for delete to authenticated using (profile_id = auth.uid());
+  for delete to authenticated using (profile_id = (select auth.uid()));
 
 revoke insert, update, delete on public.profile_tags, public.tag_follows from anon;
 revoke update on public.profile_tags, public.tag_follows from authenticated;
@@ -174,9 +175,9 @@ alter table public.follows enable row level security;
 
 create policy "seguidores são públicos" on public.follows for select using (true);
 create policy "cada um segue em nome próprio" on public.follows
-  for insert to authenticated with check (follower_id = auth.uid() and public.is_active_user());
+  for insert to authenticated with check (follower_id = (select auth.uid()) and (select public.is_active_user()));
 create policy "cada um deixa de seguir" on public.follows
-  for delete to authenticated using (follower_id = auth.uid());
+  for delete to authenticated using (follower_id = (select auth.uid()));
 
 revoke insert, update, delete on public.follows from anon;
 revoke update on public.follows from authenticated;
