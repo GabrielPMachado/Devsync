@@ -23,10 +23,20 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: `npm run start -- --port ${PORT}`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: `npm run start -- --port ${PORT}`,
+      url: `http://localhost:${PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      // Serviço de demos local (R2 e filas simulados). Precisa de workers/demos/.dev.vars:
+      // rode scripts/demos-dev-vars.sh com o Supabase local no ar.
+      command: "npm --prefix workers/demos run dev -- --port 8787",
+      port: 8787,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 });

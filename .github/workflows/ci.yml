@@ -51,7 +51,14 @@ jobs:
           {
             echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
             echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "NEXT_PUBLIC_DEMOS_URL=http://demos.localhost:8787"
           } > .env.local
+
+      # Serviço de demos local (wrangler dev) para o E2E de publicar com zip.
+      - name: Serviço de demos para o E2E
+        run: |
+          npm ci --prefix workers/demos
+          scripts/demos-dev-vars.sh
 
       - run: npm run build
 

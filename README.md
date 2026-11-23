@@ -40,6 +40,15 @@ e exporte `SUPABASE_AUTH_GITHUB_CLIENT_ID` e `SUPABASE_AUTH_GITHUB_SECRET` antes
 
 Os testes E2E de login precisam do Supabase local rodando e do `.env.local` preenchido antes do `npm run build`.
 
+Os de projetos também usam o serviço de demos local (`workers/demos`). Uma vez, com o Supabase no ar:
+
+```bash
+npm ci --prefix workers/demos
+scripts/demos-dev-vars.sh   # gera workers/demos/.dev.vars apontando para o Supabase local
+```
+
+e `NEXT_PUBLIC_DEMOS_URL=http://demos.localhost:8787` no `.env.local`. O Playwright sobe o Worker sozinho (porta 8787).
+
 | Script | O que faz |
 |---|---|
 | `npm run dev` | Servidor de desenvolvimento |
