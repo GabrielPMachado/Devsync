@@ -23,7 +23,7 @@ export type ProjectCardData = {
 export type ProjectPageData = ProjectCardData & { authorId: string; repoUrl: string | null; siteUrl: string | null; updatedAt: string };
 
 const CARD = `id, slug, title, description_md, likes_count, comments_count, created_at, updated_at, author_id, repo_url, site_url,
-  author:profiles(username, display_name, avatar_url),
+  author:profiles!projects_author_id_fkey(username, display_name, avatar_url),
   demo:demos(id, kind, status, url, version),
   project_tags(tags(slug))`;
 
@@ -73,27 +73,30 @@ async function client() {
 export async function listProjects(limit = 30): Promise<ProjectCardData[]> {
   const supabase = await client();
   if (!supabase) return [];
-  const { data } = await supabase.from("projects").select(CARD).order("created_at", { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from("projects").select(CARD).order("created_at", { ascending: false }).limit(limit);
+  if (error) throw new Error(`Falha ao listar projetos: ${error.message}`);
   return ((data ?? []) as unknown as Row[]).map(toPage);
 }
 
 export async function getProject(slug: string): Promise<ProjectPageData | null> {
   const supabase = await client();
   if (!supabase) return null;
-  const { data } = await supabase.from("projects").select(CARD).eq("slug", slug).maybeSingle();
+  const { data, error } = await supabase.from("projects").select(CARD).eq("slug", slug).maybeSingle();
+  if (error) throw new Error(`Falha ao ler o projeto: ${error.message}`);
   return data ? toPage(data as unknown as Row) : null;
 }
 
 export async function getComments(projectId: string): Promise<CommentRow[]> {
   const supabase = await client();
   if (!supabase) return [];
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("comments")
-    .select("id, parent_id, body_md, created_at, author_id, author:profiles(username, display_name, avatar_url)")
+    .select("id, parent_id, body_md, created_at, author_id, author:profiles!comments_author_id_fkey(username, display_name, avatar_url)")
     .eq("target_type", "project")
     .eq("target_id", projectId)
     .order("created_at", { ascending: true })
     .limit(500);
+  if (error) throw new Error(`Falha ao ler os comentários: ${error.message}`);
   type C = { id: string; parent_id: string | null; body_md: string; created_at: string; author_id: string; author: Row["author"] };
   return ((data ?? []) as unknown as C[]).map((c) => ({
     id: c.id,

@@ -24,7 +24,7 @@ export async function loadDemoView(demoId: string): Promise<DemoView | null> {
   const supabase = createClient();
   const [{ data: demo }, { data: project }] = await Promise.all([
     supabase.from("demos").select("id, kind, status, url").eq("id", demoId).maybeSingle(),
-    supabase.from("projects").select("title, slug, author:profiles(username, display_name, avatar_url)").eq("demo_id", demoId).limit(1).maybeSingle(),
+    supabase.from("projects").select("title, slug, author:profiles!projects_author_id_fkey(username, display_name, avatar_url)").eq("demo_id", demoId).limit(1).maybeSingle(),
   ]);
   if (!demo) return null;
   const p = project as unknown as { title: string; slug: string; author: { username: string | null; display_name: string | null; avatar_url: string | null } | null } | null;
