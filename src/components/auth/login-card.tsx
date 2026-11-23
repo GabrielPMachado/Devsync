@@ -9,14 +9,15 @@ import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 
 const RESEND_SECONDS = 60;
+const IDLE: MagicLinkState = { status: "idle" };
 
 type Props = { next: string; notice: "link" | "github" | "config" | null };
 
 export function LoginCard({ next, notice }: Props) {
   const t = useTranslations("Auth");
-  const [state, action, pending] = useActionState<MagicLinkState, FormData>(sendMagicLink, { status: "idle" });
+  const [state, action, pending] = useActionState<MagicLinkState, FormData>(sendMagicLink, IDLE);
   const [editing, setEditing] = useState(false);
-  const [lastSent, setLastSent] = useState<MagicLinkState | null>(null);
+  const [lastSent, setLastSent] = useState<MagicLinkState>(IDLE);
   const [seconds, setSeconds] = useState(0);
 
   // Cada envio novo reabre a tela "Confira seu e-mail" e reinicia a contagem.

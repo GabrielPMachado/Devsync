@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { BrandPanel } from "@/components/auth/brand-panel";
 import { LoginCard } from "@/components/auth/login-card";
 import { Logo } from "@/components/brand/logo";
@@ -14,7 +15,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: `${t("title")} · Devsync` };
 }
 
-export default async function EntrarPage({ searchParams }: PageProps<"/entrar">) {
+type SearchParams = PageProps<"/entrar">["searchParams"];
+
+/** Lê a URL e a sessão, então fica dentro de <Suspense>; o resto da tela é estático. */
+async function Card({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const next = safeNext(typeof params.next === "string" ? params.next : null);
   const go = routeFor("auth", await getViewer(), next);
@@ -22,6 +26,18 @@ export default async function EntrarPage({ searchParams }: PageProps<"/entrar">)
 
   const erro = typeof params.erro === "string" ? params.erro : null;
   const notice = !getSupabaseEnv() ? "config" : erro === "link" || erro === "github" ? erro : null;
+  return <LoginCard next={next} notice={notice} />;
+}
+
+function CardSlot({ searchParams }: { searchParams: SearchParams }) {
+  return (
+    <Suspense fallback={<LoginCard next="/" notice={null} />}>
+      <Card searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+export default async function EntrarPage({ searchParams }: PageProps<"/entrar">) {
   const t = await getTranslations("Auth");
 
   return (
@@ -40,11 +56,11 @@ export default async function EntrarPage({ searchParams }: PageProps<"/entrar">)
             <p className="text-base leading-relaxed text-text-muted">{t("brandMobileText")}</p>
           </div>
           <div className="mt-auto">
-            <LoginCard next={next} notice={notice} />
+            <CardSlot searchParams={searchParams} />
           </div>
         </div>
         <div className="hidden w-full max-w-[440px] rounded-2xl border border-border-default bg-bg-surface p-10 shadow-2xl shadow-black/40 lg:block">
-          <LoginCard next={next} notice={notice} />
+          <CardSlot searchParams={searchParams} />
         </div>
       </div>
     </main>

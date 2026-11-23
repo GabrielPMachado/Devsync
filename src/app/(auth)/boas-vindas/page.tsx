@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 import { routeFor } from "@/lib/auth/route-for";
@@ -14,20 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BoasVindasPage() {
-  const viewer = await getViewer();
-  const go = routeFor("onboarding", viewer);
-  if (go || !viewer) redirect(go ?? "/entrar");
-
-  const supabase = await createClient();
-  const [{ data: tags }, { data: claims }] = await Promise.all([
-    supabase.from("tags").select("slug, name").order("name"),
-    supabase.auth.getClaims(),
-  ]);
-  // Sugestão: o @ do GitHub, se for válido aqui.
-  const meta = (claims?.claims?.user_metadata ?? {}) as { user_name?: string };
-  const fromGithub = meta.user_name ? validateUsername(meta.user_name) : null;
   const t = await getTranslations("Onboarding");
-
   return (
     <div className="flex flex-1 flex-col">
       <header className="flex items-center px-4 py-4 sm:px-8 sm:py-5">
@@ -40,14 +28,35 @@ export default async function BoasVindasPage() {
             <h1 className="font-display text-2xl font-bold text-text-primary">{t("title")}</h1>
             <p className="text-sm leading-relaxed text-text-muted">{t("subtitle")}</p>
           </div>
-          <OnboardingForm
-            initialName={viewer.displayName ?? ""}
-            initialUsername={fromGithub?.ok ? fromGithub.username : ""}
-            avatarUrl={viewer.avatarUrl}
-            tags={tags ?? []}
-          />
+          <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-bg-elevated" />}>
+            <Form />
+          </Suspense>
         </div>
       </main>
     </div>
+  );
+}
+
+/** Lê a sessão e as tags, então fica dentro de <Suspense>. */
+async function Form() {
+  const viewer = await getViewer();
+  const go = routeFor("onboarding", viewer);
+  if (go || !viewer) redirect(go ?? "/entrar");
+
+  const supabase = await createClient();
+  const [{ data: tags }, { data: claims }] = await Promise.all([
+    supabase.from("tags").select("slug, name").order("name"),
+    supabase.auth.getClaims(),
+  ]);
+  // Sugestão: o @ do GitHub, se for válido aqui.
+  const meta = (claims?.claims?.user_metadata ?? {}) as { user_name?: string };
+  const fromGithub = meta.user_name ? validateUsername(meta.user_name) : null;
+  return (
+    <OnboardingForm
+      initialName={viewer.displayName ?? ""}
+      initialUsername={fromGithub?.ok ? fromGithub.username : ""}
+      avatarUrl={viewer.avatarUrl}
+      tags={tags ?? []}
+    />
   );
 }
