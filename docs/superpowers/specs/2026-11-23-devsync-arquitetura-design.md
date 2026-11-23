@@ -1,7 +1,7 @@
 # Devsync: design da arquitetura
 
 **Data:** 2026-11-23
-**Status:** rascunho para aprovação
+**Status:** aprovado em 2026-11-23 (seção de custos aguardando confirmação)
 **Autor do produto:** Gabriel (dev solo)
 
 > Connect. Share. Develop.
@@ -239,15 +239,39 @@ reports(id, reporter_id, target_type, target_id, reason, status, created_at)
 
 **Fase 3 em diante:** inglês, demos que rodam no navegador do visitante (Sandpack/WebContainers) para frontend, preview de apps mobile (versão web em moldura de celular e QR code), mensagens privadas, vagas. Execução de código em servidor só quando houver receita.
 
-## 7. Decisões tomadas pelo Gabriel
+## 7. Custos
+
+**Desenvolvimento e beta fechado: US$ 0 por mês.**
+- Vercel Hobby, Supabase Free e Cloudflare Free (R2 e Workers).
+- Endereços gratuitos enquanto não houver domínio: `*.vercel.app` para o site e `*.workers.dev` para as demos.
+- Supabase Free pausa o projeto depois de 7 dias sem uso. Em desenvolvimento ativo isso não pesa.
+- Google Safe Browsing (gratuito para uso não comercial) durante o desenvolvimento.
+- Filtro de tom com IA desligado por configuração até o lançamento, porque a API não tem plano gratuito.
+- Custo único inevitável ao lançar: os dois domínios (`devsync.app` e `devsync-demos.app`), cerca de US$ 30 por ano no total.
+
+**Lançamento público: teto de US$ 100 por mês.**
+| Item | Estimativa |
+|---|---|
+| Vercel Pro (uso comercial) | US$ 20 |
+| Supabase Pro (sem pausa, backups) | US$ 25 |
+| Cloudflare Workers Paid (filas e mais execuções) | US$ 5 |
+| Domínios (rateio mensal) | US$ 3 |
+| Claude Haiku para o filtro de tom | US$ 5 a 15, conforme o volume |
+| Google Web Risk (versão comercial do Safe Browsing) | US$ 0 dentro da cota gratuita |
+| **Total estimado** | **US$ 58 a 68** |
+
+A folga até US$ 100 cobre crescimento de armazenamento e tráfego. Os preços precisam ser conferidos nos sites oficiais na hora de assinar.
+
+## 8. Decisões tomadas pelo Gabriel
 - Produto real com ambição mundial, não projeto de portfólio.
 - Centro: demos, estudos estilo Stack Overflow (sem poluição, sem respostas antigas no topo, sem grosseria) e comentários.
 - Demo nível 2: link embutido ou arquivos enviados, sempre abrindo por cima da Devsync, nunca em outra guia. Mobile fica para o futuro.
 - Supabase como backend.
 - App Windows com Tauri.
 - Nasce em pt-BR.
+- Orçamento: US$ 0 agora, cerca de US$ 100 por mês quando o projeto estiver avançado.
 
-## 8. Decisões técnicas propostas por mim (revisar)
+## 9. Decisões técnicas propostas por mim (revisar)
 - Next.js na Vercel, Tailwind, next-intl, Shiki.
 - Cloudflare R2 + Worker para as demos, em domínio separado.
 - Login pelo GitHub e por link mágico.
@@ -264,7 +288,7 @@ reports(id, reporter_id, target_type, target_id, reason, status, created_at)
 - Só o autor edita, com histórico de revisões.
 - URLs sem prefixo para português.
 
-## 9. Fica a critério de quem constrói
+## 10. Fica a critério de quem constrói
 - Estrutura de pastas do repositório e organização dos componentes.
 - Ferramentas de teste (sugestão: Vitest e Playwright) e CI no GitHub Actions.
 - Detalhes das políticas de RLS, índices e migrações.
