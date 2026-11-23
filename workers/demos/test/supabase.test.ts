@@ -38,7 +38,7 @@ describe("cliente Supabase", () => {
     const f = fakeFetch(() =>
       Response.json({ code: "DS001", message: "Limite de 5 envios de demo por dia" }, { status: 400 }),
     );
-    const err = await userRest(env, "jwt", f.fetch).insert("demos", {}).catch((e) => e);
+    const err = (await userRest(env, "jwt", f.fetch).insert("demos", {}).catch((e: unknown) => e)) as SupabaseError;
     expect(err).toBeInstanceOf(SupabaseError);
     expect(err.code).toBe("DS001");
     expect(err.status).toBe(400);
