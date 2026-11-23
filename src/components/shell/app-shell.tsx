@@ -79,12 +79,12 @@ function AccountButtons({ viewer }: { viewer: Awaited<ReturnType<typeof getViewe
         <Bell className="size-5" aria-hidden="true" />
       </Link>
       <span className="hidden md:inline-flex">
-        <Link href="/projetos" className={buttonClasses({ size: "sm" })}>
+        <Link href="/projetos/novo" className={buttonClasses({ size: "sm" })}>
           <Plus className="size-4" aria-hidden="true" />
           {t("publish")}
         </Link>
       </span>
-      <Link href="/projetos" className={`${icon} md:hidden`} aria-label={t("publish")}>
+      <Link href="/projetos/novo" className={`${icon} md:hidden`} aria-label={t("publish")}>
         <Plus className="size-5" aria-hidden="true" />
       </Link>
       <span className="hidden md:inline-flex">
