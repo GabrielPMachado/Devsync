@@ -3,6 +3,7 @@ export const TITLE_MAX = 120;
 export const DESCRIPTION_MAX = 20_000;
 export const TAGS_MIN = 1;
 export const TAGS_MAX = 5;
+export const COMMENT_MAX = 5_000;
 
 export type ProjectInput = { title: string; description: string; tags: string[]; repoUrl: string; siteUrl: string };
 
