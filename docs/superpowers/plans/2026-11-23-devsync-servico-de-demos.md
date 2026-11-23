@@ -34,7 +34,7 @@
 ## Review Focus
 
 - Zip com `../`, caminho absoluto, `\`, link simbólico, entrada criptografada, zip64 ou nomes duplicados: recusado com motivo (Task 3).
-- Zip bomb (tamanho descompactado declarado gigante ou mentiroso): recusar acima de 100 MB descompactados e conferir o tamanho real ao inflar (Task 3).
+- Zip bomb (tamanho descompactado declarado gigante ou mentiroso): recusar acima de 60 MB descompactados e conferir o tamanho real ao inflar (Task 3).
 - Zip do macOS com `__MACOSX/` e `.DS_Store`: ignorar em silêncio, não recusar (Task 3).
 - SPA com rota sem extensão (`/perfil/ana`) recebe o `index.html`; arquivo com extensão que não existe recebe 404 (Task 4).
 - Link de demo que redireciona para `http:` ou que só bloqueia via CSP `frame-ancestors` com `'self'`: não embutível (Task 6).
@@ -97,7 +97,7 @@ supabase/tests/database/09_demo_service.test.sql
 
 **Produces:**
 - `ALLOWED_EXTENSIONS` e `contentTypeFor(path): string`.
-- `LIMITS = { maxZipBytes: 25 * 1024 * 1024, maxFiles: 500, maxTotalBytes: 100 * 1024 * 1024 }`.
+- `LIMITS = { maxZipBytes: 25 * 1024 * 1024, maxFiles: 500, maxTotalBytes: 60 * 1024 * 1024 }`.
 - `readDemoZip(bytes: Uint8Array): { ok: true, files: { path: string, data: Uint8Array }[] } | { ok: false, reason: ZipRejection }` com `ZipRejection = 'too_large' | 'not_a_zip' | 'unsupported_zip' | 'encrypted' | 'too_many_files' | 'unsafe_path' | 'symlink' | 'extension_not_allowed' | 'duplicate_path' | 'no_index' | 'too_big_uncompressed' | 'corrupt'`.
 - Algoritmo: achar EOCD, ler diretório central (nome, método 0/8, flags, tamanhos, atributo externo, offset), recusar antes de inflar; pular `__MACOSX/`, `.DS_Store`, `Thumbs.db` e diretórios; tirar a pasta única de topo se `index.html` não estiver na raiz e todos os arquivos estiverem nela; inflar com `inflateSync` do fflate e conferir o tamanho real com o declarado e o CRC-32.
 

@@ -20,7 +20,7 @@
       { "binding": "LINK_QUEUE", "queue": "demo-links" }
     ],
     "consumers": [
-      { "queue": "demo-zips", "max_batch_size": 1, "max_retries": 3 },
+      { "queue": "demo-zips", "max_batch_size": 1, "max_retries": 4 },
       { "queue": "demo-links", "max_batch_size": 5, "max_retries": 2 }
     ]
   },

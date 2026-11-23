@@ -10,6 +10,7 @@ interface DemoRow {
 }
 
 const CACHE_MS = 30_000;
+const CACHE_MAX = 5_000;
 const cache = new Map<string, { row: DemoRow | null; at: number }>();
 
 export function clearDemoCache(): void {
@@ -36,6 +37,8 @@ async function lookup(env: Env, demoId: string, deps: Deps): Promise<DemoRow | n
     `id=eq.${demoId}&select=id,kind,status,storage_prefix`,
   );
   const row = rows[0] ?? null;
+  // Subdomínios aleatórios não fazem o cache crescer sem limite.
+  if (cache.size >= CACHE_MAX) cache.clear();
   cache.set(demoId, { row, at: deps.now() });
   return row;
 }
@@ -117,6 +120,8 @@ export async function serveDemo(req: Request, env: Env, demoId: string, deps: De
   }
 
   const headers = securityHeaders(env);
+  // SVG/XML abertos fora de iframe (navegador sem Sec-Fetch-Dest) não rodam script.
+  if (!isHtml(resolved)) headers.set("content-security-policy", `${headers.get("content-security-policy")}; sandbox`);
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
   headers.set("cache-control", isHtml(resolved) ? "no-cache" : "public, max-age=60");

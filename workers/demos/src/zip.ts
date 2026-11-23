@@ -1,10 +1,11 @@
-import { inflateSync } from "fflate";
+import { Inflate } from "fflate";
 import { ALLOWED_EXTENSIONS, extensionOf } from "./content-types";
 
 export const LIMITS = {
   maxZipBytes: 25 * 1024 * 1024,
   maxFiles: 500,
-  maxTotalBytes: 100 * 1024 * 1024,
+  // Tudo cabe na memória do isolate (128 MB) junto com o zip de 25 MB.
+  maxTotalBytes: 60 * 1024 * 1024,
 } as const;
 
 export type ZipRejection =
@@ -27,6 +28,14 @@ export interface DemoFile {
 }
 
 export type ZipResult = { ok: true; files: DemoFile[] } | { ok: false; reason: ZipRejection };
+
+/** Arquivo já validado pelo diretório central; `read()` infla e confere o CRC (lança ZipReadError). */
+export interface LazyDemoFile {
+  path: string;
+  read(): Uint8Array;
+}
+
+export type OpenedZip = { ok: true; files: LazyDemoFile[] } | { ok: false; reason: ZipRejection };
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -56,7 +65,7 @@ interface Entry {
   offset: number;
 }
 
-class Reject extends Error {
+export class ZipReadError extends Error {
   constructor(readonly reason: ZipRejection) {
     super(reason);
   }
@@ -75,28 +84,28 @@ function findEocd(view: DataView): number {
 function readCentralDirectory(bytes: Uint8Array): Entry[] {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const eocd = findEocd(view);
-  if (eocd < 0) throw new Reject("not_a_zip");
+  if (eocd < 0) throw new ZipReadError("not_a_zip");
   const count = view.getUint16(eocd + 10, true);
   const cdOffset = view.getUint32(eocd + 16, true);
   if (count === 0xffff || cdOffset === 0xffffffff || view.getUint16(eocd + 4, true) !== 0) {
-    throw new Reject("unsupported_zip");
+    throw new ZipReadError("unsupported_zip");
   }
   // Teto bruto antes de olhar cada entrada (o lixo ignorado também conta aqui).
-  if (count > LIMITS.maxFiles * 2) throw new Reject("too_many_files");
+  if (count > LIMITS.maxFiles * 2) throw new ZipReadError("too_many_files");
 
   const decoder = new TextDecoder();
   const entries: Entry[] = [];
   let p = cdOffset;
   for (let i = 0; i < count; i++) {
-    if (p + 46 > bytes.length || view.getUint32(p, true) !== 0x02014b50) throw new Reject("corrupt");
+    if (p + 46 > bytes.length || view.getUint32(p, true) !== 0x02014b50) throw new ZipReadError("corrupt");
     const nameLen = view.getUint16(p + 28, true);
     const extraLen = view.getUint16(p + 30, true);
     const commentLen = view.getUint16(p + 32, true);
-    if (p + 46 + nameLen > bytes.length) throw new Reject("corrupt");
+    if (p + 46 + nameLen > bytes.length) throw new ZipReadError("corrupt");
     const csize = view.getUint32(p + 20, true);
     const usize = view.getUint32(p + 24, true);
     const offset = view.getUint32(p + 42, true);
-    if (csize === 0xffffffff || usize === 0xffffffff || offset === 0xffffffff) throw new Reject("unsupported_zip");
+    if (csize === 0xffffffff || usize === 0xffffffff || offset === 0xffffffff) throw new ZipReadError("unsupported_zip");
     entries.push({
       name: decoder.decode(bytes.subarray(p + 46, p + 46 + nameLen)),
       flags: view.getUint16(p + 8, true),
@@ -127,64 +136,93 @@ function isJunk(name: string): boolean {
   return segments[0] === "__MACOSX" || JUNK.has(segments[segments.length - 1]!);
 }
 
+const CHUNK = 16 * 1024;
+
+/**
+ * Infla em pedaços e para assim que a saída passa do tamanho declarado. Um zip
+ * bomb que mente o tamanho é recusado depois de poucos pedaços, sem gastar CPU
+ * inflando o resto.
+ */
+function inflateLimited(raw: Uint8Array, declared: number): Uint8Array {
+  const out = new Uint8Array(declared);
+  let size = 0;
+  const inflater = new Inflate((chunk) => {
+    if (size + chunk.length > declared) throw new ZipReadError("corrupt");
+    out.set(chunk, size);
+    size += chunk.length;
+  });
+  try {
+    if (raw.length === 0) inflater.push(raw, true);
+    for (let i = 0; i < raw.length; i += CHUNK) inflater.push(raw.subarray(i, i + CHUNK), i + CHUNK >= raw.length);
+  } catch (err) {
+    if (err instanceof ZipReadError) throw err;
+    throw new ZipReadError("corrupt");
+  }
+  return out.subarray(0, size);
+}
+
 function inflate(bytes: Uint8Array, e: Entry): Uint8Array {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (e.offset + 30 > bytes.length || view.getUint32(e.offset, true) !== 0x04034b50) throw new Reject("corrupt");
+  if (e.offset + 30 > bytes.length || view.getUint32(e.offset, true) !== 0x04034b50) throw new ZipReadError("corrupt");
   const start = e.offset + 30 + view.getUint16(e.offset + 26, true) + view.getUint16(e.offset + 28, true);
-  if (start + e.csize > bytes.length) throw new Reject("corrupt");
+  if (start + e.csize > bytes.length) throw new ZipReadError("corrupt");
   const raw = bytes.subarray(start, start + e.csize);
-  let data: Uint8Array;
-  if (e.method === 0) {
-    data = raw;
-  } else {
-    // Buffer com um byte a mais: se encher, o arquivo é maior que o declarado.
-    // O fflate trunca no tamanho do buffer, então um zip bomb não estoura a memória.
-    try {
-      data = inflateSync(raw, { out: new Uint8Array(e.usize + 1) });
-    } catch {
-      throw new Reject("corrupt");
-    }
-  }
-  if (data.length !== e.usize || crc32(data) !== e.crc) throw new Reject("corrupt");
+  const data = e.method === 0 ? raw : inflateLimited(raw, e.usize);
+  if (data.length !== e.usize || crc32(data) !== e.crc) throw new ZipReadError("corrupt");
   return data;
 }
 
-/** Valida e descompacta o zip de uma demo. Tudo é checado antes de inflar. */
-export function readDemoZip(bytes: Uint8Array): ZipResult {
+/** Valida o zip de uma demo pelo diretório central. Os arquivos são inflados um a um, sob demanda. */
+export function openDemoZip(bytes: Uint8Array): OpenedZip {
   try {
-    if (bytes.length > LIMITS.maxZipBytes) throw new Reject("too_large");
+    if (bytes.length > LIMITS.maxZipBytes) throw new ZipReadError("too_large");
     const all = readCentralDirectory(bytes);
 
     const files: Entry[] = [];
     const seen = new Set<string>();
     let total = 0;
     for (const e of all) {
-      if (isUnsafePath(e.name)) throw new Reject("unsafe_path");
-      if (e.flags & 1) throw new Reject("encrypted");
-      if (e.madeByUnix && (e.mode & 0o170000) === 0o120000) throw new Reject("symlink");
+      if (isUnsafePath(e.name)) throw new ZipReadError("unsafe_path");
+      if (e.flags & 1) throw new ZipReadError("encrypted");
+      if (e.madeByUnix && (e.mode & 0o170000) === 0o120000) throw new ZipReadError("symlink");
       if (e.name.endsWith("/") || isJunk(e.name)) continue;
-      if (e.method !== 0 && e.method !== 8) throw new Reject("unsupported_zip");
+      if (e.method !== 0 && e.method !== 8) throw new ZipReadError("unsupported_zip");
       const ext = extensionOf(e.name);
-      if (!ext || !ALLOWED_EXTENSIONS.has(ext)) throw new Reject("extension_not_allowed");
-      if (seen.has(e.name)) throw new Reject("duplicate_path");
+      if (!ext || !ALLOWED_EXTENSIONS.has(ext)) throw new ZipReadError("extension_not_allowed");
+      if (seen.has(e.name)) throw new ZipReadError("duplicate_path");
       seen.add(e.name);
       total += e.usize;
-      if (total > LIMITS.maxTotalBytes) throw new Reject("too_big_uncompressed");
+      if (total > LIMITS.maxTotalBytes) throw new ZipReadError("too_big_uncompressed");
       files.push(e);
     }
-    if (files.length > LIMITS.maxFiles) throw new Reject("too_many_files");
+    if (files.length > LIMITS.maxFiles) throw new ZipReadError("too_many_files");
 
     let prefix = "";
     if (!seen.has("index.html")) {
       const top = new Set(files.map((f) => (f.name.includes("/") ? f.name.split("/")[0] : "")));
       const [dir] = [...top];
-      if (top.size !== 1 || !dir || !seen.has(`${dir}/index.html`)) throw new Reject("no_index");
+      if (top.size !== 1 || !dir || !seen.has(`${dir}/index.html`)) throw new ZipReadError("no_index");
       prefix = `${dir}/`;
     }
 
-    return { ok: true, files: files.map((e) => ({ path: e.name.slice(prefix.length), data: inflate(bytes, e) })) };
+    return {
+      ok: true,
+      files: files.map((e) => ({ path: e.name.slice(prefix.length), read: () => inflate(bytes, e) })),
+    };
   } catch (err) {
-    if (err instanceof Reject) return { ok: false, reason: err.reason };
+    if (err instanceof ZipReadError) return { ok: false, reason: err.reason };
+    throw err;
+  }
+}
+
+/** Valida e descompacta tudo de uma vez (útil para testes e zips pequenos). */
+export function readDemoZip(bytes: Uint8Array): ZipResult {
+  const opened = openDemoZip(bytes);
+  if (!opened.ok) return opened;
+  try {
+    return { ok: true, files: opened.files.map((f) => ({ path: f.path, data: f.read() })) };
+  } catch (err) {
+    if (err instanceof ZipReadError) return { ok: false, reason: err.reason };
     throw err;
   }
 }

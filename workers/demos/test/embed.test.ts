@@ -48,6 +48,12 @@ describe("checkEmbeddable", () => {
     expect(r.embeddable).toBe(true);
   });
 
+  it("fonte sem esquema não cobre site http", async () => {
+    const f = fakeFetch(() => new Response("ok", { headers: { "content-security-policy": "frame-ancestors localhost:3000" } }));
+    const r = await checkEmbeddable("https://ana.dev", "http://localhost:3000", { fetch: f.fetch });
+    expect(r.reason).toBe("csp_frame_ancestors");
+  });
+
   it("curinga de subdomínio não cobre o domínio raiz", async () => {
     const r = await check("https://ana.dev", page({ "content-security-policy": "frame-ancestors https://*.devsync.app" }));
     expect(r.reason).toBe("csp_frame_ancestors");
@@ -93,8 +99,19 @@ describe("checkEmbeddable", () => {
         ? Response.json({ matches: [{ threatType: "SOCIAL_ENGINEERING" }] })
         : new Response("ok"), "k");
     expect(r).toMatchObject({ embeddable: false, reason: "unsafe" });
-    const sb = JSON.parse(r.calls[0]!.body!);
+    const sb = JSON.parse(r.calls.find((c) => c.url.includes("safebrowsing"))!.body!);
     expect(sb.threatInfo.threatEntries).toEqual([{ url: "https://mal.dev/" }]);
+  });
+
+  it("Safe Browsing checa os redirecionamentos também", async () => {
+    const r = await check("https://ok.dev", (c) => {
+      if (c.url.includes("safebrowsing")) {
+        const urls = JSON.parse(c.body!).threatInfo.threatEntries.map((e: { url: string }) => e.url);
+        return Response.json(urls.includes("https://mal.dev/") ? { matches: [{}] } : {});
+      }
+      return c.url === "https://ok.dev/" ? new Response(null, { status: 302, headers: { location: "https://mal.dev/" } }) : new Response("ok");
+    }, "k");
+    expect(r.reason).toBe("unsafe");
   });
 
   it("Safe Browsing sem match segue para a checagem", async () => {

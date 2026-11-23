@@ -63,6 +63,21 @@ describe("processZip", () => {
     expect(await env.DEMOS_BUCKET.head(`uploads/${ID}/1.zip`)).toBeNull();
   });
 
+  it("arquivo corrompido no meio: apaga o que já gravou e recusa", async () => {
+    await env.DEMOS_BUCKET.put(`uploads/${ID}/1.zip`, makeZip([...SITE, { name: "z.js", data: "a".repeat(1000), declaredSize: 10 }]));
+    await processZip({ demoId: ID, version: 1 }, env, deps);
+    expect((await env.DEMOS_BUCKET.list({ prefix: `demos/${ID}/` })).objects).toHaveLength(0);
+    expect(JSON.parse(patches()[0]!.body!)).toEqual({ status: "unavailable", rejection_reason: "corrupt" });
+  });
+
+  it("depois das tentativas da fila, desiste e marca processing_failed", async () => {
+    await env.DEMOS_BUCKET.put(`uploads/${ID}/1.zip`, makeZip(SITE));
+    await processZip({ demoId: ID, version: 1 }, env, deps, 5);
+    expect(JSON.parse(patches()[0]!.body!)).toEqual({ status: "unavailable", rejection_reason: "processing_failed" });
+    expect((await env.DEMOS_BUCKET.list({ prefix: `demos/${ID}/` })).objects).toHaveLength(0);
+    expect(await env.DEMOS_BUCKET.head(`uploads/${ID}/1.zip`)).toBeNull();
+  });
+
   it("zip sumiu (reentrega da fila): não faz nada", async () => {
     await processZip({ demoId: ID, version: 1 }, env, deps);
     expect(patches()).toHaveLength(0);

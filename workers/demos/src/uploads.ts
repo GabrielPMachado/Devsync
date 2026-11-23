@@ -57,7 +57,12 @@ export async function receiveUpload(req: Request, env: Env, demoId: string, vers
 
   const key = zipKey(demoId, version);
   if (await env.DEMOS_BUCKET.head(key)) return errorResponse(409, "Este envio já foi feito");
-  await env.DEMOS_BUCKET.put(key, req.body, { httpMetadata: { contentType: "application/zip" } });
+  // Condicional: dois PUTs simultâneos não sobrescrevem um ao outro.
+  const saved = await env.DEMOS_BUCKET.put(key, req.body, {
+    httpMetadata: { contentType: "application/zip" },
+    onlyIf: { etagDoesNotMatch: "*" },
+  });
+  if (!saved) return errorResponse(409, "Este envio já foi feito");
   return json({ ok: true }, 201);
 }
 

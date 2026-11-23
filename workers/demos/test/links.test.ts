@@ -57,7 +57,7 @@ describe("POST /demos/:id/verify", () => {
     expect(select.url).toContain("owner_id=eq.ana");
     expect(select.headers.get("authorization")).toBe("Bearer jwt-ana");
     const [patch] = patches();
-    expect(patch!.url).toBe(`https://sb.test/rest/v1/demos?id=eq.${ID}&status=neq.blocked`);
+    expect(patch!.url).toBe(`https://sb.test/rest/v1/demos?id=eq.${ID}&status=neq.blocked&url=eq.https%3A%2F%2Fana.dev`);
     expect(patch!.headers.get("authorization")).toBe("Bearer service-key");
     expect(JSON.parse(patch!.body!)).toEqual({ status: "live", embeddable: true, checked_at: new Date(NOW).toISOString() });
   });
@@ -103,7 +103,7 @@ describe("checagem diária", () => {
     siteHeaders = { "x-frame-options": "SAMEORIGIN" };
     await recheckLink({ demoId: ID }, env, deps);
     const [patch] = patches();
-    expect(patch!.url).toBe(`https://sb.test/rest/v1/demos?id=eq.${ID}&status=neq.blocked`);
+    expect(patch!.url).toBe(`https://sb.test/rest/v1/demos?id=eq.${ID}&status=neq.blocked&url=eq.https%3A%2F%2Fana.dev`);
     expect(JSON.parse(patch!.body!)).toMatchObject({ status: "unavailable", embeddable: false });
   });
 

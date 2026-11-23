@@ -39,7 +39,7 @@ export async function handleFetch(req: Request, env: Env, deps: Deps): Promise<R
 export async function handleQueue(batch: MessageBatch<ZipMessage | LinkMessage>, env: Env, deps: Deps): Promise<void> {
   for (const msg of batch.messages) {
     try {
-      if (batch.queue.startsWith("demo-zips")) await processZip(msg.body as ZipMessage, env, deps);
+      if (batch.queue.startsWith("demo-zips")) await processZip(msg.body as ZipMessage, env, deps, msg.attempts);
       else if (batch.queue.startsWith("demo-links")) await recheckLink(msg.body as LinkMessage, env, deps);
       msg.ack();
     } catch (err) {

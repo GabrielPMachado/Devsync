@@ -68,7 +68,9 @@ describe("serveDemo", () => {
     const res = await get("/assets/a.js", { "sec-fetch-dest": "script" });
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
-    expect((await get("/logo.svg", { "sec-fetch-dest": "empty" })).status).toBe(200);
+    const svg = await get("/logo.svg", { "sec-fetch-dest": "empty" });
+    expect(svg.status).toBe(200);
+    expect(svg.headers.get("content-security-policy")).toBe("frame-ancestors https://devsync.app; sandbox");
   });
 
   it("recusa registrar service worker", async () => {

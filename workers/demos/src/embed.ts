@@ -50,10 +50,9 @@ function sourceMatches(source: string, site: URL): boolean {
   const m = /^(?:([a-z][a-z0-9+.-]*):\/\/)?(\*\.)?([a-z0-9.-]+|\*)(?::(\d+|\*))?(?:\/.*)?$/.exec(s);
   if (!m) return false;
   const [, scheme, wildcard, host, port] = m;
-  if (scheme) {
-    const ok = `${scheme}:` === site.protocol || (scheme === "http" && site.protocol === "https:");
-    if (!ok) return false;
-  }
+  // Sem esquema, vale o da página embutida (sempre https aqui).
+  const effective = scheme ?? "https";
+  if (!(`${effective}:` === site.protocol || (effective === "http" && site.protocol === "https:"))) return false;
   const siteHost = site.hostname.toLowerCase();
   // "scheme://*" cobre qualquer host; "*.x.com" cobre só subdomínios.
   if (host !== "*" && (wildcard ? !siteHost.endsWith(`.${host}`) : siteHost !== host)) return false;
@@ -86,7 +85,8 @@ function headersBlock(headers: Headers, site: URL): EmbedReason | null {
   return xfo.includes("deny") || xfo.includes("sameorigin") ? "x_frame_options" : null;
 }
 
-async function isUnsafe(url: string, key: string, f: typeof fetch): Promise<boolean> {
+/** Falha aberta: erro da API do Safe Browsing não impede a publicação. */
+async function isUnsafe(urls: string[], key: string, f: typeof fetch): Promise<boolean> {
   const res = await f(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${encodeURIComponent(key)}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -96,7 +96,7 @@ async function isUnsafe(url: string, key: string, f: typeof fetch): Promise<bool
         threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
         platformTypes: ["ANY_PLATFORM"],
         threatEntryTypes: ["URL"],
-        threatEntries: [{ url }],
+        threatEntries: urls.map((url) => ({ url })),
       },
     }),
   });
@@ -111,11 +111,8 @@ export async function checkEmbeddable(rawUrl: string, siteUrl: string, deps: Emb
   if ("reason" in first) return no(first.reason);
   const site = new URL(siteUrl);
 
-  if (deps.safeBrowsingKey && (await isUnsafe(first.url.href, deps.safeBrowsingKey, deps.fetch).catch(() => false))) {
-    return no("unsafe");
-  }
-
   let url = first.url;
+  const hops = [url.href];
   for (let hop = 0; ; hop++) {
     let res: Response;
     try {
@@ -135,10 +132,16 @@ export async function checkEmbeddable(rawUrl: string, siteUrl: string, deps: Emb
       const next = urlProblem(new URL(location, url).href);
       if ("reason" in next) return no(next.reason);
       url = next.url;
+      hops.push(url.href);
       continue;
     }
     if (!res.ok) return no("http_error");
     const blocked = headersBlock(res.headers, site);
-    return blocked ? no(blocked) : { embeddable: true };
+    if (blocked) return no(blocked);
+    // Checa todos os endereços do caminho, inclusive os redirecionamentos.
+    if (deps.safeBrowsingKey && (await isUnsafe(hops, deps.safeBrowsingKey, deps.fetch).catch(() => false))) {
+      return no("unsafe");
+    }
+    return { embeddable: true };
   }
 }

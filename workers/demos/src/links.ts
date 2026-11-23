@@ -14,9 +14,12 @@ interface LinkDemo {
 const check = (url: string, env: Env, deps: Deps) =>
   checkEmbeddable(url, env.SITE_URL, { fetch: deps.fetch, safeBrowsingKey: env.SAFE_BROWSING_API_KEY || undefined });
 
-/** Grava o resultado sem sobrescrever um bloqueio da moderação. */
-async function saveResult(env: Env, deps: Deps, demoId: string, result: EmbedResult): Promise<void> {
-  await serviceRest(env, deps.fetch).update("demos", `id=eq.${demoId}&status=neq.blocked`, {
+/** Grava o resultado sem sobrescrever um bloqueio da moderação nem uma url trocada no meio. */
+async function saveResult(env: Env, deps: Deps, demoId: string, url: string, result: EmbedResult): Promise<void> {
+  // Filtra pela url checada: se o dono trocou a url durante a checagem, o
+  // resultado antigo não publica a url nova.
+  const where = `id=eq.${demoId}&status=neq.blocked&url=eq.${encodeURIComponent(url)}`;
+  await serviceRest(env, deps.fetch).update("demos", where, {
     status: result.embeddable ? "live" : "unavailable",
     embeddable: result.embeddable,
     checked_at: new Date(deps.now()).toISOString(),
@@ -42,7 +45,7 @@ export async function verifyDemo(req: Request, env: Env, demoId: string, deps: D
   if (!demo || demo.kind !== "web_link" || !demo.url) return errorResponse(404, "Demo não encontrada");
   if (demo.status === "blocked") return errorResponse(409, "Esta demo foi suspensa pela moderação");
   const result = await check(demo.url, env, deps);
-  await saveResult(env, deps, demoId, result);
+  await saveResult(env, deps, demoId, demo.url, result);
   return json(result);
 }
 
@@ -64,5 +67,5 @@ export async function recheckLink(msg: LinkMessage, env: Env, deps: Deps): Promi
     `id=eq.${msg.demoId}&select=id,kind,status,url`,
   );
   if (!demo || demo.kind !== "web_link" || !demo.url || demo.status === "blocked") return;
-  await saveResult(env, deps, msg.demoId, await check(demo.url, env, deps));
+  await saveResult(env, deps, msg.demoId, demo.url, await check(demo.url, env, deps));
 }

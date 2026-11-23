@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readDemoZip, type ZipRejection } from "../src/zip";
+import { openDemoZip, readDemoZip, type ZipRejection } from "../src/zip";
 import { makeZip, SITE, type ZipEntry } from "./helpers";
 
 const text = (d: Uint8Array) => new TextDecoder().decode(d);
@@ -69,6 +69,25 @@ describe("readDemoZip", () => {
 
   it("recusa tamanho declarado menor que o real (zip bomb)", () => {
     expect(reason([...SITE, { name: "x.js", data: "a".repeat(100_000), declaredSize: 10 }])).toBe("corrupt");
+  });
+
+  it("zip bomb com tamanho mentiroso para cedo, sem inflar tudo", () => {
+    const bomb = makeZip([...SITE, { name: "x.js", data: new Uint8Array(20 * 1024 * 1024), declaredSize: 10 }]);
+    const started = Date.now();
+    expect(readDemoZip(bomb)).toEqual({ ok: false, reason: "corrupt" });
+    expect(Date.now() - started).toBeLessThan(500);
+  });
+
+  it("limite de 60 MB descompactados", () => {
+    expect(reason([...SITE, { name: "x.js", data: "x", declaredSize: 61 * 1024 * 1024 }])).toBe("too_big_uncompressed");
+  });
+
+  it("openDemoZip valida tudo antes e infla um arquivo por vez", () => {
+    const opened = openDemoZip(makeZip([...SITE, { name: "x.js", data: "a".repeat(1000), declaredSize: 10 }]));
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(new TextDecoder().decode(opened.files.find((f) => f.path === "index.html")!.read())).toContain("Oi");
+    expect(() => opened.files.find((f) => f.path === "x.js")!.read()).toThrow(expect.objectContaining({ reason: "corrupt" }));
   });
 
   it("recusa nomes duplicados", () => {

@@ -42,19 +42,26 @@ CORS liberado só para as origens de `FRAME_ANCESTORS` (padrão: `SITE_URL`).
 - Válido: arquivos em `demos/<demo_id>/<versão>/`, `status = 'live'`, `storage_prefix` preenchido.
 - Recusado: `status = 'unavailable'` e `rejection_reason` com um destes códigos: `too_large`, `not_a_zip`, `unsupported_zip`, `encrypted`, `too_many_files`, `unsafe_path`, `symlink`, `extension_not_allowed`, `duplicate_path`, `no_index`, `too_big_uncompressed`, `corrupt`.
 
-Limites: 25 MB compactado, 500 arquivos, 100 MB descompactado, `index.html` na raiz ou numa única pasta. `__MACOSX/`, `.DS_Store` e `Thumbs.db` são ignorados. Extensões aceitas: veja `src/content-types.ts`.
+Limites: 25 MB compactado, 500 arquivos, 60 MB descompactado (cabe na memória do isolate), `index.html` na raiz ou numa única pasta. `__MACOSX/`, `.DS_Store` e `Thumbs.db` são ignorados. Extensões aceitas: veja `src/content-types.ts`.
 
 ### Motivos da checagem de embed
 
-`invalid_url`, `not_https`, `unsafe` (Google Safe Browsing, só com `SAFE_BROWSING_API_KEY`), `unreachable`, `http_error`, `too_many_redirects`, `x_frame_options`, `csp_frame_ancestors`.
+`invalid_url`, `not_https`, `unsafe` (Google Safe Browsing em todos os endereços do caminho, só com `SAFE_BROWSING_API_KEY`; se a API falhar, a checagem segue), `unreachable`, `http_error`, `too_many_redirects`, `x_frame_options`, `csp_frame_ancestors`.
 
 ## Entrega das demos
 
 - HTML só com `Sec-Fetch-Dest: iframe` (ou `frame`). Aberto direto, qualquer arquivo redireciona para `SITE_URL/demo/<id>`.
 - `Content-Security-Policy: frame-ancestors <FRAME_ANCESTORS>` e `X-Content-Type-Options: nosniff` em tudo.
+- Arquivos que não são HTML levam também `sandbox` na CSP: um SVG aberto fora de iframe não roda script.
 - Registro de service worker é recusado (403).
 - Rota sem extensão que não existe recebe o `index.html` (SPAs).
 - O status da demo é lido do Supabase com a chave anon e guardado por 30 s: uma demo bloqueada pela moderação sai do ar em até 30 s.
+
+### Riscos conhecidos
+
+- O iframe da spec tem `allow-popups`: uma demo pode abrir uma janela nova e escrever HTML nela com a origem da demo, sem passar pelo redirecionamento. Fica como está porque muitas demos abrem links; reavaliar se aparecer abuso (tirar `allow-popups` ou usar `allow-popups-to-escape-sandbox` sem `allow-same-origin`).
+- `/complete`, `/embed-check` e `/verify` não têm limite de chamadas próprio (o limite de 5 envios por dia vale na criação). Rate limit fica para o subprojeto de lançamento.
+- Zips enviados e não concluídos ficam em `uploads/`: configurar uma regra de ciclo de vida no R2 (apagar após 1 dia).
 
 ## Checagem diária
 
@@ -79,6 +86,6 @@ Bindings: R2 `DEMOS_BUCKET` (`devsync-demos`), filas `demo-zips` e `demo-links`.
 Nada foi publicado na conta Cloudflare. Para o lançamento:
 
 1. Domínio próprio com rota curinga para o Worker.
-2. Workers Paid (US$ 5/mês): descompactar um zip grande passa do limite de CPU do plano grátis (10 ms por pedido).
-3. `wrangler r2 bucket create devsync-demos`, `wrangler queues create demo-zips`, `wrangler queues create demo-links`, segredos com `wrangler secret put`.
+2. Workers Paid (US$ 5/mês): descompactar um zip grande passa do limite de CPU do plano grátis (10 ms por pedido) e de subrequests (50; um zip de 500 arquivos faz ~500 gravações no R2).
+3. `wrangler r2 bucket create devsync-demos` (com regra de ciclo de vida em `uploads/`), `wrangler queues create demo-zips`, `wrangler queues create demo-links`, segredos com `wrangler secret put`.
 4. Aplicar a migration `20261123000900_demo_service.sql` no Supabase.
