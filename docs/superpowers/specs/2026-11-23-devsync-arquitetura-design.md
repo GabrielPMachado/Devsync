@@ -184,7 +184,7 @@ project_tags(project_id, tag_id)
 likes(profile_id, project_id, created_at)
 
 demos(id, owner_id, kind[web_link|web_upload|sandbox|mobile], url,
-      storage_prefix, version, status[pending|live|blocked], embeddable,
+      storage_prefix, version, status[pending|live|blocked|unavailable], embeddable,
       screenshot_url, created_at)
 
 questions(id, author_id, title, slug, body_md, project_id?, accepted_answer_id?,
