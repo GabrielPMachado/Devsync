@@ -1,7 +1,7 @@
 # Devsync: design da arquitetura
 
 **Data:** 2026-11-23
-**Status:** aprovado em 2026-11-23 (seção de custos aguardando confirmação)
+**Status:** aprovado em 2026-11-23, incluindo o plano de custos
 **Autor do produto:** Gabriel (dev solo)
 
 > Connect. Share. Develop.
