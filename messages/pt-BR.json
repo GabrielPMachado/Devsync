@@ -120,5 +120,39 @@
     "x_frame_options": "Este site não permite ser exibido dentro de outro site (X-Frame-Options).",
     "csp_frame_ancestors": "Este site não permite ser exibido dentro de outro site (frame-ancestors).",
     "unknown": "Não deu para validar a demo. Tente de novo."
+  },
+  "Demo": {
+    "status": {
+      "live": "Demo ao vivo",
+      "pending": "Processando",
+      "unavailable": "Indisponível",
+      "blocked": "Suspensa"
+    },
+    "kindUpload": "Arquivos enviados · v{version}",
+    "kindLink": "Link do site",
+    "dialogFallback": "Demo do projeto",
+    "frameTitle": "Demo: {title}",
+    "by": "por @{username}",
+    "widths": "Largura da demo",
+    "desktop": "Computador",
+    "tablet": "Tablet",
+    "phone": "Celular",
+    "reload": "Recarregar demo",
+    "fullscreen": "Tela cheia",
+    "exitFullscreen": "Sair da tela cheia",
+    "comments": "Comentários do projeto",
+    "close": "Fechar demo",
+    "loading": "Abrindo a demo…",
+    "pendingTitle": "Preparando a demo…",
+    "pendingText": "Estamos validando os arquivos enviados. Isso leva alguns segundos.",
+    "blockedTitle": "Esta demo foi suspensa",
+    "blockedText": "A moderação suspendeu esta demo por violar as regras da comunidade. O restante do projeto continua disponível.",
+    "unavailableTitle": "Demo indisponível no momento",
+    "unavailableText": "O site do autor não permite mais ser exibido aqui. Você ainda pode ver o código e os comentários do projeto.",
+    "missingText": "Esta demo não está disponível. Ela pode ter sido apagada pelo autor.",
+    "projectPage": "Ver página do projeto",
+    "closeShort": "Fechar",
+    "userContent": "Conteúdo enviado por usuário. A Devsync não controla o que roda nesta demo.",
+    "backToDevsync": "Voltar para a Devsync"
   }
 }
