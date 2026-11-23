@@ -97,5 +97,28 @@
     "following": "{count} seguindo",
     "followers": "{count, plural, one {# seguidor} other {# seguidores}}",
     "soon": "Projetos, perguntas e respostas vão aparecer aqui."
+  },
+  "DemoReasons": {
+    "too_large": "O .zip passa de 25 MB.",
+    "not_a_zip": "Esse arquivo não é um .zip.",
+    "unsupported_zip": "Esse .zip usa um formato que não aceitamos. Gere de novo com o compactador padrão do sistema.",
+    "encrypted": "O .zip tem senha. Envie sem senha.",
+    "too_many_files": "O .zip tem mais de 500 arquivos.",
+    "unsafe_path": "O .zip tem caminhos não permitidos (como ../).",
+    "symlink": "O .zip tem atalhos (links simbólicos). Envie só arquivos.",
+    "extension_not_allowed": "O .zip tem arquivos que não são de site estático.",
+    "duplicate_path": "O .zip tem arquivos repetidos.",
+    "no_index": "Não achamos o index.html na raiz do .zip (nem numa única pasta).",
+    "too_big_uncompressed": "Descompactado, o site passa de 60 MB.",
+    "corrupt": "O .zip está corrompido. Gere de novo.",
+    "invalid_url": "Esse endereço não é válido.",
+    "not_https": "O link precisa começar com https://.",
+    "unsafe": "Esse site foi marcado como perigoso.",
+    "unreachable": "Não conseguimos abrir esse site. Ele está no ar?",
+    "http_error": "O site respondeu com erro.",
+    "too_many_redirects": "O site redireciona vezes demais.",
+    "x_frame_options": "Este site não permite ser exibido dentro de outro site (X-Frame-Options).",
+    "csp_frame_ancestors": "Este site não permite ser exibido dentro de outro site (frame-ancestors).",
+    "unknown": "Não deu para validar a demo. Tente de novo."
   }
 }
