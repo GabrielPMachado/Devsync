@@ -19,7 +19,7 @@
     "next-intl": "^4.15.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "zod": "^4.6.7"
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",
