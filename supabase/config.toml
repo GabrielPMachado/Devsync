@@ -1,0 +1,10 @@
+# Configuração do Supabase CLI para desenvolvimento local.
+# Os valores omitidos usam os padrões do CLI. Rode `supabase start` para
+# subir o banco local e `supabase test db` para os testes pgTAP.
+project_id = "devsync"
+
+[db]
+major_version = 15
+
+[db.seed]
+enabled = false
