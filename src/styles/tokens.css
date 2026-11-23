@@ -1,0 +1,95 @@
+/* Gerado a partir de src/lib/design-tokens.ts (tokens do Figma). */
+/* Tailwind v4: só existem as cores da Devsync; as padrão foram removidas. */
+@theme {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-black: #000000;
+
+  /* Primitivos: não use direto nos componentes. */
+  --color-ink-950: #070B14;
+  --color-ink-900: #0B1120;
+  --color-ink-850: #111827;
+  --color-ink-800: #161F33;
+  --color-ink-700: #1E293B;
+  --color-ink-600: #334155;
+  --color-ink-500: #475569;
+  --color-ink-400: #64748B;
+  --color-ink-300: #94A3B8;
+  --color-ink-200: #CBD5E1;
+  --color-ink-100: #E2E8F0;
+  --color-ink-50: #F8FAFC;
+  --color-white: #FFFFFF;
+  --color-blue-400: #60A5FA;
+  --color-blue-500: #3B82F6;
+  --color-blue-600: #2563EB;
+  --color-blue-700: #1D4ED8;
+  --color-blue-950: #0F1B3D;
+  --color-cyan-300: #67E8F9;
+  --color-cyan-400: #22D3EE;
+  --color-cyan-500: #06B6D4;
+  --color-cyan-950: #082F3A;
+  --color-green-400: #4ADE80;
+  --color-green-500: #22C55E;
+  --color-green-950: #0A2A17;
+  --color-amber-400: #FBBF24;
+  --color-amber-500: #F59E0B;
+  --color-amber-950: #2E1F05;
+  --color-red-400: #F87171;
+  --color-red-500: #EF4444;
+  --color-red-950: #2F0E0E;
+
+  /* Semânticos (coleção "Cor", modo Escuro): use estes. */
+  --color-bg-base: #070B14;
+  --color-bg-surface: #0B1120;
+  --color-bg-elevated: #111827;
+  --color-bg-hover: #161F33;
+  --color-bg-muted: #1E293B;
+  --color-border-default: #1E293B;
+  --color-border-strong: #334155;
+  --color-border-focus: #22D3EE;
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #94A3B8;
+  --color-text-subtle: #64748B;
+  --color-text-on-brand: #FFFFFF;
+  --color-text-link: #22D3EE;
+  --color-brand-primary: #2563EB;
+  --color-brand-primary-hover: #3B82F6;
+  --color-brand-primary-pressed: #1D4ED8;
+  --color-brand-accent: #22D3EE;
+  --color-brand-primary-soft: #0F1B3D;
+  --color-brand-accent-soft: #082F3A;
+  --color-status-success: #22C55E;
+  --color-status-success-text: #4ADE80;
+  --color-status-success-soft: #0A2A17;
+  --color-status-warning: #F59E0B;
+  --color-status-warning-text: #FBBF24;
+  --color-status-warning-soft: #2E1F05;
+  --color-status-danger: #EF4444;
+  --color-status-danger-text: #F87171;
+  --color-status-danger-soft: #2F0E0E;
+  --color-icon-default: #E2E8F0;
+  --color-icon-muted: #94A3B8;
+
+  /* Raios (coleção "Espaço e raio"). */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+
+  /* Grade de 4 px: p-1 = 4 px, p-4 = 16 px. */
+  --spacing: 0.25rem;
+
+  /* Fontes (variáveis criadas por next/font no layout). */
+  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* Efeitos do Figma. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55), 0 4px 12px rgb(0 0 0 / 0.35);
+  --shadow-glow: 0 0 24px rgb(34 211 238 / 0.35);
+}
