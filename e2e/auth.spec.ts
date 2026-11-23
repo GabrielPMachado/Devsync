@@ -87,6 +87,29 @@ test.describe("login com link mágico", () => {
   });
 });
 
+test("foto de perfil de 1,5 MB é enviada no primeiro acesso", async ({ page }) => {
+  const email = uniqueEmail("foto");
+  const username = `foto_${Date.now().toString(36)}`;
+  await page.goto("/entrar", { waitUntil: "networkidle" });
+  const since = new Date();
+  await page.getByLabel("E-mail").fill(email);
+  await page.getByRole("button", { name: "Enviar link de acesso" }).click();
+  await page.goto(await latestLinkFor(email, since));
+
+  // PNG válido (1x1) com bytes extras no fim até ~1,5 MB: acima do limite padrão de 1 MB das Server Actions.
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  const buffer = Buffer.concat([png, Buffer.alloc(1.5 * 1024 * 1024)]);
+  await page.locator('input[type="file"][name="avatar"]').setInputFiles({ name: "eu.png", mimeType: "image/png", buffer });
+  await page.getByLabel("Nome").fill("Foto Teste");
+  await page.getByLabel("@usuário").fill(username);
+  for (const tag of ["react", "typescript", "css"]) await page.getByText(tag, { exact: true }).click();
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.goto(`/@${username}`);
+  await expect(page.getByRole("article").getByRole("img", { name: "Foto Teste" })).toHaveAttribute("src", /\/storage\/v1\/object\/public\/avatars\//);
+});
+
 test("visitante em /boas-vindas e /notificacoes vai para /entrar", async ({ page }) => {
   await page.goto("/boas-vindas");
   await expect(page).toHaveURL(/\/entrar\?next=%2Fboas-vindas$/);

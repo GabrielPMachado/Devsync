@@ -33,7 +33,7 @@ jobs:
       # Supabase local (Docker) para os testes do banco e o login nos E2E.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.3.0
 
       - name: Subir o Supabase local
         env:

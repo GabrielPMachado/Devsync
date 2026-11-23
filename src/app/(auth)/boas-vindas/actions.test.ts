@@ -124,7 +124,8 @@ describe("completeOnboarding", () => {
     await expect(completeOnboarding({}, form({ ...ok, avatar }))).rejects.toThrow("REDIRECT /");
     const [path, , opts] = db.upload.mock.calls[0];
     expect(path).toMatch(/^u1\/avatar-\d+\.png$/);
-    expect(opts).toEqual({ contentType: "image/png", upsert: true });
+    // Sem upsert: o Storage exige política de SELECT para upsert, e o nome já é único.
+    expect(opts).toEqual({ contentType: "image/png", upsert: false });
     expect(db.profileUpdate.mock.calls[0][0]).toMatchObject({ avatar_url: `http://storage/avatars/${path}` });
   });
 

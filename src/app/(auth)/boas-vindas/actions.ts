@@ -56,7 +56,7 @@ export async function completeOnboarding(_prev: OnboardingState, formData: FormD
 
   if (file) {
     const path = `${viewer.id}/avatar-${Date.now()}.${AVATAR_TYPES[file.type]}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type, upsert: true });
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type, upsert: false });
     if (error) return { errors: { avatar: "tooBig" } };
     update.avatar_url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
   }

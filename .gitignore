@@ -46,3 +46,7 @@ next-env.d.ts
 /playwright-report
 /blob-report
 /playwright/.cache
+
+# Supabase CLI (estado local)
+supabase/.temp/
+supabase/.branches/

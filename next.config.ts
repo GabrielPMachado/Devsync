@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [{ source: "/@:username", destination: "/u/:username" }];
   },
+  experimental: {
+    // Foto de perfil vai pela Server Action: até 2 MB (AVATAR_MAX_BYTES) mais o resto do formulário.
+    serverActions: { bodySizeLimit: "3mb" },
+  },
   turbopack: {
     rules: {
       "*.css": {
