@@ -69,6 +69,7 @@ src/
 messages/pt-BR.json textos da interface
 e2e/                testes do Playwright
 supabase/           migrações e testes do banco
+workers/demos/      serviço de demos (Cloudflare Worker, pacote próprio; veja o README dele)
 ```
 
 ## Regras do tema
