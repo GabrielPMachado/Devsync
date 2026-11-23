@@ -45,10 +45,10 @@ select throws_ok(format($$ insert into follows (follower_id, followee_id) values
 
 -- Tags.
 select tests.login_as(:'ana');
-select throws_ok($$ insert into tags (slug, name) values ('C#', 'C#') $$, '23514', null, 'tag slug format: maiúscula falha');
-select lives_ok($$ insert into tags (slug, name) values ('c#', 'C#') $$, 'tag slug format: c# passa');
-delete from tags where slug = 'c#';
-select is((select count(*)::int from tags where slug = 'c#'), 1, 'user cannot delete tag');
+select throws_ok($$ insert into tags (slug, name) values ('F#', 'F#') $$, '23514', null, 'tag slug format: maiúscula falha');
+select lives_ok($$ insert into tags (slug, name) values ('f#', 'F#') $$, 'tag slug format: f# passa');
+delete from tags where slug = 'f#';
+select is((select count(*)::int from tags where slug = 'f#'), 1, 'user cannot delete tag');
 
 -- Visitante lê perfis.
 select tests.as_anon();
