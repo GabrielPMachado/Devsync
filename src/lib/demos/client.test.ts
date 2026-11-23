@@ -4,7 +4,7 @@ import { completeUpload, createUpload, DemoServiceError, embedCheck, putZip, ver
 const base = new URL("http://demos.localhost:8787");
 
 function fakeFetch(status: number, body: unknown) {
-  return vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => new Response(body === null ? null : JSON.stringify(body), { status }));
+  return vi.fn<(url: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(body === null ? null : JSON.stringify(body), { status }));
 }
 
 describe("chamadas ao serviço de demos", () => {
