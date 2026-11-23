@@ -188,4 +188,4 @@ O gatilho de revisão (`public.save_revision()`, grava título e corpo antigos q
 ### Task 8: Verificação e PR
 
 - [ ] Rodar `scripts/test-db.sh` do zero e colar o resumo do `pg_prove` no PR.
-- [ ] Abrir PR para `claude/project-thread-850ls9` (a branch padrão hoje) com o resumo das decisões acima.
+- [x] Abrir PR para a branch padrão (era `claude/project-thread-850ls9`; desde 2026-11-23 a branch padrão é `main`) com o resumo das decisões acima.
