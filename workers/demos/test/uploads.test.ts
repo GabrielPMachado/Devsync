@@ -110,7 +110,7 @@ describe("POST /uploads/:id/complete", () => {
 
   it("enfileira a validação", async () => {
     await env.DEMOS_BUCKET.put(`uploads/${ID}/1.zip`, makeZip(SITE));
-    const send = vi.spyOn(env.ZIP_QUEUE, "send");
+    const send = vi.spyOn(env.ZIP_QUEUE, "send").mockResolvedValue(undefined as never);
     const res = await complete();
     expect(res.status).toBe(202);
     expect(send).toHaveBeenCalledWith({ demoId: ID, version: 1 });

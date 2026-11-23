@@ -1,5 +1,6 @@
 import { defaultDeps, type Deps, type Env, type LinkMessage, type ZipMessage } from "./env";
 import { errorResponse, withCors } from "./http";
+import { embedCheck, recheckLink, scheduleLinkChecks, verifyDemo } from "./links";
 import { processZip } from "./process-zip";
 import { parseDemoHost, serveDemo } from "./serve";
 import { completeUpload, createUpload, receiveUpload } from "./uploads";
@@ -7,6 +8,7 @@ import { completeUpload, createUpload, receiveUpload } from "./uploads";
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const UPLOAD_FILE = new RegExp(`^/uploads/(${UUID})/(\\d+)$`);
 const UPLOAD_COMPLETE = new RegExp(`^/uploads/(${UUID})/complete$`);
+const DEMO_VERIFY = new RegExp(`^/demos/(${UUID})/verify$`);
 
 async function api(req: Request, env: Env, deps: Deps): Promise<Response> {
   const { pathname } = new URL(req.url);
@@ -16,6 +18,9 @@ async function api(req: Request, env: Env, deps: Deps): Promise<Response> {
   if (m && req.method === "PUT") return receiveUpload(req, env, m[1]!, Number(m[2]), deps);
   m = UPLOAD_COMPLETE.exec(pathname);
   if (m && req.method === "POST") return completeUpload(req, env, m[1]!, deps);
+  m = DEMO_VERIFY.exec(pathname);
+  if (m && req.method === "POST") return verifyDemo(req, env, m[1]!, deps);
+  if (req.method === "POST" && pathname === "/embed-check") return embedCheck(req, env, deps);
   return errorResponse(404, "Rota não encontrada");
 }
 
@@ -35,6 +40,7 @@ export async function handleQueue(batch: MessageBatch<ZipMessage | LinkMessage>,
   for (const msg of batch.messages) {
     try {
       if (batch.queue.startsWith("demo-zips")) await processZip(msg.body as ZipMessage, env, deps);
+      else if (batch.queue.startsWith("demo-links")) await recheckLink(msg.body as LinkMessage, env, deps);
       msg.ack();
     } catch (err) {
       console.error(`Falha ao processar ${batch.queue}`, err);
@@ -46,4 +52,5 @@ export async function handleQueue(batch: MessageBatch<ZipMessage | LinkMessage>,
 export default {
   fetch: (req, env) => handleFetch(req, env, defaultDeps()),
   queue: (batch, env) => handleQueue(batch, env, defaultDeps()),
+  scheduled: (_controller, env, ctx) => ctx.waitUntil(scheduleLinkChecks(env, defaultDeps())),
 } satisfies ExportedHandler<Env, ZipMessage | LinkMessage>;

@@ -47,6 +47,9 @@ Estes nomes são fixos. Quem planejar um subprojeto usa exatamente estes:
   - `POST /uploads` → `{ demoId, uploadUrl }` (URL assinada do R2)
   - `POST /uploads/:demoId/complete` → enfileira validação. Resultado gravado em `demos.status`.
   - `POST /embed-check` `{ url }` → `{ embeddable: boolean, reason?: string }`
+  - `POST /demos/:demoId/verify` → `{ embeddable: boolean, reason?: string }`. Checa o link de uma demo `web_link` do usuário e grava `live` ou `unavailable` (o site não pode escrever `demos.status`).
+  - Todas as rotas recebem `Authorization: Bearer <access token do Supabase do usuário>`. O `uploadUrl` é um `PUT` com `Content-Length` (até 25 MB), assinado pelo próprio Worker.
+  - Zip recusado: `demos.status = 'unavailable'` e o motivo em `demos.rejection_reason`. Detalhes em `workers/demos/README.md`.
   - Demo servida em `https://<demo_id>.<DEMOS_HOST>/`. `DEMOS_HOST` é variável de ambiente.
 - **Componente da camada de demo (subprojeto 4):** `<DemoOverlay demoId={string} onClose={() => void} />`, reaproveitado pelas respostas no 5.
 
