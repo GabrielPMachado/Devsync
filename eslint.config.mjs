@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Serviço de demos: pacote próprio com lint e tipos próprios.
+    "workers/**",
   ]),
 ]);
 
