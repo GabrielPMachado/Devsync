@@ -29,7 +29,7 @@ describe("tokens do Figma", () => {
     for (const [name, prim] of Object.entries(SEMANTIC)) {
       expected.set(cssColorName(name), PRIMITIVES[prim]);
     }
-    const actual = new Map([...cssVars("color")].filter(([k]) => !["*", "transparent", "current"].includes(k)));
+    const actual = new Map([...cssVars("color")].filter(([k]) => !["*", "transparent", "current", "black"].includes(k)));
     expect(Object.fromEntries(actual)).toEqual(Object.fromEntries(expected));
   });
 

@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -38,7 +38,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e -- --trace off
+      - run: npm run test:e2e
 
       - name: Relatório do Playwright
         if: failure()

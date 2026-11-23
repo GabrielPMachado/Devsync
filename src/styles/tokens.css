@@ -4,6 +4,7 @@
   --color-*: initial;
   --color-transparent: transparent;
   --color-current: currentColor;
+  --color-black: #000000;
 
   /* Primitivos: não use direto nos componentes. */
   --color-ink-950: #070B14;
@@ -79,7 +80,7 @@
   --radius-2xl: 24px;
 
   /* Grade de 4 px: p-1 = 4 px, p-4 = 16 px. */
-  --spacing: 4px;
+  --spacing: 0.25rem;
 
   /* Fontes (variáveis criadas por next/font no layout). */
   --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;

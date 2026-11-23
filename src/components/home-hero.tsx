@@ -8,6 +8,7 @@ export function HomeHero() {
       <span className="rounded-full border border-border-default bg-brand-accent-soft px-3 py-1 font-mono text-xs text-brand-accent">
         {t("status")}
       </span>
+      {/* Marca: não é traduzida, por isso fica fora do next-intl. */}
       <p className="font-display text-5xl font-extrabold tracking-tight">
         Dev<span className="text-brand-gradient">sync</span>
       </p>

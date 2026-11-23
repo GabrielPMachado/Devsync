@@ -28,7 +28,7 @@ export function getSupabaseEnv(raw: RawSupabaseEnv = fromProcess()): SupabaseEnv
     throw new Error(`NEXT_PUBLIC_SUPABASE_URL inválida: "${url}". Use algo como https://<projeto>.supabase.co`);
   }
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-    throw new Error(`NEXT_PUBLIC_SUPABASE_URL precisa começar com https://. Valor atual: "${url}"`);
+    throw new Error(`NEXT_PUBLIC_SUPABASE_URL precisa começar com http:// ou https://. Valor atual: "${url}"`);
   }
 
   return { url, anonKey };
