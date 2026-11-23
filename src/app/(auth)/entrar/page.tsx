@@ -29,14 +29,6 @@ async function Card({ searchParams }: { searchParams: SearchParams }) {
   return <LoginCard next={next} notice={notice} />;
 }
 
-function CardSlot({ searchParams }: { searchParams: SearchParams }) {
-  return (
-    <Suspense fallback={<LoginCard next="/" notice={null} />}>
-      <Card searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
 export default async function EntrarPage({ searchParams }: PageProps<"/entrar">) {
   const t = await getTranslations("Auth");
 
@@ -48,19 +40,18 @@ export default async function EntrarPage({ searchParams }: PageProps<"/entrar">)
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(160deg,rgb(37_99_235/0.25),rgb(34_211_238/0)_60%)] lg:hidden"
         />
-        <div className="relative flex flex-1 flex-col gap-7 px-6 pt-14 pb-8 lg:hidden">
+        <div className="relative flex flex-col gap-7 px-6 pt-14 lg:hidden">
           <Logo size={34} />
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold tracking-[0.08em] text-brand-accent uppercase">{t("brandTagline")}</p>
             <p className="font-display text-3xl font-extrabold text-text-primary">{t("brandMobileTitle")}</p>
             <p className="text-base leading-relaxed text-text-muted">{t("brandMobileText")}</p>
           </div>
-          <div className="mt-auto">
-            <CardSlot searchParams={searchParams} />
-          </div>
         </div>
-        <div className="hidden w-full max-w-[440px] rounded-2xl border border-border-default bg-bg-surface p-10 shadow-2xl shadow-black/40 lg:block">
-          <CardSlot searchParams={searchParams} />
+        <div className="relative mt-auto px-6 pt-10 pb-8 lg:mt-0 lg:w-full lg:max-w-[440px] lg:rounded-2xl lg:border lg:border-border-default lg:bg-bg-surface lg:p-10 lg:shadow-2xl lg:shadow-black/40">
+          <Suspense fallback={<LoginCard next="/" notice={null} />}>
+            <Card searchParams={searchParams} />
+          </Suspense>
         </div>
       </div>
     </main>

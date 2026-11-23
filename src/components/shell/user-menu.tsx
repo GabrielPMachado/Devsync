@@ -29,7 +29,7 @@ export function UserMenu({ name, username, avatarUrl }: Props) {
 
   return (
     <details ref={ref} className="relative">
-      <summary aria-label={t("userMenu")} className="flex cursor-pointer list-none rounded-full [&::-webkit-details-marker]:hidden">
+      <summary role="button" aria-haspopup="menu" aria-label={t("userMenu")} className="flex cursor-pointer list-none rounded-full [&::-webkit-details-marker]:hidden">
         <Avatar name={name} src={avatarUrl} size="sm" />
       </summary>
       <div className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-border-default bg-bg-elevated p-1.5 shadow-xl shadow-black/40">
@@ -38,7 +38,7 @@ export function UserMenu({ name, username, avatarUrl }: Props) {
           <p className="truncate font-mono text-xs text-text-muted">@{username}</p>
         </div>
         <hr className="my-1 border-border-default" />
-        <Link href={`/@${username}`} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
+        <Link href={`/@${username}`} onClick={() => ref.current?.removeAttribute("open")} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
           <User className="size-4" aria-hidden="true" />
           {t("myProfile")}
         </Link>

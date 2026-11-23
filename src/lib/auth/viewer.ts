@@ -1,4 +1,5 @@
 import "server-only";
+import { connection } from "next/server";
 import { cache } from "react";
 import { getSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +15,8 @@ export type Viewer = {
 /** Quem está logado neste pedido, com o perfil. null para visitantes ou sem Supabase. */
 export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!getSupabaseEnv()) return null;
+  // A sessão é sempre do pedido atual (o Supabase compara a validade do token com o relógio).
+  await connection();
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const id = claims?.claims?.sub;

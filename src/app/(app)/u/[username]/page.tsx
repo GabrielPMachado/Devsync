@@ -2,6 +2,7 @@ import { CalendarDays, LogOut } from "lucide-react";
 import type { Metadata } from "next";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { buttonClasses } from "@/components/ui/button";
@@ -41,6 +42,7 @@ export default function ProfilePage({ params }: { params: Params }) {
 
 async function Profile({ params }: { params: Params }) {
   const { username } = await params;
+  await connection();
   const [profile, viewer] = await Promise.all([loadProfile(username), getViewer()]);
   if (!profile?.username) notFound();
 
