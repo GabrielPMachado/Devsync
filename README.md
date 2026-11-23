@@ -22,6 +22,24 @@ cp .env.example .env.local   # opcional: sem Supabase o site abre, só sem login
 npm run dev                  # http://localhost:3000
 ```
 
+### Com login (Supabase local)
+
+Precisa do Docker e do [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
+
+```bash
+supabase start               # banco, Auth, Storage e Mailpit (e-mails) em Docker
+supabase status -o env       # copie API_URL e ANON_KEY para o .env.local:
+                             # NEXT_PUBLIC_SUPABASE_URL=<API_URL>
+                             # NEXT_PUBLIC_SUPABASE_ANON_KEY=<ANON_KEY>
+npm run dev
+```
+
+Os e-mails de login chegam no Mailpit: http://127.0.0.1:54324. Para testar o GitHub
+localmente, crie um app OAuth de teste (callback `http://127.0.0.1:54321/auth/v1/callback`)
+e exporte `SUPABASE_AUTH_GITHUB_CLIENT_ID` e `SUPABASE_AUTH_GITHUB_SECRET` antes do `supabase start`.
+
+Os testes E2E de login precisam do Supabase local rodando e do `.env.local` preenchido antes do `npm run build`.
+
 | Script | O que faz |
 |---|---|
 | `npm run dev` | Servidor de desenvolvimento |
@@ -44,6 +62,10 @@ src/
     supabase/         clientes do navegador e do servidor, renovação de sessão
   styles/tokens.css tema do Tailwind gerado a partir dos tokens
   proxy.ts          roda antes de cada página (renova a sessão do Supabase)
+  app/(auth)/       /entrar e /boas-vindas (sem a barra de navegação)
+  app/(app)/        páginas com a barra de navegação e as abas do celular
+  app/auth/         retorno do GitHub, link mágico e sair
+  lib/auth/         regras do @usuário, destino seguro e quem vai para onde
 messages/pt-BR.json textos da interface
 e2e/                testes do Playwright
 supabase/           migrações e testes do banco

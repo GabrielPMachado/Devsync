@@ -29,6 +29,30 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+
+      # Supabase local (Docker) para os testes do banco e o login nos E2E.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.3.0
+
+      - name: Subir o Supabase local
+        env:
+          # App OAuth falso: o E2E só confere o redirecionamento para o GitHub.
+          SUPABASE_AUTH_GITHUB_CLIENT_ID: ci-client-id
+          SUPABASE_AUTH_GITHUB_SECRET: ci-secret
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,realtime
+
+      - name: Testes do banco (pgTAP)
+        run: supabase test db
+
+      - name: Variáveis do site apontando para o Supabase local
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+          } > .env.local
+
       - run: npm run build
 
       - name: Cache do navegador do Playwright
