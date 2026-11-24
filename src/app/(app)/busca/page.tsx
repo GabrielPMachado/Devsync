@@ -81,7 +81,7 @@ async function Results({ searchParams }: { searchParams: Search }) {
       {results.projects.length ? (
         <section aria-labelledby="r-projetos" className="flex flex-col gap-4">
           <h2 id="r-projetos" className="font-display text-lg font-bold text-text-primary">{t("projects", { count: results.projects.length })}</h2>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {results.projects.map((p) => (
               <ProjectCard key={p.id} project={p} basePath="/busca" />
             ))}

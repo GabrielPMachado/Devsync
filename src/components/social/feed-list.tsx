@@ -15,7 +15,7 @@ export function FeedList({ items, basePath, label }: { items: FeedItem[]; basePa
     <section aria-label={label} className="flex flex-col gap-5">
       {blocks.map((b) =>
         Array.isArray(b) ? (
-          <div key={b.map((x) => (x.kind === "project" ? x.project.id : "")).join("-")} className="grid gap-5 sm:grid-cols-2">
+          <div key={b.map((x) => (x.kind === "project" ? x.project.id : "")).join("-")} className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             {b.map((x) => (x.kind === "project" ? <ProjectCard key={x.project.id} project={x.project} basePath={basePath} /> : null))}
           </div>
         ) : b.kind === "question" ? (
