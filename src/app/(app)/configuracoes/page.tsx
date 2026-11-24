@@ -39,6 +39,7 @@ async function Form() {
   return (
     <ProfileEditor
       username={profile.username}
+      userId={viewer.id}
       tags={tags}
       avatarUrl={profile.avatarUrl}
       bannerUrl={profile.bannerUrl}

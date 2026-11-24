@@ -2,14 +2,18 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { saveProfile, type SaveProfileState } from "@/app/(app)/configuracoes/actions";
+import { ProfileImageField, previewSrc, type PendingImage } from "@/components/social/profile-image-field";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
 import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
-import { BIO_MAX, HEADLINE_MAX, LOCATION_MAX, NAME_MAX, PROFILE_TAGS_MAX, type ProfileInput } from "@/lib/social/profile-rules";
+import type { CropKind } from "@/lib/images/crop-math";
+import { preparePendingImages } from "@/lib/social/profile-images";
+import { BIO_MAX, HEADLINE_MAX, LOCATION_MAX, NAME_MAX, PROFILE_TAGS_MAX, validateProfile, type ProfileInput } from "@/lib/social/profile-rules";
 import { STATUSES } from "@/lib/social/profile-style";
+import { createClient } from "@/lib/supabase/client";
 import { AccentPicker, BannerPicker } from "./appearance-pickers";
 import { EditorSection } from "./editor-section";
 import { FramePicker } from "./frame-picker";
@@ -18,13 +22,13 @@ import { ProfilePreview } from "./profile-preview";
 type Props = {
   initial: ProfileInput;
   username: string;
+  /** Id da pessoa: a pasta dela no Storage. */
+  userId: string;
   tags: { slug: string; name: string }[];
   avatarUrl: string | null;
   bannerUrl: string | null;
   /** Insígnias da pessoa (sem a lista, todas as bordas ficam liberadas). */
   unlockedBadges?: string[];
-  /** Campos de foto e banner (envio e recorte). */
-  imageFields?: { avatar?: ReactNode; banner?: ReactNode };
   /** Seção de insígnias. */
   badgesSection?: ReactNode;
 };
@@ -37,13 +41,27 @@ const LINKS = [
 ] as const;
 
 /** Editar perfil: aparência, sobre você, links e tecnologias, com prévia ao vivo. */
-export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, unlockedBadges, imageFields, badgesSection }: Props) {
+export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bannerUrl, unlockedBadges, badgesSection }: Props) {
   const t = useTranslations("Settings");
   const style = useTranslations("ProfileStyle");
+  const crop = useTranslations("ImageCrop");
   const badges = useTranslations("Badges");
   const [state, action, pending] = useActionState<SaveProfileState, FormData>(saveProfile, {});
   const [v, setV] = useState<ProfileInput>(() => ({ ...initial, ...(state.values ?? {}) }));
   const [dirty, setDirty] = useState(false);
+  // Foto e banner só sobem ao salvar; até lá ficam pendentes (e aparecem na prévia).
+  const [images, setImages] = useState<Record<CropKind, PendingImage>>({ avatar: { kind: "keep" }, banner: { kind: "keep" } });
+  // A transição cobre o envio das imagens inteiro: o botão trava do clique até a ação.
+  const [uploading, startUpload] = useTransition();
+  const [uploadFailed, setUploadFailed] = useState(false);
+  const shownAvatar = previewSrc(avatarUrl, images.avatar);
+  const shownBanner = previewSrc(bannerUrl, images.banner);
+  const setImage = (kind: CropKind, p: PendingImage) => {
+    setImages((old) => ({ ...old, [kind]: p }));
+    setUploadFailed(false);
+    setDirty(true);
+  };
+  const busy = pending || uploading;
   const e = state.errors ?? {};
   const hasErrors = Object.keys(e).length > 0;
   const formRef = useRef<HTMLFormElement>(null);
@@ -61,27 +79,61 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
     onChange: (ev: { target: { value: string } }) => set(key, ev.target.value),
   });
 
+  // A barra Salvar fica presa embaixo: a rolagem (foco pelo teclado incluso)
+  // deixa espaço para ela não cobrir o campo em foco.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.scrollPaddingBottom = "10rem";
+    return () => {
+      root.style.scrollPaddingBottom = "";
+    };
+  }, []);
+
   // Sair com mudanças não salvas pede confirmação do navegador.
   useEffect(() => {
-    if (!dirty || pending) return;
+    if (!dirty || busy) return;
     const warn = (ev: BeforeUnloadEvent) => ev.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, pending]);
+  }, [dirty, busy]);
+
+  /**
+   * Envia as imagens pendentes e só então chama a ação com as URLs.
+   * Com algum campo inválido, não envia nada: a ação devolve os erros sem
+   * deixar arquivo novo à toa no Storage.
+   */
+  function submit(ev: FormEvent<HTMLFormElement>) {
+    ev.preventDefault();
+    if (busy) return;
+    const formData = new FormData(ev.currentTarget);
+    setUploadFailed(false);
+    startUpload(async () => {
+      if (validateProfile(v).ok) {
+        try {
+          const fields = await preparePendingImages(createClient(), userId, images);
+          for (const [name, value] of Object.entries(fields)) formData.set(name, value);
+        } catch {
+          startUpload(() => setUploadFailed(true));
+          return;
+        }
+      }
+      startTransition(() => action(formData));
+    });
+  }
 
   // As tecnologias atuais primeiro, depois o resto.
   const [ordered] = useState(() => [...tags].sort((a, b) => Number(initial.tags.includes(b.slug)) - Number(initial.tags.includes(a.slug))));
   const appearanceError = e.bannerPreset || e.avatarFrame || e.accent || e.avatarUrl || e.bannerUrl;
 
   return (
-    <form ref={formRef} action={action} noValidate className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+    <form ref={formRef} action={action} onSubmit={submit} noValidate className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
       <aside className="lg:sticky lg:top-20 lg:order-2">
         <ProfilePreview
           data={{
             ...v,
             username,
-            avatarUrl,
-            bannerUrl,
+            avatarUrl: shownAvatar,
+            bannerUrl: shownBanner,
             links: [...LINKS.filter((l) => v[l.key].trim()), ...(v.site.trim() ? [{ key: "site", label: t("site") }] : [])].map(({ key, label }) => ({ key, label })),
           }}
         />
@@ -89,10 +141,17 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
 
       <div className="flex min-w-0 flex-col gap-6 lg:order-1">
         <EditorSection id="aparencia" title={t("sectionAppearance")} help={t("sectionAppearanceHelp")}>
-          {imageFields?.banner}
-          <BannerPicker value={v.bannerPreset} onChange={(p) => set("bannerPreset", p)} />
-          {imageFields?.avatar}
-          <FramePicker name={v.displayName || username} avatarUrl={avatarUrl} value={v.avatarFrame} onChange={(f) => set("avatarFrame", f)} unlockedBadges={unlockedBadges} />
+          <BannerPicker
+            value={v.bannerPreset}
+            onChange={(p) => {
+              set("bannerPreset", p);
+              // O banner enviado vence o pronto; escolher um pronto é trocar o banner.
+              if (shownBanner) setImage("banner", { kind: "remove" });
+            }}
+          />
+          <ProfileImageField kind="banner" currentUrl={bannerUrl} value={images.banner} onChange={(p) => setImage("banner", p)} />
+          <ProfileImageField kind="avatar" currentUrl={avatarUrl} value={images.avatar} onChange={(p) => setImage("avatar", p)} />
+          <FramePicker name={v.displayName || username} avatarUrl={shownAvatar} value={v.avatarFrame} onChange={(f) => set("avatarFrame", f)} unlockedBadges={unlockedBadges} />
           <AccentPicker value={v.accent} onChange={(a) => set("accent", a)} />
           {appearanceError ? <p className="text-xs text-status-danger-text">{t("appearanceError")}</p> : null}
           <input type="hidden" name="bannerPreset" value={v.bannerPreset} />
@@ -176,9 +235,17 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
 
         {/* No celular fica acima da barra de abas; no computador, presa ao fim da tela. */}
         <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-xl border border-border-default bg-bg-surface/95 px-4 py-3 backdrop-blur md:bottom-4">
-          {state.error || hasErrors ? (
+          {uploadFailed || state.error || hasErrors ? (
             <p role="alert" className="text-xs text-status-danger-text">
-              {state.error === "badges" ? badges("notEarned") : state.error === "frame" ? badges("frameNotUnlocked") : state.error ? t("error") : t("fixErrors")}
+              {uploadFailed
+                ? crop("uploadFailed")
+                : state.error === "badges"
+                  ? badges("notEarned")
+                  : state.error === "frame"
+                    ? badges("frameNotUnlocked")
+                    : state.error
+                      ? t("error")
+                      : t("fixErrors")}
             </p>
           ) : (
             <p className="text-xs text-text-muted" aria-live="polite">
@@ -195,8 +262,8 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
             >
               {t("cancel")}
             </Link>
-            <Button type="submit" disabled={pending || v.tags.length > PROFILE_TAGS_MAX}>
-              {pending ? t("saving") : t("save")}
+            <Button type="submit" disabled={busy || v.tags.length > PROFILE_TAGS_MAX}>
+              {busy ? t("saving") : t("save")}
             </Button>
           </div>
         </div>

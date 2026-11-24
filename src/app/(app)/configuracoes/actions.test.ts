@@ -148,7 +148,23 @@ describe("saveProfile", () => {
     expect(db.update.mock.calls[1][0]).toMatchObject({ avatar_url: null, banner_url: url });
     expect(db.list).toHaveBeenCalledWith("avatars", "u1");
     expect(db.remove).toHaveBeenCalledWith("avatars", ["u1/avatar.webp", "u1/avatar-123.png"]);
-    expect(db.remove).toHaveBeenCalledTimes(1);
+    // O banner novo fica; os arquivos antigos da pasta saem.
+    expect(db.list).toHaveBeenCalledWith("banners", "u1");
+    expect(db.remove).toHaveBeenCalledTimes(2);
+  });
+
+  it("imagem nova apaga os arquivos antigos da pasta, menos ela", async () => {
+    db.list.mockResolvedValueOnce({ data: [{ name: "avatar-1.webp" }, { name: "avatar-123.png" }, { name: "avatar-9.webp" }] });
+    const url = "https://abc.supabase.co/storage/v1/object/public/avatars/u1/avatar-9.webp?v=9";
+    await expect(saveProfile({}, form({ ...ok, avatarUrl: url }))).rejects.toThrow("REDIRECT");
+    expect(db.remove).toHaveBeenCalledWith("avatars", ["u1/avatar-1.webp", "u1/avatar-123.png"]);
+  });
+
+  it("se o perfil não salvar, nada é apagado", async () => {
+    db.update.mockResolvedValueOnce({ data: [], error: null });
+    const url = "https://abc.supabase.co/storage/v1/object/public/avatars/u1/avatar-9.webp?v=9";
+    await expect(saveProfile({}, form({ ...ok, avatarUrl: url }))).resolves.toMatchObject({ error: "unknown" });
+    expect(db.remove).not.toHaveBeenCalled();
   });
 
   it("insígnias exibidas: só grava quando a seção veio no formulário, sem repetir, até 3", async () => {
