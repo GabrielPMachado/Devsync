@@ -85,10 +85,7 @@ export function ProfileForm({ initial, username, tags, earnedBadges, shownBadges
         <input key={k} type="hidden" name={k} value={values[k]} />
       ))}
       {earnedBadges ? (
-        <>
-          <input type="hidden" name="shownBadgesSet" value="1" />
-          <BadgesSection earned={earnedBadges} initial={shownBadges} />
-        </>
+        <BadgesSection earned={earnedBadges} initial={shownBadges} />
       ) : null}
       {state.error ? (
         <p role="alert" className="text-sm text-status-danger-text">

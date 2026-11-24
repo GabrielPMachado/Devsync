@@ -35,6 +35,8 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
     <fieldset id="insignias" className="flex flex-col gap-3">
       <legend className="text-base font-semibold text-text-primary">{t("sectionTitle")}</legend>
       <p className="text-sm text-text-muted">{t("sectionHint")}</p>
+      {/* Diz à ação de salvar que a seção veio no formulário (sem ela, as exibidas não mudam). */}
+      <input type="hidden" name="shownBadgesSet" value="1" />
       {shown.map((b) => (
         <input key={b} type="hidden" name={name} value={b} />
       ))}
