@@ -10,9 +10,21 @@ const UPLOAD_FILE = new RegExp(`^/uploads/(${UUID})/(\\d+)$`);
 const UPLOAD_COMPLETE = new RegExp(`^/uploads/(${UUID})/complete$`);
 const DEMO_VERIFY = new RegExp(`^/demos/(${UUID})/verify$`);
 
+/** Segundos que o cliente espera depois de passar do limite (o período do binding). */
+const RATE_LIMIT_PERIOD = 60;
+
 async function api(req: Request, env: Env, deps: Deps): Promise<Response> {
   const { pathname } = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, { status: 204 });
+  if (env.API_LIMITER) {
+    const key = req.headers.get("cf-connecting-ip") ?? "desconhecido";
+    const { success } = await env.API_LIMITER.limit({ key });
+    if (!success) {
+      const res = errorResponse(429, "Muitas tentativas. Espere um minuto e tente de novo.");
+      res.headers.set("retry-after", String(RATE_LIMIT_PERIOD));
+      return res;
+    }
+  }
   if (req.method === "POST" && pathname === "/uploads") return createUpload(req, env, deps);
   let m = UPLOAD_FILE.exec(pathname);
   if (m && req.method === "PUT") return receiveUpload(req, env, m[1]!, Number(m[2]), deps);

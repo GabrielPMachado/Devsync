@@ -1,0 +1,98 @@
+name: Publicar serviço de demos
+
+# Roda só quando alguém clica em "Run workflow" (Actions > Publicar serviço de demos).
+# Precisa, em Settings > Secrets and variables > Actions:
+#   Variável DEMOS_DOMAIN               domínio das demos, ex.: devsyncdemos.com
+#   Segredo  CLOUDFLARE_API_TOKEN       token com Workers, R2, Queues e Workers Routes
+#   Segredo  CLOUDFLARE_ACCOUNT_ID      ID da conta Cloudflare
+#   Segredo  SUPABASE_SERVICE_ROLE_KEY  chave service_role do Supabase
+#   Segredo  UPLOAD_SIGNING_SECRET      `openssl rand -hex 32`
+#   Segredo  SAFE_BROWSING_API_KEY      opcional
+# Passo a passo completo: docs/lancamento.md
+
+on:
+  workflow_dispatch:
+    inputs:
+      criar_recursos:
+        description: "Criar bucket R2 e filas (só na primeira vez)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-demos
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Testar e publicar o Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    defaults:
+      run:
+        working-directory: workers/demos
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DEMOS_DOMAIN: ${{ vars.DEMOS_DOMAIN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: workers/demos/package-lock.json
+
+      - name: Conferir configuração
+        env:
+          HAS_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+          HAS_SIGNING: ${{ secrets.UPLOAD_SIGNING_SECRET != '' }}
+        run: |
+          missing=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          [ "$HAS_SERVICE_ROLE" = "true" ] || missing="$missing SUPABASE_SERVICE_ROLE_KEY"
+          [ "$HAS_SIGNING" = "true" ] || missing="$missing UPLOAD_SIGNING_SECRET"
+          if ! printf '%s' "$DEMOS_DOMAIN" | grep -Eq '^[a-z0-9-]+(\.[a-z0-9-]+)+$'; then missing="$missing DEMOS_DOMAIN(válido)"; fi
+          if [ -n "$missing" ]; then echo "::error::Falta configurar:$missing (veja docs/lancamento.md)"; exit 1; fi
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Colocar o domínio na configuração
+        run: sed -i "s/DOMINIO_DAS_DEMOS/$DEMOS_DOMAIN/g" wrangler.jsonc
+
+      - name: Criar bucket e filas
+        if: ${{ inputs.criar_recursos }}
+        run: |
+          npx wrangler r2 bucket create devsync-demos || echo "bucket já existe"
+          npx wrangler queues create demo-zips || echo "fila demo-zips já existe"
+          npx wrangler queues create demo-links || echo "fila demo-links já existe"
+          # Zips enviados e não concluídos somem depois de 1 dia.
+          npx wrangler r2 bucket lifecycle add devsync-demos uploads-1-dia uploads/ --expire-days 1 --force || echo "regra de ciclo de vida já existe"
+
+      - name: Publicar
+        run: npx wrangler deploy --env production
+
+      - name: Gravar segredos
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          UPLOAD_SIGNING_SECRET: ${{ secrets.UPLOAD_SIGNING_SECRET }}
+          SAFE_BROWSING_API_KEY: ${{ secrets.SAFE_BROWSING_API_KEY }}
+        run: |
+          printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env production
+          printf '%s' "$UPLOAD_SIGNING_SECRET" | npx wrangler secret put UPLOAD_SIGNING_SECRET --env production
+          if [ -n "$SAFE_BROWSING_API_KEY" ]; then
+            printf '%s' "$SAFE_BROWSING_API_KEY" | npx wrangler secret put SAFE_BROWSING_API_KEY --env production
+          fi
+
+      - name: Conferir que está no ar
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "https://$DEMOS_DOMAIN/rota-que-nao-existe")
+          echo "Resposta da API: $code"
+          [ "$code" = "404" ] || { echo "::error::A API não respondeu como esperado ($code). Confira a rota e o DNS curinga."; exit 1; }

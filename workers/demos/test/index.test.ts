@@ -89,3 +89,42 @@ describe("de ponta a ponta", () => {
     expect((await getQueueResult(batch, ctx)).retryMessages).toEqual([{ msgId: "m1" }]);
   });
 });
+
+describe("limite de chamadas da API", () => {
+  const blocked = { limit: vi.fn(async () => ({ success: false })) };
+  const envWith = (limiter: unknown) => ({ ...env, API_LIMITER: limiter }) as typeof env;
+
+  it.each([
+    ["POST", "/uploads"],
+    ["POST", "/embed-check"],
+    ["POST", `/uploads/${"0".repeat(8)}-0000-0000-0000-${"0".repeat(12)}/complete`],
+    ["POST", `/demos/${"0".repeat(8)}-0000-0000-0000-${"0".repeat(12)}/verify`],
+  ])("%s %s responde 429 quando passa do limite", async (method, path) => {
+    const res = await handleFetch(
+      new Request(`https://demos.test${path}`, { method, headers: { ...auth, "cf-connecting-ip": "203.0.113.9", origin: "https://devsync.app" } }),
+      envWith(blocked), deps);
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("60");
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://devsync.app");
+  });
+
+  it("a chave do limite é o IP de quem chama", async () => {
+    blocked.limit.mockClear();
+    await handleFetch(new Request("https://demos.test/embed-check", { method: "POST", headers: { "cf-connecting-ip": "203.0.113.9" } }), envWith(blocked), deps);
+    expect(blocked.limit).toHaveBeenCalledWith({ key: "203.0.113.9" });
+  });
+
+  it("OPTIONS (CORS) não conta no limite", async () => {
+    blocked.limit.mockClear();
+    const res = await handleFetch(new Request("https://demos.test/uploads", { method: "OPTIONS", headers: { origin: "https://devsync.app" } }), envWith(blocked), deps);
+    expect(res.status).toBe(204);
+    expect(blocked.limit).not.toHaveBeenCalled();
+  });
+
+  it("dentro do limite segue normal", async () => {
+    const ok = { limit: vi.fn(async () => ({ success: true })) };
+    const res = await handleFetch(new Request("https://demos.test/rota-que-nao-existe", { method: "POST" }), envWith(ok), deps);
+    expect(res.status).toBe(404);
+    expect(ok.limit).toHaveBeenCalled();
+  });
+});
