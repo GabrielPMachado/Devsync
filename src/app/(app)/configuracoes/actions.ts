@@ -8,16 +8,29 @@ import { createClient } from "@/lib/supabase/server";
 
 export type SaveProfileState = { errors?: ProfileErrors; error?: "unknown"; values?: ProfileInput };
 
-/** Salva o perfil (nome, bio, links, tecnologias) e volta para ele. */
+/** Salva o perfil (sobre, links, aparência, imagens, tecnologias) e volta para ele. */
 export async function saveProfile(_prev: SaveProfileState, formData: FormData): Promise<SaveProfileState> {
   const viewer = await getViewer();
   if (!viewer?.username) redirect("/entrar?next=%2Fconfiguracoes");
 
+  const text = (k: string) => String(formData.get(k) ?? "");
+  const optional = (k: string) => (formData.has(k) ? text(k) : undefined);
   const values: ProfileInput = {
-    displayName: String(formData.get("displayName") ?? ""),
-    bio: String(formData.get("bio") ?? ""),
-    github: String(formData.get("github") ?? ""),
-    site: String(formData.get("site") ?? ""),
+    displayName: text("displayName"),
+    bio: text("bio"),
+    headline: text("headline"),
+    location: text("location"),
+    status: text("status"),
+    github: text("github"),
+    linkedin: text("linkedin"),
+    x: text("x"),
+    youtube: text("youtube"),
+    site: text("site"),
+    bannerPreset: text("bannerPreset"),
+    avatarFrame: text("avatarFrame"),
+    accent: text("accent"),
+    avatarUrl: optional("avatarUrl"),
+    bannerUrl: optional("bannerUrl"),
     tags: formData.getAll("tags").map(String),
   };
   const check = validateProfile(values);
@@ -30,11 +43,29 @@ export async function saveProfile(_prev: SaveProfileState, formData: FormData): 
   if (wanted.length !== v.tags.length) return { error: "unknown", values };
 
   const links: Record<string, string> = {};
-  if (v.github) links.github = v.github;
-  if (v.site) links.site = v.site;
+  for (const key of ["github", "site", "linkedin", "x", "youtube"] as const) if (v[key]) links[key] = v[key];
+  const row: Record<string, unknown> = {
+    display_name: v.displayName,
+    bio: v.bio || null,
+    headline: v.headline || null,
+    location: v.location || null,
+    status: v.status || null,
+    banner_preset: v.bannerPreset || null,
+    avatar_frame: v.avatarFrame || null,
+    accent: v.accent || null,
+    links,
+  };
+  // Ausente = não mexe; "" = remove.
+  if (v.avatarUrl !== undefined) row.avatar_url = v.avatarUrl || null;
+  if (v.bannerUrl !== undefined) row.banner_url = v.bannerUrl || null;
   // .select() devolve as linhas alteradas: zero linhas = a RLS recusou (conta suspensa).
-  const { data: updated, error } = await supabase.from("profiles").update({ display_name: v.displayName, bio: v.bio || null, links }).eq("id", viewer.id).select("id");
+  const { data: updated, error } = await supabase.from("profiles").update(row).eq("id", viewer.id).select("id");
   if (error || !updated?.length) return { error: "unknown", values };
+
+  // Removeu a foto ou o banner: apaga o arquivo depois do perfil salvo (sem órfãos).
+  // Falhar aqui não desfaz o salvamento: o arquivo é sobrescrito no próximo envio.
+  if (v.avatarUrl === "") await clearFolder(supabase, "avatars", viewer.id);
+  if (v.bannerUrl === "") await clearFolder(supabase, "banners", viewer.id);
 
   // Troca só a diferença: se algo falhar no meio, as tecnologias que ficam não somem.
   const { data: current, error: readError } = await supabase.from("profile_tags").select("tag_id").eq("profile_id", viewer.id);
@@ -53,4 +84,11 @@ export async function saveProfile(_prev: SaveProfileState, formData: FormData): 
 
   revalidatePath(`/u/${viewer.username}`);
   redirect(`/@${viewer.username}?salvo=1`);
+}
+
+/** Apaga tudo na pasta da pessoa (inclui fotos antigas do cadastro, como avatar-<ts>.png). */
+async function clearFolder(supabase: Awaited<ReturnType<typeof createClient>>, bucket: "avatars" | "banners", id: string) {
+  const { data } = await supabase.storage.from(bucket).list(id);
+  const paths = (data ?? []).map((f) => `${id}/${f.name}`);
+  if (paths.length) await supabase.storage.from(bucket).remove(paths);
 }

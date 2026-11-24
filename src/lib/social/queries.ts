@@ -6,6 +6,7 @@ import { getSupabaseEnv } from "@/lib/env";
 import { PROJECT_CARD_FIELDS, toPage, type ProjectCardData, type ProjectRow } from "@/lib/projects/queries";
 import { QUESTION_FIELDS, toSummary, type QuestionSummary } from "@/lib/studies/queries";
 import { createClient } from "@/lib/supabase/server";
+import { isAccent, isBannerPreset, isStatus, type Accent, type BannerPreset, type ProfileStatus } from "./profile-style";
 
 /**
  * Leituras da parte social e da descoberta. Sempre com o cliente de quem está
@@ -20,10 +21,17 @@ export type Person = {
   bio: string | null;
 };
 
-export type ProfileLinks = { github?: string; site?: string };
+export type ProfileLinks = { github?: string; site?: string; linkedin?: string; x?: string; youtube?: string };
 
 export type ProfileData = Person & {
   links: ProfileLinks;
+  headline: string | null;
+  location: string | null;
+  status: ProfileStatus | null;
+  bannerUrl: string | null;
+  bannerPreset: BannerPreset | null;
+  avatarFrame: string | null;
+  accent: Accent | null;
   followersCount: number;
   followingCount: number;
   createdAt: string;
@@ -55,6 +63,9 @@ export function toLinks(raw: unknown): ProfileLinks {
   const links: ProfileLinks = {};
   if (typeof o.github === "string" && /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(o.github)) links.github = o.github;
   if (typeof o.site === "string" && /^https:\/\//.test(o.site)) links.site = o.site;
+  if (typeof o.linkedin === "string" && /^[A-Za-z0-9_%-]{3,100}$/.test(o.linkedin)) links.linkedin = o.linkedin;
+  if (typeof o.x === "string" && /^[A-Za-z0-9_]{1,15}$/.test(o.x)) links.x = o.x;
+  if (typeof o.youtube === "string" && /^[A-Za-z0-9._-]{3,30}$/.test(o.youtube)) links.youtube = o.youtube;
   return links;
 }
 
@@ -70,7 +81,7 @@ export const getProfile = cache(async (raw: string): Promise<ProfileData | null>
   }
   const { data } = await supabase
     .from("profiles")
-    .select(`${PERSON_FIELDS}, links, followers_count, following_count, created_at, profile_tags(tags(slug))`)
+    .select(`${PERSON_FIELDS}, links, headline, location, status, banner_url, banner_preset, avatar_frame, accent, followers_count, following_count, created_at, profile_tags(tags(slug))`)
     .eq("username", username)
     .maybeSingle();
   if (!data?.username) return null;
@@ -81,6 +92,13 @@ export const getProfile = cache(async (raw: string): Promise<ProfileData | null>
   return {
     ...toPerson(data as PersonRow),
     links: toLinks(data.links),
+    headline: data.headline,
+    location: data.location,
+    status: data.status && isStatus(data.status) ? data.status : null,
+    bannerUrl: data.banner_url,
+    bannerPreset: data.banner_preset && isBannerPreset(data.banner_preset) ? data.banner_preset : null,
+    avatarFrame: data.avatar_frame,
+    accent: data.accent && isAccent(data.accent) ? data.accent : null,
     followersCount: data.followers_count,
     followingCount: data.following_count,
     createdAt: data.created_at,
