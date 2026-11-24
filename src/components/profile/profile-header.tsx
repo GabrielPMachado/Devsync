@@ -80,7 +80,7 @@ export function ProfileHeader({ profile, actions, basePath, joined }: Props) {
             {/* INSÍGNIAS: <ProfileBadges /> aqui, ao lado do nome (até 3). */}
           </div>
           <p className="font-mono text-sm text-text-muted">@{profile.username}</p>
-          {profile.headline ? <p className="text-base text-text-secondary">{profile.headline}</p> : null}
+          {profile.headline ? <p className="text-base break-words text-text-secondary">{profile.headline}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2 md:pt-3">{actions}</div> : null}
       </div>
@@ -96,8 +96,9 @@ export function ProfileHeader({ profile, actions, basePath, joined }: Props) {
           </span>
         ) : null}
         {profile.location ? (
-          <span className="inline-flex items-center gap-1.5">
-            <MapPin className="size-4" aria-label={t("location")} />
+          <span className="inline-flex min-w-0 items-center gap-1.5 break-words">
+            <MapPin className="size-4 shrink-0" aria-hidden="true" />
+            <span className="sr-only">{t("location")}</span>
             {profile.location}
           </span>
         ) : null}

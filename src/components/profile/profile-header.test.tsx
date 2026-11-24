@@ -47,7 +47,7 @@ describe("ProfileHeader", () => {
   it("sem cargo, status ou local, não deixa buracos", () => {
     const { container } = show({});
     expect(container.querySelector("[data-status]")).toBeNull();
-    expect(screen.queryByText("Localização")).toBeNull();
+    expect(screen.queryByText("Localização:")).toBeNull();
   });
 
   it("monta os links de cada rede com endereço completo", () => {

@@ -13,7 +13,7 @@ const RING = "relative inline-flex shrink-0 rounded-full p-[3px]";
 function Brackets() {
   // Os colchetes < > da logo, um de cada lado, um pouco para fora da foto.
   return (
-    <svg viewBox="0 0 100 100" aria-hidden="true" className="pointer-events-none absolute -inset-[14%] size-[128%] overflow-visible">
+    <svg viewBox="0 0 100 100" aria-hidden="true" className="pointer-events-none absolute -top-[14%] -left-[14%] size-[128%] overflow-visible">
       <g fill="none" stroke="#22D3EE" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 34L2 50L14 66" />
         <path d="M86 34L98 50L86 66" />
