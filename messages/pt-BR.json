@@ -454,7 +454,15 @@
     "cancel": "Cancelar",
     "confirm": "Usar imagem",
     "working": "Gerando imagem…",
-    "failed": "Não foi possível gerar a imagem. Tente outra."
+    "failed": "Não foi possível gerar a imagem. Tente outra.",
+    "changeAvatar": "Trocar foto",
+    "changeBanner": "Trocar banner",
+    "removeAvatar": "Remover foto",
+    "removeBanner": "Remover banner",
+    "invalid": "Não foi possível abrir essa imagem. Use PNG, JPEG ou WebP.",
+    "tooBig": "Imagem grande demais (máximo 15 MB).",
+    "pending": "Aparece no perfil depois de salvar.",
+    "uploadFailed": "Não foi possível enviar a imagem. Tente de novo."
   },
   "Settings": {
     "title": "Editar perfil",
