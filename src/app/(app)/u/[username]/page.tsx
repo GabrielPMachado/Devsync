@@ -1,4 +1,4 @@
-import { CalendarDays, CircleCheck, Globe, LogOut, Pencil } from "lucide-react";
+import { CalendarDays, CircleCheck, Globe, LogOut, Pencil, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import { getFormatter, getTranslations } from "next-intl/server";
 import Link from "next/link";
@@ -72,13 +72,20 @@ async function Profile({ params, searchParams }: { params: Params; searchParams:
           <h1 className="font-display text-2xl font-bold text-text-primary md:text-3xl">{name}</h1>
           <p className="font-mono text-sm text-text-muted">@{profile.username}</p>
         </div>
-        <div className="flex items-center gap-2 md:pb-1">
+        <div className="flex flex-wrap items-center gap-2 md:pb-1">
           {mine ? (
             <>
               <Link href="/configuracoes" className={buttonClasses({ variant: "secondary" })}>
                 <Pencil className="size-4" aria-hidden="true" />
                 {t("editProfile")}
               </Link>
+              {/* No celular o menu da conta não aparece: o link da moderação fica aqui. */}
+              {viewer?.isAdmin ? (
+                <Link href="/admin" className={`${buttonClasses({ variant: "secondary" })} md:hidden`}>
+                  <ShieldCheck className="size-4" aria-hidden="true" />
+                  {nav("moderation")}
+                </Link>
+              ) : null}
               <form action="/auth/sair" method="post" className="md:hidden">
                 <button type="submit" className={buttonClasses({ variant: "ghost" })}>
                   <LogOut className="size-4" aria-hidden="true" />
