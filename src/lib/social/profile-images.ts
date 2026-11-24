@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CropKind } from "@/lib/images/crop-math";
-import { IMAGE_BUCKET } from "./profile-image-url";
+
+export const IMAGE_BUCKET = { avatar: "avatars", banner: "banners" } as const;
 
 /** Imagem do perfil ainda não salva: manter a atual, remover, ou trocar por uma recortada. */
 export type PendingImage = { kind: "keep" } | { kind: "remove" } | { kind: "new"; blob: Blob; previewUrl: string };
