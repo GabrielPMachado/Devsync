@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { Gate } from "@/components/auth/gate";
 import { ConnectedPublishForm } from "@/components/projects/publish-form-connected";
 import { OverlayNotice } from "@/components/projects/publish-form";
-import { listTags } from "@/lib/projects/queries";
+import { getGithubLogin, listTags } from "@/lib/projects/queries";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Publish");
@@ -37,5 +37,6 @@ export default async function NewProjectPage() {
 }
 
 async function Form() {
-  return <ConnectedPublishForm tags={await listTags()} />;
+  const [tags, githubUser] = await Promise.all([listTags(), getGithubLogin()]);
+  return <ConnectedPublishForm tags={tags} githubUser={githubUser} />;
 }

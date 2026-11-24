@@ -7,7 +7,7 @@ export type ProfileInput = { displayName: string; bio: string; github: string; s
 export type ProfileErrors = { displayName?: "length"; bio?: "tooLong"; github?: "invalid"; site?: "https"; tags?: "max" };
 
 /** "@ana", "ana", "github.com/ana" ou "https://github.com/ana/" viram "ana". null se não for um usuário do GitHub. */
-function githubUser(raw: string): string | null {
+export function githubUser(raw: string): string | null {
   const v = raw.replace(/^@/, "").replace(/^(https?:\/\/)?(www\.)?github\.com\//i, "").replace(/\/+$/, "");
   return /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(v) ? v : null;
 }

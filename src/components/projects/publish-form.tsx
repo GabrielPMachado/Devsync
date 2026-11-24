@@ -3,15 +3,17 @@
 import { CircleCheck, Clock, Info, Link2, LoaderCircle, Package, Send, Shield, TriangleAlert, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
 import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
+import { GithubImport, type GithubServices } from "./github-import";
 import type { PublishResult } from "@/app/(app)/projetos/actions";
 import { DemoServiceError, waitForDemo, type DemoRow, type DemoServiceOptions, type EmbedResult } from "@/lib/demos/client";
 import { EMBED_BLOCKED, reasonKey } from "@/lib/demos/reasons";
 import { ZIP_MAX_BYTES } from "@/lib/demos/url";
+import type { ImportDraft } from "@/lib/projects/github";
 import { TAGS_MAX, validateProject, type ProjectErrors, type ProjectInput } from "@/lib/projects/rules";
 
 /** Tudo que o formulário chama de fora. Trocável nos testes. */
@@ -26,6 +28,8 @@ export type PublishServices = {
   readDemo: (demoId: string) => Promise<DemoRow | null>;
   createLinkDemo: (url: string) => Promise<string>;
   publish: (input: ProjectInput & { demoId: string }) => Promise<PublishResult>;
+  /** Importar do GitHub (opcional: sem isso o painel não aparece). */
+  github?: GithubServices;
   sleep?: (ms: number) => Promise<void>;
   /** Tempo máximo esperando a validação do zip (padrão: 90 s). */
   timeoutMs?: number;
@@ -64,6 +68,23 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
   const busy = phase !== "idle";
 
   const toggleTag = (slug: string) => setChosen((c) => (c.includes(slug) ? c.filter((s) => s !== slug) : c.length >= TAGS_MAX ? c : [...c, slug]));
+
+  // Demo que veio da última importação: reimportar um repo sem site não deve herdá-la.
+  const importedLink = useRef<string | null>(null);
+
+  function applyImport(d: ImportDraft) {
+    setTitle(d.title);
+    setDescription(d.description);
+    setChosen(d.tags);
+    setRepoUrl(d.repoUrl);
+    setSiteUrl(d.siteUrl);
+    if (d.demoLink) {
+      setMode("link");
+      setLink(d.demoLink);
+    } else if (importedLink.current && link === importedLink.current) setLink("");
+    importedLink.current = d.demoLink;
+    setErrors({});
+  }
 
   async function finish(input: ProjectInput, demoId: string) {
     setPhase("publishing");
@@ -153,6 +174,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6">
+      {services.github ? <GithubImport services={services.github} tags={tags.map((tag) => tag.slug)} onImport={applyImport} /> : null}
       <Step n={1} title={t("aboutStep")}>
         <TextField label={t("titleLabel")} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} help={t("titleHelp")} error={errors.title ? t("titleError") : undefined} />
         <div className="flex flex-col gap-2">

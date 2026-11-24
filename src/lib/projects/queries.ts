@@ -5,6 +5,7 @@ import type { CommentAuthor, CommentRow } from "@/lib/comments/tree";
 import type { DemoKind, DemoStatus } from "@/lib/demos/url";
 import { getSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { githubLogin } from "./github";
 
 export type ProjectDemo = { id: string; kind: DemoKind; status: DemoStatus; url: string | null; version: number };
 
@@ -122,4 +123,15 @@ export async function listTags(): Promise<{ slug: string; name: string }[]> {
   if (!supabase) return [];
   const { data } = await supabase.from("tags").select("slug, name").order("slug").limit(300);
   return data ?? [];
+}
+
+/** Usuário do GitHub de quem está publicando (perfil ou login com GitHub), para importar projeto. */
+export async function getGithubLogin(): Promise<string | null> {
+  const supabase = await client();
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  const { data: profile } = await supabase.from("profiles").select("links").eq("id", claims.sub).maybeSingle();
+  return githubLogin(profile?.links, claims as Parameters<typeof githubLogin>[1]);
 }

@@ -222,6 +222,27 @@
     "overlayNoticeText": "Quem clicar em “Ver demo” fica na Devsync. Não existe botão de abrir em outra guia.",
     "demoNotReady": "A demo ainda não está pronta ou não é sua. Envie de novo."
   },
+  "GithubImport": {
+    "title": "Importar do GitHub",
+    "text": "Escolha um dos seus repositórios públicos e a gente preenche o formulário.",
+    "open": "Escolher repositório",
+    "close": "Fechar",
+    "userLabel": "Usuário do GitHub",
+    "search": "Buscar",
+    "filterLabel": "Filtrar repositórios",
+    "listLabel": "Repositórios de {user}",
+    "use": "Usar {name}",
+    "useShort": "Usar",
+    "loading": "Buscando no GitHub…",
+    "empty": "Nenhum repositório público encontrado.",
+    "noMatch": "Nenhum repositório com esse nome.",
+    "imported": "Importado de {repo}. Confira antes de publicar.",
+    "not_found": "Não achamos esse usuário no GitHub.",
+    "rate_limit": "O GitHub limitou as buscas por agora. Tente de novo às {time}.",
+    "rate_limit_later": "O GitHub limitou as buscas por agora. Tente de novo mais tarde.",
+    "network": "Não deu para falar com o GitHub. Tente de novo.",
+    "privateNote": "Só repositórios públicos aparecem aqui."
+  },
   "Projects": {
     "metaTitle": "Projetos · Devsync",
     "title": "Projetos",
