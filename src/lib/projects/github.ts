@@ -185,3 +185,16 @@ export function importDraft(repo: GithubRepo, details: RepoDetails, available: s
     demoLink: site || null,
   };
 }
+
+type Claims = { user_metadata?: Record<string, unknown>; app_metadata?: { provider?: unknown; providers?: unknown } } | null | undefined;
+
+/** Usuário do GitHub da pessoa: o do perfil; senão o do login com GitHub. */
+export function githubLogin(links: unknown, claims: Claims): string | null {
+  const fromProfile = (links && typeof links === "object" ? (links as Record<string, unknown>).github : null) as unknown;
+  if (typeof fromProfile === "string" && USER_RE.test(fromProfile)) return fromProfile;
+  const app = claims?.app_metadata;
+  const providers = Array.isArray(app?.providers) ? app.providers : [app?.provider];
+  const name = claims?.user_metadata?.user_name;
+  if (providers.includes("github") && typeof name === "string" && USER_RE.test(name)) return name;
+  return null;
+}

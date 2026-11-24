@@ -28,7 +28,8 @@ export function contentSecurityPolicy({ supabaseUrl, demosUrl, dev }: SecurityEn
   const supabase = origin(supabaseUrl);
   const demos = origin(demosUrl);
 
-  const connect = ["'self'"];
+  // API pública do GitHub: importar projeto lê os repositórios direto do navegador.
+  const connect = ["'self'", "https://api.github.com"];
   const frame = ["'self'", "https:"]; // demos por link podem estar em qualquer site https
   const formAction = ["'self'", "https://github.com"];
 

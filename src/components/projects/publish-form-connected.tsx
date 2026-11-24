@@ -4,11 +4,12 @@ import { useMemo } from "react";
 import { publishProject } from "@/app/(app)/projetos/actions";
 import { completeUpload, createUpload, embedCheck, putZip, verifyDemo, type DemoRow } from "@/lib/demos/client";
 import { demosBaseUrl } from "@/lib/demos/url";
+import { listRepos, repoDetails } from "@/lib/projects/github";
 import { createClient } from "@/lib/supabase/client";
 import { PublishForm, type PublishServices } from "./publish-form";
 
 /** O formulário ligado ao Supabase do navegador, ao serviço de demos e à ação de publicar. */
-export function ConnectedPublishForm({ tags }: { tags: { slug: string; name: string }[] }) {
+export function ConnectedPublishForm({ tags, githubUser }: { tags: { slug: string; name: string }[]; githubUser: string | null }) {
   const services = useMemo<PublishServices>(() => {
     const supabase = createClient();
     return {
@@ -32,7 +33,8 @@ export function ConnectedPublishForm({ tags }: { tags: { slug: string; name: str
         return data.id as string;
       },
       publish: publishProject,
+      github: { user: githubUser, listRepos: (u) => listRepos(u), repoDetails: (r) => repoDetails(r) },
     };
-  }, []);
+  }, [githubUser]);
   return <PublishForm tags={tags} services={services} />;
 }

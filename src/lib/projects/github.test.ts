@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { absolutizeReadme, GithubError, importDraft, listRepos, mapTags, repoDetails, type GithubRepo } from "./github";
+import { absolutizeReadme, GithubError, githubLogin, importDraft, listRepos, mapTags, repoDetails, type GithubRepo } from "./github";
 
 const repo: GithubRepo = {
   name: "kanban",
@@ -124,5 +124,21 @@ describe("importDraft", () => {
 
   it("nome curto demais ganha o dono para passar do mínimo", () => {
     expect(importDraft({ ...repo, name: "ui", fullName: "ana/ui" }, { readme: null, languages: [] }, available).title).toBe("ana/ui");
+  });
+});
+
+describe("githubLogin", () => {
+  it("prefere o GitHub do perfil", () => {
+    expect(githubLogin({ github: "ana" }, { user_metadata: { user_name: "outra" }, app_metadata: { providers: ["github"] } })).toBe("ana");
+  });
+  it("senão usa o usuário do login com GitHub", () => {
+    expect(githubLogin({}, { user_metadata: { user_name: "bia" }, app_metadata: { providers: ["email", "github"] } })).toBe("bia");
+  });
+  it("login por e-mail não inventa usuário", () => {
+    expect(githubLogin(null, { user_metadata: { user_name: "x" }, app_metadata: { providers: ["email"] } })).toBeNull();
+    expect(githubLogin(undefined, undefined)).toBeNull();
+  });
+  it("ignora valores inválidos", () => {
+    expect(githubLogin({ github: "a/b" }, { user_metadata: { user_name: "<x>" }, app_metadata: { provider: "github" } })).toBeNull();
   });
 });

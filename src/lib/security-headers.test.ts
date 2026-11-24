@@ -63,9 +63,13 @@ describe("contentSecurityPolicy", () => {
     expect(directives(csp)["script-src"]).not.toContain("'unsafe-eval'");
   });
 
+  it("o navegador pode ler a API pública do GitHub (importar projeto)", () => {
+    expect(directives(contentSecurityPolicy({ dev: false }))["connect-src"]).toContain("https://api.github.com");
+  });
+
   it("sem Supabase nem demos configurados continua válida", () => {
     const d = directives(contentSecurityPolicy({ dev: false }));
-    expect(d["connect-src"]).toEqual(["'self'"]);
+    expect(d["connect-src"]).toEqual(["'self'", "https://api.github.com"]);
     expect(d["default-src"]).toEqual(["'self'"]);
   });
 
