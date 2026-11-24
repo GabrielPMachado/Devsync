@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const db = { remove: vi.fn(), update: vi.fn(), tags: vi.fn(), current: vi.fn(), removeTags: vi.fn(), insertTags: vi.fn() };
+const db = { list: vi.fn(), remove: vi.fn(), update: vi.fn(), tags: vi.fn(), current: vi.fn(), removeTags: vi.fn(), insertTags: vi.fn() };
 const supabase = {
-  storage: { from: (bucket: string) => ({ remove: (paths: string[]) => db.remove(bucket, paths) }) },
+  storage: { from: (bucket: string) => ({ list: (dir: string) => db.list(bucket, dir), remove: (paths: string[]) => db.remove(bucket, paths) }) },
   from(table: string) {
     if (table === "profiles") return { update: (v: unknown) => ({ eq: (_c: string, id: string) => ({ select: () => db.update(v, id) }) }) };
     if (table === "tags") return { select: () => ({ in: (_c: string, slugs: string[]) => db.tags(slugs) }) };
@@ -45,6 +45,7 @@ beforeEach(() => {
   db.removeTags.mockResolvedValue({ error: null });
   db.insertTags.mockResolvedValue({ error: null });
   db.remove.mockResolvedValue({ error: null });
+  db.list.mockResolvedValue({ data: [{ name: "avatar.webp" }, { name: "avatar-123.png" }], error: null });
 });
 
 describe("saveProfile", () => {
@@ -145,7 +146,8 @@ describe("saveProfile", () => {
     const url = "https://abc.supabase.co/storage/v1/object/public/banners/u1/banner.webp?v=2";
     await expect(saveProfile({}, form({ ...ok, avatarUrl: "", bannerUrl: url }))).rejects.toThrow("REDIRECT");
     expect(db.update.mock.calls[1][0]).toMatchObject({ avatar_url: null, banner_url: url });
-    expect(db.remove).toHaveBeenCalledWith("avatars", ["u1/avatar.webp"]);
+    expect(db.list).toHaveBeenCalledWith("avatars", "u1");
+    expect(db.remove).toHaveBeenCalledWith("avatars", ["u1/avatar.webp", "u1/avatar-123.png"]);
     expect(db.remove).toHaveBeenCalledTimes(1);
   });
 });

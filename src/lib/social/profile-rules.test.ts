@@ -59,7 +59,8 @@ describe("validateProfile", () => {
   });
 
   it("status, banner pronto, borda e cor só da lista (vazio = nenhum)", () => {
-    expect(validateProfile({ ...base, status: "building", bannerPreset: "hex", avatarFrame: "neon", accent: "rosa" })).toMatchObject({ ok: true });
+    expect(validateProfile({ ...base, status: "building", bannerPreset: "hex", avatarFrame: "gradiente", accent: "rosa" })).toMatchObject({ ok: true });
+    expect(validateProfile({ ...base, avatarFrame: "neon" })).toMatchObject({ ok: false, errors: { avatarFrame: "invalid" } });
     expect(validateProfile({ ...base, status: "dormindo" })).toMatchObject({ ok: false, errors: { status: "invalid" } });
     expect(validateProfile({ ...base, bannerPreset: "x" })).toMatchObject({ ok: false, errors: { bannerPreset: "invalid" } });
     expect(validateProfile({ ...base, avatarFrame: "x" })).toMatchObject({ ok: false, errors: { avatarFrame: "invalid" } });
@@ -67,13 +68,13 @@ describe("validateProfile", () => {
   });
 
   it("LinkedIn, X e YouTube aceitam o link colado e guardam só o usuário", () => {
-    for (const l of ["ana-souza", "https://www.linkedin.com/in/ana-souza/", "linkedin.com/in/ana-souza"]) {
+    for (const l of ["ana-souza", "https://www.linkedin.com/in/ana-souza/", "linkedin.com/in/ana-souza", "https://br.linkedin.com/in/ana-souza?trk=x"]) {
       expect(validateProfile({ ...base, linkedin: l })).toMatchObject({ ok: true, value: { linkedin: "ana-souza" } });
     }
-    for (const l of ["@ana_dev", "https://x.com/ana_dev", "twitter.com/ana_dev/"]) {
+    for (const l of ["@ana_dev", "https://x.com/ana_dev", "twitter.com/ana_dev/", "https://x.com/ana_dev?s=20", "mobile.twitter.com/ana_dev"]) {
       expect(validateProfile({ ...base, x: l })).toMatchObject({ ok: true, value: { x: "ana_dev" } });
     }
-    for (const l of ["@anacoda", "anacoda", "https://www.youtube.com/@anacoda"]) {
+    for (const l of ["@anacoda", "anacoda", "https://www.youtube.com/@anacoda", "https://m.youtube.com/@anacoda?si=1"]) {
       expect(validateProfile({ ...base, youtube: l })).toMatchObject({ ok: true, value: { youtube: "anacoda" } });
     }
     expect(validateProfile({ ...base, linkedin: "javascript:alert(1)" })).toMatchObject({ ok: false, errors: { linkedin: "invalid" } });
