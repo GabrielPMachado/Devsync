@@ -443,6 +443,19 @@
     "noFollowers": "Ninguém segue este perfil ainda.",
     "noFollowing": "Este perfil ainda não segue ninguém."
   },
+  "ImageCrop": {
+    "titleAvatar": "Recortar foto",
+    "titleBanner": "Recortar banner",
+    "hint": "Arraste para posicionar. Setas movem, + e − aproximam.",
+    "area": "Área de recorte",
+    "zoom": "Zoom",
+    "zoomIn": "Aproximar",
+    "zoomOut": "Afastar",
+    "cancel": "Cancelar",
+    "confirm": "Usar imagem",
+    "working": "Gerando imagem…",
+    "failed": "Não foi possível gerar a imagem. Tente outra."
+  },
   "Settings": {
     "title": "Editar perfil",
     "subtitle": "É assim que as pessoas veem você na Devsync.",
