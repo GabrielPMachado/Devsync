@@ -427,7 +427,7 @@
     "empty": "Nada por aqui ainda. Quando alguém seguir você, curtir ou responder, aparece aqui.",
     "realtime": "As notificações chegam em tempo real enquanto a Devsync está aberta.",
     "someone": "Alguém",
-    "removed": "um conteúdo removido",
+    "removed": "um conteúdo que não está mais disponível",
     "followBack": "Seguir de volta",
     "unread": "Não lida",
     "follow": "<b>{name}</b> começou a seguir você",
@@ -454,13 +454,15 @@
     "newQuestion": "Pergunta",
     "empty": "Seu início ainda está vazio. Siga pessoas e tags para ver os projetos e perguntas delas aqui.",
     "more": "Carregar mais",
+    "loading": "Carregando…",
+    "loadError": "Não deu para carregar agora. Tente de novo.",
     "end": "Você chegou ao fim. Que tal explorar algo novo?"
   },
   "Discover": {
     "whoToFollow": "Quem seguir",
     "seeMore": "Ver mais",
     "unanswered": "Sem resposta",
-    "suggestions": "Sugestões",
+    
     "exploreTitle": "Explorar",
     "exploreSubtitle": "Projetos em alta, perguntas esperando resposta e gente nova para seguir.",
     "popularTags": "Tags populares",

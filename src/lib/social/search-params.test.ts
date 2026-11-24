@@ -10,6 +10,7 @@ describe("parseSearch", () => {
     expect(parseSearch({ tipo: "perguntas" }).kinds).toEqual(["question"]);
     expect(parseSearch({ tipo: "pessoas" }).kinds).toEqual(["profile"]);
     expect(parseSearch({ tipo: "xyz" })).toMatchObject({ tipo: "tudo", kinds: null });
+    expect(parseSearch({ tipo: "toString" })).toMatchObject({ tipo: "tudo", kinds: null });
   });
   it("corta a busca em 200 e ignora tag inválida", () => {
     expect(parseSearch({ q: "a".repeat(300) }).q).toHaveLength(200);

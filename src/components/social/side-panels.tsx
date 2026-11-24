@@ -7,24 +7,24 @@ import { PersonRow } from "./person-row";
 const PANEL = "flex flex-col gap-4 rounded-xl border border-border-default bg-bg-surface p-4";
 
 /** "Quem seguir": sugestões do banco (tecnologias em comum, depois mais seguidos). */
-export async function WhoToFollow({ viewerId, path, limit = 3, showBio = false, title }: { viewerId: string | null; path: string; limit?: number; showBio?: boolean; title?: string }) {
+export async function WhoToFollow({ viewerId, path, limit = 3, showBio = false, bare = false }: { viewerId: string | null; path: string; limit?: number; showBio?: boolean; bare?: boolean }) {
   const people = await suggestedPeople(limit);
   if (people.length === 0) return null;
   const follows = await followingSet(viewerId, people.map((p) => p.id));
   const t = await getTranslations("Discover");
+  const rows = people.map((p) => <PersonRow key={p.id} person={p} following={follows.has(p.id)} viewerId={viewerId} path={path} showBio={showBio} />);
+  if (bare) return <div className={PANEL}>{rows}</div>;
   return (
     <section className={PANEL} aria-labelledby="quem-seguir">
       <div className="flex items-center justify-between">
         <h2 id="quem-seguir" className="font-display text-base font-bold text-text-primary">
-          {title ?? t("whoToFollow")}
+          {t("whoToFollow")}
         </h2>
         <Link href="/explorar" className="text-sm font-semibold text-text-link hover:underline">
           {t("seeMore")}
         </Link>
       </div>
-      {people.map((p) => (
-        <PersonRow key={p.id} person={p} following={follows.has(p.id)} viewerId={viewerId} path={path} showBio={showBio} />
-      ))}
+      {rows}
     </section>
   );
 }

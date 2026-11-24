@@ -26,20 +26,30 @@ export async function saveProfile(_prev: SaveProfileState, formData: FormData): 
 
   const supabase = await createClient();
   const { data: found } = v.tags.length ? await supabase.from("tags").select("id").in("slug", v.tags) : { data: [] };
-  const tags = (found ?? []) as { id: string }[];
-  if (tags.length !== v.tags.length) return { error: "unknown", values };
+  const wanted = ((found ?? []) as { id: string }[]).map((t) => t.id);
+  if (wanted.length !== v.tags.length) return { error: "unknown", values };
 
   const links: Record<string, string> = {};
   if (v.github) links.github = v.github;
   if (v.site) links.site = v.site;
-  const { error } = await supabase.from("profiles").update({ display_name: v.displayName, bio: v.bio || null, links }).eq("id", viewer.id);
-  if (error) return { error: "unknown", values };
+  // .select() devolve as linhas alteradas: zero linhas = a RLS recusou (conta suspensa).
+  const { data: updated, error } = await supabase.from("profiles").update({ display_name: v.displayName, bio: v.bio || null, links }).eq("id", viewer.id).select("id");
+  if (error || !updated?.length) return { error: "unknown", values };
 
-  const { error: clearError } = await supabase.from("profile_tags").delete().eq("profile_id", viewer.id);
-  const { error: tagError } = clearError || tags.length === 0
-    ? { error: clearError }
-    : await supabase.from("profile_tags").insert(tags.map((t) => ({ profile_id: viewer.id, tag_id: t.id })));
-  if (tagError) return { error: "unknown", values };
+  // Troca só a diferença: se algo falhar no meio, as tecnologias que ficam não somem.
+  const { data: current, error: readError } = await supabase.from("profile_tags").select("tag_id").eq("profile_id", viewer.id);
+  if (readError) return { error: "unknown", values };
+  const have = new Set(((current ?? []) as { tag_id: string }[]).map((r) => r.tag_id));
+  const add = wanted.filter((id) => !have.has(id));
+  const remove = [...have].filter((id) => !wanted.includes(id));
+  if (add.length) {
+    const { error: addError } = await supabase.from("profile_tags").insert(add.map((tag_id) => ({ profile_id: viewer.id, tag_id })));
+    if (addError) return { error: "unknown", values };
+  }
+  if (remove.length) {
+    const { error: removeError } = await supabase.from("profile_tags").delete().eq("profile_id", viewer.id).in("tag_id", remove);
+    if (removeError) return { error: "unknown", values };
+  }
 
   revalidatePath(`/u/${viewer.username}`);
   redirect(`/@${viewer.username}?salvo=1`);

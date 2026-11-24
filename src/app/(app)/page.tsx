@@ -5,32 +5,24 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HomeHero } from "@/components/home-hero";
 import { FeedList } from "@/components/social/feed-list";
+import { LoadMore } from "@/components/social/load-more";
 import { Unanswered, WhoToFollow } from "@/components/social/side-panels";
 import { buttonClasses } from "@/components/ui/button";
 import { getViewer, type Viewer } from "@/lib/auth/viewer";
 import { followedTags, loadFeed, loadLatest } from "@/lib/social/queries";
 
-type Search = PageProps<"/">["searchParams"];
-
-export default function Home({ searchParams }: { searchParams: Search }) {
+export default function Home() {
   return (
     <Suspense fallback={<div className="mx-auto h-96 w-full max-w-[1280px] animate-pulse" />}>
-      <HomeFor searchParams={searchParams} />
+      <HomeFor />
     </Suspense>
   );
 }
 
-/** Cursor da paginação: só datas válidas. */
-function cursorOf(raw: string | string[] | undefined): string | null {
-  const v = Array.isArray(raw) ? raw[0] : raw;
-  return v && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null;
-}
-
-async function HomeFor({ searchParams }: { searchParams: Search }) {
+async function HomeFor() {
   const viewer = await getViewer();
   if (!viewer?.username) return <Visitor />;
-  const sp = await searchParams;
-  return <Feed viewer={viewer} before={cursorOf(sp.antes)} />;
+  return <Feed viewer={viewer} />;
 }
 
 function Visitor() {
@@ -62,9 +54,9 @@ async function Latest() {
   );
 }
 
-async function Feed({ viewer, before }: { viewer: Viewer; before: string | null }) {
+async function Feed({ viewer }: { viewer: Viewer }) {
   const t = await getTranslations("Feed");
-  const [{ items, next }, tags] = await Promise.all([loadFeed(before), followedTags(viewer.id)]);
+  const [{ items, next }, tags] = await Promise.all([loadFeed(null), followedTags(viewer.id)]);
   return (
     <main className="mx-auto flex w-full max-w-[1280px] flex-1 gap-8 px-4 py-6 md:px-6 md:py-8">
       <aside className="hidden w-52 shrink-0 flex-col gap-3 lg:flex">
@@ -98,7 +90,7 @@ async function Feed({ viewer, before }: { viewer: Viewer; before: string | null 
           </Link>
         </div>
         <h1 className="sr-only">{t("title")}</h1>
-        {items.length === 0 && !before ? (
+        {items.length === 0 ? (
           <>
             <p className="rounded-xl border border-dashed border-border-default px-4 py-10 text-center text-sm text-text-muted">{t("empty")}</p>
             <Suspense fallback={null}>
@@ -108,13 +100,7 @@ async function Feed({ viewer, before }: { viewer: Viewer; before: string | null 
         ) : (
           <FeedList items={items} basePath="/" label={t("yours")} />
         )}
-        {next ? (
-          <Link href={`/?antes=${encodeURIComponent(next)}`} className={`${buttonClasses({ variant: "secondary" })} self-center`}>
-            {t("more")}
-          </Link>
-        ) : items.length > 0 ? (
-          <p className="text-center text-sm text-text-subtle">{t("end")}</p>
-        ) : null}
+        {items.length > 0 ? <LoadMore cursor={next} label={t("yours")} /> : null}
       </div>
 
       <aside className="hidden w-72 shrink-0 flex-col gap-5 xl:flex">

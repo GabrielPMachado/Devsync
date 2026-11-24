@@ -4,7 +4,7 @@ import { UserCheck, UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { toggleFollow } from "@/app/(app)/u/[username]/actions";
+import { setFollow } from "@/app/(app)/u/[username]/actions";
 import { buttonClasses } from "@/components/ui/button";
 
 type Props = {
@@ -52,7 +52,7 @@ export function FollowButton({ profileId, username, following: initial, signedIn
           setNotice(null);
           start(async () => {
             try {
-              const next = await toggleFollow(profileId, path);
+              const next = await setFollow(profileId, !before, path);
               setFollowing(next.following);
               setNotice(next.following ? t("nowFollowing", { username }) : null);
               onChange?.(next);

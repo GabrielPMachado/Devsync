@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { Logo } from "@/components/brand/logo";
 import { buttonClasses } from "@/components/ui/button";
-import { NotificationBell } from "@/components/social/notification-bell";
+import { NotificationBell, NotificationToast } from "@/components/social/notification-bell";
 import { SearchBox } from "@/components/social/search-box";
 import { getViewer } from "@/lib/auth/viewer";
 import { unreadCount } from "@/lib/social/notification-queries";
@@ -77,6 +77,7 @@ function AccountButtons({ viewer, unread }: { viewer: Awaited<ReturnType<typeof 
       <span className="hidden md:flex">
         <NotificationBell userId={viewer.id} initial={unread} />
       </span>
+      <NotificationToast userId={viewer.id} initial={unread} />
       <span className="hidden md:inline-flex">
         <Link href="/projetos/novo" className={buttonClasses({ size: "sm" })}>
           <Plus className="size-4" aria-hidden="true" />

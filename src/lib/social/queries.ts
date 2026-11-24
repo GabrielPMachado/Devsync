@@ -53,7 +53,7 @@ function toPerson(r: PersonRow): Person {
 export function toLinks(raw: unknown): ProfileLinks {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const links: ProfileLinks = {};
-  if (typeof o.github === "string" && o.github) links.github = o.github;
+  if (typeof o.github === "string" && /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(o.github)) links.github = o.github;
   if (typeof o.site === "string" && /^https:\/\//.test(o.site)) links.site = o.site;
   return links;
 }

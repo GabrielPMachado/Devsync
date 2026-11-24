@@ -13,7 +13,7 @@ const first = (v: Raw) => (Array.isArray(v) ? v[0] : v) ?? "";
 export function parseSearch(sp: { q?: Raw; tipo?: Raw; tag?: Raw }): SearchQuery {
   const q = first(sp.q).trim().slice(0, Q_MAX);
   const rawTipo = first(sp.tipo);
-  const tipo: SearchTipo = rawTipo in KINDS ? (rawTipo as SearchTipo) : "tudo";
+  const tipo: SearchTipo = Object.hasOwn(KINDS, rawTipo) ? (rawTipo as SearchTipo) : "tudo";
   const tag = first(sp.tag).trim().toLowerCase();
   return { q, tipo, kinds: tipo === "tudo" ? null : [KINDS[tipo as keyof typeof KINDS]], tag: TAG.test(tag) ? tag : null };
 }

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import messages from "../../../messages/pt-BR.json";
 import type { NotificationView } from "@/lib/social/notification-queries";
 
-vi.mock("@/app/(app)/u/[username]/actions", () => ({ toggleFollow: vi.fn() }));
+vi.mock("@/app/(app)/u/[username]/actions", () => ({ setFollow: vi.fn() }));
 const { NotificationItem } = await import("./notification-item");
 
 const now = new Date("2026-11-24T12:00:00Z");
@@ -46,7 +46,7 @@ describe("NotificationItem", () => {
 
   it("alvo apagado mostra texto genérico e não vira link", () => {
     show(view({ type: "comment", targetType: "comment", target: null }));
-    expect(screen.getByRole("listitem")).toHaveTextContent("Ana Souza comentou em um conteúdo removido");
+    expect(screen.getByRole("listitem")).toHaveTextContent("Ana Souza comentou em um conteúdo que não está mais disponível");
     expect(screen.queryByRole("link")).toBeNull();
   });
 

@@ -4,7 +4,7 @@ import { Check, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { toggleTagFollow } from "@/app/(app)/tags/actions";
+import { setTagFollow } from "@/app/(app)/tags/actions";
 import { buttonClasses } from "@/components/ui/button";
 
 /** Acompanhar / Acompanhando uma tag. */
@@ -31,7 +31,7 @@ export function TagFollowButton({ slug, followed: initial, signedIn }: { slug: s
         setFollowed(!before);
         start(async () => {
           try {
-            setFollowed((await toggleTagFollow(slug)).followed);
+            setFollowed((await setTagFollow(slug, !before)).followed);
           } catch {
             setFollowed(before);
           }

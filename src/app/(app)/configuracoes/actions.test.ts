@@ -1,13 +1,17 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const db = { update: vi.fn(), tags: vi.fn(), clearTags: vi.fn(), insertTags: vi.fn() };
+const db = { update: vi.fn(), tags: vi.fn(), current: vi.fn(), removeTags: vi.fn(), insertTags: vi.fn() };
 const supabase = {
   from(table: string) {
-    if (table === "profiles") return { update: (v: unknown) => ({ eq: (_c: string, id: string) => db.update(v, id) }) };
+    if (table === "profiles") return { update: (v: unknown) => ({ eq: (_c: string, id: string) => ({ select: () => db.update(v, id) }) }) };
     if (table === "tags") return { select: () => ({ in: (_c: string, slugs: string[]) => db.tags(slugs) }) };
     if (table === "profile_tags")
-      return { delete: () => ({ eq: (_c: string, id: string) => db.clearTags(id) }), insert: (rows: unknown) => db.insertTags(rows) };
+      return {
+        select: () => ({ eq: (_c: string, id: string) => db.current(id) }),
+        delete: () => ({ eq: (_c: string, id: string) => ({ in: (_c2: string, ids: string[]) => db.removeTags(id, ids) }) }),
+        insert: (rows: unknown) => db.insertTags(rows),
+      };
     throw new Error(table);
   },
 };
@@ -34,22 +38,36 @@ const ok = { displayName: "Ana Souza", bio: "Front-end", github: "https://github
 beforeEach(() => {
   vi.clearAllMocks();
   getViewer.mockResolvedValue(viewer);
-  db.update.mockResolvedValue({ error: null });
+  db.update.mockResolvedValue({ data: [{ id: "u1" }], error: null });
+  db.current.mockResolvedValue({ data: [{ tag_id: "id-react" }, { tag_id: "id-go" }], error: null });
   db.tags.mockImplementation(async (slugs: string[]) => ({ data: slugs.map((s) => ({ id: `id-${s}` })) }));
-  db.clearTags.mockResolvedValue({ error: null });
+  db.removeTags.mockResolvedValue({ error: null });
   db.insertTags.mockResolvedValue({ error: null });
 });
 
 describe("saveProfile", () => {
-  it("grava nome, bio, links e troca as tecnologias, depois abre o perfil", async () => {
+  it("grava nome, bio, links e troca só a diferença das tecnologias, depois abre o perfil", async () => {
     await expect(saveProfile({}, form(ok))).rejects.toThrow("REDIRECT /@ana?salvo=1");
     expect(db.update).toHaveBeenCalledWith({ display_name: "Ana Souza", bio: "Front-end", links: { github: "anasouza", site: "https://ana.dev" } }, "u1");
-    expect(db.clearTags).toHaveBeenCalledWith("u1");
     expect(db.insertTags).toHaveBeenCalledWith([
-      { profile_id: "u1", tag_id: "id-react" },
       { profile_id: "u1", tag_id: "id-css" },
       { profile_id: "u1", tag_id: "id-a11y" },
     ]);
+    expect(db.removeTags).toHaveBeenCalledWith("u1", ["id-go"]);
+  });
+
+  it("se a inclusão falhar, não apaga as tecnologias que já existiam", async () => {
+    db.insertTags.mockResolvedValue({ error: { message: "x" } });
+    await expect(saveProfile({}, form(ok))).resolves.toMatchObject({ error: "unknown" });
+    expect(db.removeTags).not.toHaveBeenCalled();
+  });
+
+  it("conta suspensa (a RLS não altera nenhuma linha) não mexe nas tecnologias", async () => {
+    db.update.mockResolvedValue({ data: [], error: null });
+    await expect(saveProfile({}, form(ok))).resolves.toMatchObject({ error: "unknown" });
+    expect(db.current).not.toHaveBeenCalled();
+    expect(db.insertTags).not.toHaveBeenCalled();
+    expect(db.removeTags).not.toHaveBeenCalled();
   });
 
   it("formulário inválido não grava nada e devolve o que foi digitado", async () => {
@@ -68,7 +86,7 @@ describe("saveProfile", () => {
 
   it("sem tecnologias limpa a lista", async () => {
     await expect(saveProfile({}, form({ ...ok, tags: [] }))).rejects.toThrow("REDIRECT");
-    expect(db.clearTags).toHaveBeenCalledWith("u1");
+    expect(db.removeTags).toHaveBeenCalledWith("u1", ["id-react", "id-go"]);
     expect(db.insertTags).not.toHaveBeenCalled();
   });
 

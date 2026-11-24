@@ -87,7 +87,7 @@ async function Sections() {
         </section>
         <section aria-labelledby="pessoas" className="flex flex-col gap-4 lg:w-80">
           {title(Users, t("peopleToFollow"), "pessoas")}
-          <WhoToFollow viewerId={viewer?.id ?? null} path="/explorar" limit={5} showBio title={t("suggestions")} />
+          <WhoToFollow viewerId={viewer?.id ?? null} path="/explorar" limit={5} showBio bare />
         </section>
       </div>
     </>
