@@ -5,6 +5,8 @@ import messages from "../../../messages/pt-BR.json";
 import type { AnswerView } from "@/lib/studies/queries";
 
 vi.mock("@/app/(app)/estudos/actions", () => ({ voteAnswer: vi.fn(), acceptAnswer: vi.fn(), toggleOutdated: vi.fn() }));
+vi.mock("@/lib/moderation/actions", () => ({ reportContent: vi.fn() }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/estudos/x" }));
 const { AnswerCard } = await import("./answer-card");
 
 const now = new Date("2026-11-23T12:00:00Z");

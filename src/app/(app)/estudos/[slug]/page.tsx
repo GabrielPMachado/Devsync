@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { ReportButton } from "@/components/moderation/report-button";
 import { AnswerCard } from "@/components/studies/answer-card";
 import { AnswerForm } from "@/components/studies/answer-form";
 import { Markdown } from "@/components/studies/markdown";
@@ -136,6 +137,7 @@ async function Question({ params }: { params: Params }) {
             {t("needsDetails")}
           </Link>
         )}
+        {!mine ? <ReportButton target="question" targetId={question.id} signedIn={!!viewerId} className="h-8 px-2.5" /> : null}
         {question.edited ? (
           <Link href={`/estudos/${question.slug}/historico`} className={ghost}>
             <History className="size-4" aria-hidden="true" />

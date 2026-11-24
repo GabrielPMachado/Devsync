@@ -4,9 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import messages from "../../../messages/pt-BR.json";
 import type { CommentNode } from "@/lib/comments/tree";
 
-const addComment = vi.fn(async () => ({}));
-vi.mock("@/app/(app)/projetos/actions", () => ({ addComment, deleteComment: vi.fn(async () => ({})) }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const addComment = vi.fn<(...a: unknown[]) => Promise<{ toneWarning?: true }>>(async () => ({}));
+vi.mock("@/app/(app)/projetos/actions", () => ({ addComment: (...a: unknown[]) => addComment(...a), deleteComment: vi.fn(async () => ({})) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/projetos/x" }));
+vi.mock("@/lib/moderation/actions", () => ({ reportContent: vi.fn() }));
 
 const { Comments } = await import("./comments");
 
@@ -49,12 +50,27 @@ describe("Comments", () => {
     show("u1");
     fireEvent.change(screen.getByLabelText("Escreva um comentário"), { target: { value: "Show!" } });
     fireEvent.click(screen.getByRole("button", { name: "Comentar" }));
-    await waitFor(() => expect(addComment).toHaveBeenCalledWith("p1", "Show!", null, "/projetos/x"));
+    await waitFor(() => expect(addComment).toHaveBeenCalledWith("p1", "Show!", null, "/projetos/x", false));
 
     fireEvent.click(screen.getAllByRole("button", { name: "Responder" })[0]!);
     fireEvent.change(screen.getByLabelText("Responder a Lucas Pereira"), { target: { value: "Também achei" } });
     fireEvent.click(screen.getByRole("button", { name: "Enviar resposta" }));
-    await waitFor(() => expect(addComment).toHaveBeenCalledWith("p1", "Também achei", "c1", "/projetos/x"));
+    await waitFor(() => expect(addComment).toHaveBeenCalledWith("p1", "Também achei", "c1", "/projetos/x", false));
+  });
+
+  it("aviso de tom: publicar assim mesmo reenvia confirmado", async () => {
+    addComment.mockResolvedValueOnce({ toneWarning: true });
+    show("u1");
+    fireEvent.change(screen.getByLabelText("Escreva um comentário"), { target: { value: "que lixo" } });
+    fireEvent.click(screen.getByRole("button", { name: "Comentar" }));
+    expect(await screen.findByText("Seu texto pode soar ríspido")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Publicar assim mesmo" }));
+    await waitFor(() => expect(addComment).toHaveBeenLastCalledWith("p1", "que lixo", null, "/projetos/x", true));
+  });
+
+  it("denunciar aparece só no comentário dos outros", () => {
+    show("u1");
+    expect(screen.getAllByRole("button", { name: "Denunciar comentário" })).toHaveLength(1);
   });
 
   it("só o autor vê Apagar", () => {
