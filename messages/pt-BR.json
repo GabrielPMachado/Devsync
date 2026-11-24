@@ -84,14 +84,6 @@
     "mainNav": "Navegação principal",
     "tabs": "Abas"
   },
-  "ComingSoon": {
-    "badge": "Em breve",
-    "projects": "Aqui vão aparecer os projetos com demo ao vivo.",
-    "studies": "Aqui vão aparecer as perguntas e respostas por assunto.",
-    "notifications": "Aqui você vai ver quem respondeu, curtiu ou começou a seguir você.",
-    "feed": "O seu feed chega em breve. Por enquanto, seu perfil já está pronto.",
-    "hello": "Olá, {name}!"
-  },
   "Profile": {
     "joined": "Na Devsync desde {date}",
     "following": "{count} seguindo",
@@ -381,11 +373,11 @@
     "editProfile": "Editar perfil",
     "profileSaved": "Perfil atualizado.",
     "joined": "Na Devsync desde {date}",
-    "followersLabel": "{count, plural, one {seguidor} other {seguidores}}",
+    "followersLabel": "{count, plural, =1 {seguidor} other {seguidores}}",
     "followingLabel": "seguindo",
-    "projectsLabel": "{count, plural, one {projeto} other {projetos}}",
-    "answersLabel": "{count, plural, one {resposta} other {respostas}}",
-    "acceptedLabel": "{count, plural, one {resposta aceita} other {respostas aceitas}}",
+    "projectsLabel": "{count, plural, =1 {projeto} other {projetos}}",
+    "answersLabel": "{count, plural, =1 {resposta} other {respostas}}",
+    "acceptedLabel": "{count, plural, =1 {resposta aceita} other {respostas aceitas}}",
     "technologies": "Tecnologias",
     "profileSections": "Seções do perfil",
     "tab_projetos": "Projetos ({count})",
@@ -454,9 +446,10 @@
   "Feed": {
     "title": "Início",
     "latest": "Mais recentes na Devsync",
+    "yours": "Seu início",
     "tagsYouFollow": "Tags que você segue",
     "moreTags": "+ Seguir mais tags",
-    "composer": "O que você está construindo, {name}?",
+    "composer": "Olá, {name}! O que você está construindo hoje?",
     "newProject": "Projeto com demo",
     "newQuestion": "Pergunta",
     "empty": "Seu início ainda está vazio. Siga pessoas e tags para ver os projetos e perguntas delas aqui.",

@@ -57,7 +57,7 @@ async function Latest() {
   return (
     <section className="flex w-full max-w-[760px] flex-col gap-4 px-4">
       <h2 className="font-display text-lg font-bold text-text-primary">{t("latest")}</h2>
-      <FeedList items={items} basePath="/" />
+      <FeedList items={items} basePath="/" label={t("latest")} />
     </section>
   );
 }
@@ -106,7 +106,7 @@ async function Feed({ viewer, before }: { viewer: Viewer; before: string | null 
             </Suspense>
           </>
         ) : (
-          <FeedList items={items} basePath="/" />
+          <FeedList items={items} basePath="/" label={t("yours")} />
         )}
         {next ? (
           <Link href={`/?antes=${encodeURIComponent(next)}`} className={`${buttonClasses({ variant: "secondary" })} self-center`}>
