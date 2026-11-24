@@ -36,7 +36,22 @@ async function Form() {
     <ProfileForm
       username={profile.username}
       tags={tags}
-      initial={{ displayName: profile.displayName ?? "", bio: profile.bio ?? "", github: profile.links.github ?? "", site: profile.links.site ?? "", tags: profile.tags }}
+      initial={{
+        displayName: profile.displayName ?? "",
+        bio: profile.bio ?? "",
+        headline: profile.headline ?? "",
+        location: profile.location ?? "",
+        status: profile.status ?? "",
+        github: profile.links.github ?? "",
+        linkedin: profile.links.linkedin ?? "",
+        x: profile.links.x ?? "",
+        youtube: profile.links.youtube ?? "",
+        site: profile.links.site ?? "",
+        bannerPreset: profile.bannerPreset ?? "",
+        avatarFrame: profile.avatarFrame ?? "",
+        accent: profile.accent ?? "",
+        tags: profile.tags,
+      }}
     />
   );
 }
