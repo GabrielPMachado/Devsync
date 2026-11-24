@@ -3,7 +3,7 @@
 import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ACCENT_COLORS, ACCENTS, BANNER_PRESETS } from "@/lib/social/profile-style";
-import { BANNER_BACKGROUNDS } from "./preview-style";
+import { ProfileBanner } from "@/components/profile/profile-banner";
 
 const RING = "has-checked:border-brand-accent has-checked:ring-2 has-checked:ring-brand-accent has-focus-visible:outline-2 has-focus-visible:outline-border-focus";
 
@@ -11,7 +11,7 @@ const RING = "has-checked:border-brand-accent has-checked:ring-2 has-checked:rin
 export function BannerPicker({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   const t = useTranslations("Settings");
   const style = useTranslations("ProfileStyle");
-  const options = [{ key: "", label: t("bannerDefault"), bg: BANNER_BACKGROUNDS.padrao }, ...BANNER_PRESETS.map((p) => ({ key: p, label: style(`banner_${p}`), bg: BANNER_BACKGROUNDS[p] }))];
+  const options = [{ key: "", label: t("bannerDefault") }, ...BANNER_PRESETS.map((p) => ({ key: p, label: style(`banner_${p}`) }))];
   return (
     <fieldset className="flex flex-col gap-3" disabled={disabled}>
       <legend className="mb-3 text-sm font-semibold text-text-secondary">{t("banner")}</legend>
@@ -19,7 +19,7 @@ export function BannerPicker({ value, onChange, disabled }: { value: string; onC
         {options.map((o) => (
           <label key={o.key || "padrao"} className={`flex cursor-pointer flex-col gap-1.5 rounded-lg border border-border-default p-1.5 ${RING}`}>
             <input type="radio" name="bannerPresetChoice" className="sr-only" checked={value === o.key} onChange={() => onChange(o.key)} aria-label={o.label} />
-            <span aria-hidden="true" className="h-12 rounded-md border border-border-default" style={{ background: o.bg }} />
+            <ProfileBanner preset={o.key || null} className="h-12 rounded-md border border-border-default" />
             <span className="px-1 text-xs text-text-secondary">{o.label}</span>
           </label>
         ))}
