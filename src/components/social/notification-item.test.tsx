@@ -59,4 +59,10 @@ describe("NotificationItem", () => {
     show(view({ type: "comment", targetType: "comment", target: { title: "Kanban", href: "/projetos/kanban", quote: "Ficou muito bom!" } }));
     expect(screen.getByText("“Ficou muito bom!”")).toBeInTheDocument();
   });
+
+  it("insígnia ganha: nome traduzido e link para a seção de insígnias", () => {
+    show(view({ type: "badge", targetType: "profile", actors: [], badge: "mentor", target: { title: "mentor", href: "/configuracoes#insignias", quote: null } }));
+    expect(screen.getByRole("listitem")).toHaveTextContent("Você ganhou a insígnia Mentor");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/configuracoes#insignias");
+  });
 });

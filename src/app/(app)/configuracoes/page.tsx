@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { BadgesSection } from "@/components/badges/badges-section";
+import { EditorSection } from "@/components/social/profile-editor/editor-section";
 import { ProfileEditor } from "@/components/social/profile-editor/profile-editor";
 import { getViewer } from "@/lib/auth/viewer";
 import { listTags } from "@/lib/projects/queries";
@@ -32,12 +34,20 @@ async function Form() {
   if (!viewer?.username) redirect("/entrar?next=%2Fconfiguracoes");
   const [profile, tags] = await Promise.all([getProfile(viewer.username), listTags()]);
   if (!profile) redirect("/");
+  const tb = await getTranslations("Badges");
+  const earned = profile.badges.map((b) => b.badge);
   return (
     <ProfileEditor
       username={profile.username}
       tags={tags}
       avatarUrl={profile.avatarUrl}
       bannerUrl={profile.bannerUrl}
+      unlockedBadges={earned}
+      badgesSection={
+        <EditorSection id="insignias" title={tb("sectionTitle")} help={tb("sectionHint")}>
+          <BadgesSection earned={earned} initial={profile.shownBadges} />
+        </EditorSection>
+      }
       initial={{
         displayName: profile.displayName ?? "",
         bio: profile.bio ?? "",

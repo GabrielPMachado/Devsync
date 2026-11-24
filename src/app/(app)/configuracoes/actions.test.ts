@@ -150,4 +150,20 @@ describe("saveProfile", () => {
     expect(db.remove).toHaveBeenCalledWith("avatars", ["u1/avatar.webp", "u1/avatar-123.png"]);
     expect(db.remove).toHaveBeenCalledTimes(1);
   });
+
+  it("insígnias exibidas: só grava quando a seção veio no formulário, sem repetir, até 3", async () => {
+    await expect(saveProfile({}, form(ok))).rejects.toThrow("REDIRECT");
+    expect(db.update.mock.calls[0][0]).not.toHaveProperty("shown_badges");
+    await expect(saveProfile({}, form({ ...ok, shownBadgesSet: "1", shown_badges: ["mentor", "mentor", "x", "curious", "popular", "founder"] }))).rejects.toThrow("REDIRECT");
+    expect(db.update.mock.calls[1][0]).toMatchObject({ shown_badges: ["mentor", "curious", "popular"] });
+    await expect(saveProfile({}, form({ ...ok, shownBadgesSet: "1" }))).rejects.toThrow("REDIRECT");
+    expect(db.update.mock.calls[2][0]).toMatchObject({ shown_badges: [] });
+  });
+
+  it("insígnia não conquistada ou borda bloqueada: mostra o erro certo", async () => {
+    db.update.mockResolvedValueOnce({ data: null, error: { code: "DS004" } });
+    expect(await saveProfile({}, form({ ...ok, shownBadgesSet: "1", shown_badges: ["mentor"] }))).toMatchObject({ error: "badges" });
+    db.update.mockResolvedValueOnce({ data: null, error: { code: "DS005" } });
+    expect(await saveProfile({}, form({ ...ok, avatarFrame: "neon" }))).toMatchObject({ error: "frame" });
+  });
 });

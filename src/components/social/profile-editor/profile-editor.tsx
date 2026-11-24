@@ -40,6 +40,7 @@ const LINKS = [
 export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, unlockedBadges, imageFields, badgesSection }: Props) {
   const t = useTranslations("Settings");
   const style = useTranslations("ProfileStyle");
+  const badges = useTranslations("Badges");
   const [state, action, pending] = useActionState<SaveProfileState, FormData>(saveProfile, {});
   const [v, setV] = useState<ProfileInput>(() => ({ ...initial, ...(state.values ?? {}) }));
   const [dirty, setDirty] = useState(false);
@@ -177,7 +178,7 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
         <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-xl border border-border-default bg-bg-surface/95 px-4 py-3 backdrop-blur md:bottom-4">
           {state.error || hasErrors ? (
             <p role="alert" className="text-xs text-status-danger-text">
-              {state.error ? t("error") : t("fixErrors")}
+              {state.error === "badges" ? badges("notEarned") : state.error === "frame" ? badges("frameNotUnlocked") : state.error ? t("error") : t("fixErrors")}
             </p>
           ) : (
             <p className="text-xs text-text-muted" aria-live="polite">

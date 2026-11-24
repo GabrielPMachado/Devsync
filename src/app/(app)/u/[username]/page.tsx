@@ -4,6 +4,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, type CSSProperties } from "react";
+import { AchievementsBlock } from "@/components/badges/achievements-block";
 import { ReportButton } from "@/components/moderation/report-button";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProjectCard } from "@/components/projects/project-card";
@@ -109,7 +110,7 @@ async function Profile({ params, searchParams }: { params: Params; searchParams:
             ))}
           </div>
         ) : null}
-        {/* CONQUISTAS: <AchievementsBlock /> aqui. */}
+        <AchievementsBlock badges={profile.badges} />
       </div>
 
       <ProfileTabs base={base} active={tab} counts={{ projetos: stats.projects, perguntas: stats.questions, respostas: stats.answers }} />

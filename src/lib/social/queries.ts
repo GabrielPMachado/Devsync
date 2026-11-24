@@ -6,6 +6,7 @@ import { getSupabaseEnv } from "@/lib/env";
 import { PROJECT_CARD_FIELDS, toPage, type ProjectCardData, type ProjectRow } from "@/lib/projects/queries";
 import { QUESTION_FIELDS, toSummary, type QuestionSummary } from "@/lib/studies/queries";
 import { createClient } from "@/lib/supabase/server";
+import { toBadges, type BadgeKey, type EarnedBadge } from "./badges";
 import { isAccent, isBannerPreset, isStatus, type Accent, type BannerPreset, type ProfileStatus } from "./profile-style";
 
 /**
@@ -32,6 +33,10 @@ export type ProfileData = Person & {
   bannerPreset: BannerPreset | null;
   avatarFrame: string | null;
   accent: Accent | null;
+  /** Até 3 insígnias escolhidas para aparecer ao lado do nome. */
+  shownBadges: BadgeKey[];
+  /** Todas as conquistadas, com a data. */
+  badges: EarnedBadge[];
   followersCount: number;
   followingCount: number;
   createdAt: string;
@@ -81,7 +86,7 @@ export const getProfile = cache(async (raw: string): Promise<ProfileData | null>
   }
   const { data } = await supabase
     .from("profiles")
-    .select(`${PERSON_FIELDS}, links, headline, location, status, banner_url, banner_preset, avatar_frame, accent, followers_count, following_count, created_at, profile_tags(tags(slug))`)
+    .select(`${PERSON_FIELDS}, links, headline, location, status, banner_url, banner_preset, avatar_frame, accent, shown_badges, followers_count, following_count, created_at, profile_tags(tags(slug)), user_badges(badge, awarded_at)`)
     .eq("username", username)
     .maybeSingle();
   if (!data?.username) return null;
@@ -99,6 +104,7 @@ export const getProfile = cache(async (raw: string): Promise<ProfileData | null>
     bannerPreset: data.banner_preset && isBannerPreset(data.banner_preset) ? data.banner_preset : null,
     avatarFrame: data.avatar_frame,
     accent: data.accent && isAccent(data.accent) ? data.accent : null,
+    ...toBadges(data.shown_badges, data.user_badges),
     followersCount: data.followers_count,
     followingCount: data.following_count,
     createdAt: data.created_at,
@@ -312,3 +318,4 @@ export async function getTagPage(slug: string, viewerId: string | null | undefin
     questions: ((q.data ?? []) as unknown as Record<string, unknown>[]).map(toSummary),
   };
 }
+

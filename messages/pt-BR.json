@@ -556,7 +556,8 @@
     "demo_unavailable": "A demo de <b>{title}</b> ficou indisponível: o site passou a bloquear a exibição dentro da Devsync.",
     "bell": "{count, plural, =0 {Notificações} one {Notificações, 1 não lida} other {Notificações, # não lidas}}",
     "toast": "Nova notificação",
-    "toastOpen": "Ver"
+    "toastOpen": "Ver",
+    "badge": "Você ganhou a insígnia <b>{title}</b>"
   },
   "Feed": {
     "title": "Início",
@@ -719,6 +720,34 @@
     "devops": "DevOps e nuvem",
     "temas": "Temas gerais",
     "outros": "Outros"
+  },
+  "Badges": {
+    "founder_name": "Membro fundador",
+    "founder_how": "Estar entre os 1.000 primeiros a escolher um @ na Devsync",
+    "first_project_name": "Primeiro projeto",
+    "first_project_how": "Publicar seu primeiro projeto",
+    "builder_name": "Construtor",
+    "builder_how": "Publicar 5 projetos",
+    "curious_name": "Curioso",
+    "curious_how": "Fazer sua primeira pergunta",
+    "first_accepted_name": "Primeira resposta aceita",
+    "first_accepted_how": "Ter uma resposta aceita na pergunta de outra pessoa",
+    "mentor_name": "Mentor",
+    "mentor_how": "Ter 10 respostas aceitas em perguntas de outras pessoas",
+    "popular_name": "Popular",
+    "popular_how": "Chegar a 50 seguidores",
+    "shown": "Insígnias de {name}",
+    "achievements": "Conquistas",
+    "achievementsCount": "{count, plural, one {1 insígnia} other {# insígnias}}",
+    "earnedOn": "Conquistada em {date}",
+    "sectionTitle": "Insígnias",
+    "sectionHint": "Marque até 3 para aparecer ao lado do seu nome. As apagadas você ainda não conquistou.",
+    "locked": "Ainda não conquistada",
+    "howTo": "Como ganhar: {how}",
+    "limit": "Você já marcou 3. Desmarque uma para trocar.",
+    "frameLocked": "Bloqueada. Para liberar, conquiste a insígnia {badge}: {how}",
+    "notEarned": "Você só pode exibir insígnias que conquistou.",
+    "frameNotUnlocked": "Essa borda ainda está bloqueada para você."
   },
   "ProfileStyle": {
     "status_open_to_work": "Aberto a oportunidades",

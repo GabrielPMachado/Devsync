@@ -60,7 +60,8 @@ describe("validateProfile", () => {
 
   it("status, banner pronto, borda e cor só da lista (vazio = nenhum)", () => {
     expect(validateProfile({ ...base, status: "building", bannerPreset: "hex", avatarFrame: "gradiente", accent: "rosa" })).toMatchObject({ ok: true });
-    expect(validateProfile({ ...base, avatarFrame: "neon" })).toMatchObject({ ok: false, errors: { avatarFrame: "invalid" } });
+    // Bordas por conquista passam aqui; o banco recusa quem ainda não liberou (DS005).
+    expect(validateProfile({ ...base, avatarFrame: "neon" })).toMatchObject({ ok: true });
     expect(validateProfile({ ...base, status: "dormindo" })).toMatchObject({ ok: false, errors: { status: "invalid" } });
     expect(validateProfile({ ...base, bannerPreset: "x" })).toMatchObject({ ok: false, errors: { bannerPreset: "invalid" } });
     expect(validateProfile({ ...base, avatarFrame: "x" })).toMatchObject({ ok: false, errors: { avatarFrame: "invalid" } });

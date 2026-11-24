@@ -14,9 +14,16 @@ test("seguir alguém, ver o que a pessoa publica no início e receber a notifica
   await ana.page.getByLabel("Tags").fill("iniciante");
   await ana.page.getByRole("button", { name: "Publicar pergunta" }).click();
   await expect(ana.page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+  const questionUrl = ana.page.url();
   await ana.page.waitForLoadState("networkidle");
   const bell = ana.page.getByRole("banner").getByRole("link", { name: /^Notificações/ });
+  // Escolher o @ e fazer a primeira pergunta deram duas insígnias (fundador e curioso).
+  await expect(bell).toHaveAccessibleName("Notificações, 2 não lidas");
+  await bell.click();
+  await expect(ana.page.getByRole("listitem").filter({ hasText: "Você ganhou a insígnia Curioso" })).toBeVisible();
+  await expect(ana.page.getByRole("listitem").filter({ hasText: "Você ganhou a insígnia Membro fundador" })).toBeVisible();
   await expect(bell).toHaveAccessibleName("Notificações");
+  await ana.page.goto(questionUrl, { waitUntil: "networkidle" });
 
   // Bruno ainda não segue a Ana: a pergunta não está no início dele.
   const bruno = await newMember(browser, "Bruno");

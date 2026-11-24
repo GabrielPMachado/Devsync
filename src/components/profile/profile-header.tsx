@@ -7,12 +7,13 @@ import { GithubIcon } from "@/components/icons/github";
 import { Avatar } from "@/components/ui/avatar";
 import { accentStyle } from "@/lib/profile/accent";
 import type { ProfileData, ProfileLinks } from "@/lib/social/queries";
+import { ProfileBadges } from "@/components/badges/profile-badges";
 import { AvatarFrame } from "./avatar-frame";
 import { ProfileBanner } from "./profile-banner";
 
 export type ProfileHeaderData = Pick<
   ProfileData,
-  "username" | "displayName" | "avatarUrl" | "headline" | "location" | "status" | "bannerUrl" | "bannerPreset" | "avatarFrame" | "accent" | "links" | "followersCount" | "followingCount"
+  "username" | "displayName" | "avatarUrl" | "headline" | "location" | "status" | "bannerUrl" | "bannerPreset" | "avatarFrame" | "accent" | "links" | "followersCount" | "followingCount" | "shownBadges"
 >;
 
 type LinkKind = keyof ProfileLinks;
@@ -77,7 +78,7 @@ export function ProfileHeader({ profile, actions, basePath, joined }: Props) {
         <div className="flex min-w-0 flex-1 flex-col gap-1 md:pt-3">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <h1 className="min-w-0 font-display text-2xl font-bold break-words text-text-primary md:text-3xl">{name}</h1>
-            {/* INSÍGNIAS: <ProfileBadges /> aqui, ao lado do nome (até 3). */}
+            <ProfileBadges badges={profile.shownBadges} name={name} />
           </div>
           <p className="font-mono text-sm text-text-muted">@{profile.username}</p>
           {profile.headline ? <p className="text-base break-words text-text-secondary">{profile.headline}</p> : null}

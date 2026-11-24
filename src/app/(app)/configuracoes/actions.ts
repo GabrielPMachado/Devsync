@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth/viewer";
+import { BADGE_KEYS, SHOWN_BADGES_MAX } from "@/lib/social/badges";
 import { validateProfile, type ProfileErrors, type ProfileInput } from "@/lib/social/profile-rules";
 import { createClient } from "@/lib/supabase/server";
 
-export type SaveProfileState = { errors?: ProfileErrors; error?: "unknown"; values?: ProfileInput };
+/** "badges": tentou exibir insígnia não conquistada (DS004); "frame": borda ainda bloqueada (DS005). */
+export type SaveProfileState = { errors?: ProfileErrors; error?: "unknown" | "badges" | "frame"; values?: ProfileInput };
 
 /** Salva o perfil (sobre, links, aparência, imagens, tecnologias) e volta para ele. */
 export async function saveProfile(_prev: SaveProfileState, formData: FormData): Promise<SaveProfileState> {
@@ -58,8 +60,16 @@ export async function saveProfile(_prev: SaveProfileState, formData: FormData): 
   // Ausente = não mexe; "" = remove.
   if (v.avatarUrl !== undefined) row.avatar_url = v.avatarUrl || null;
   if (v.bannerUrl !== undefined) row.banner_url = v.bannerUrl || null;
+  // A seção de insígnias manda "shownBadgesSet"; sem ela, não mexe nas exibidas.
+  // O banco confere se foram conquistadas (DS004).
+  if (formData.has("shownBadgesSet")) {
+    const picked = formData.getAll("shown_badges").map(String);
+    row.shown_badges = [...new Set(picked)].filter((b) => (BADGE_KEYS as readonly string[]).includes(b)).slice(0, SHOWN_BADGES_MAX);
+  }
   // .select() devolve as linhas alteradas: zero linhas = a RLS recusou (conta suspensa).
   const { data: updated, error } = await supabase.from("profiles").update(row).eq("id", viewer.id).select("id");
+  if (error?.code === "DS004") return { error: "badges", values };
+  if (error?.code === "DS005") return { error: "frame", values };
   if (error || !updated?.length) return { error: "unknown", values };
 
   // Removeu a foto ou o banner: apaga o arquivo depois do perfil salvo (sem órfãos).

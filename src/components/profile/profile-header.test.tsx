@@ -18,6 +18,7 @@ const base: ProfileHeaderData = {
   links: {},
   followersCount: 0,
   followingCount: 0,
+  shownBadges: [],
 };
 
 function show(p: Partial<ProfileHeaderData>, extra: { basePath?: string; joined?: string } = {}) {
@@ -81,5 +82,12 @@ describe("ProfileHeader", () => {
     expect(container.querySelector('[data-frame="neon"]')).not.toBeNull();
     const root = container.firstElementChild as HTMLElement;
     expect(root.style.getPropertyValue("--accent")).toBe("#8B5CF6");
+  });
+
+  it("mostra as insígnias escolhidas ao lado do nome", () => {
+    show({ shownBadges: ["mentor", "founder"] });
+    const list = screen.getByRole("list", { name: "Insígnias de Ana Souza" });
+    expect(list).toHaveTextContent("Mentor");
+    expect(list).toHaveTextContent("Membro fundador");
   });
 });

@@ -1,6 +1,6 @@
 /** Notificações: tipos e agrupamento na leitura ("Ana e mais 4 curtiram"). */
 
-export type NotificationType = "follow" | "comment" | "reply" | "answer" | "accepted" | "like" | "vote" | "detail_request" | "demo_unavailable";
+export type NotificationType = "follow" | "comment" | "reply" | "answer" | "accepted" | "like" | "vote" | "detail_request" | "demo_unavailable" | "badge";
 export type NotificationTarget = "profile" | "project" | "question" | "answer" | "comment";
 export type Actor = { id?: string; username: string | null; displayName: string | null; avatarUrl: string | null };
 
@@ -12,6 +12,8 @@ export type NotificationRow = {
   targetId: string;
   readAt: string | null;
   createdAt: string;
+  /** Só em "badge": a chave da insígnia ganha. */
+  badge?: string | null;
 };
 
 export type NotificationGroup = {
@@ -25,6 +27,7 @@ export type NotificationGroup = {
   /** Data do evento mais novo do grupo. */
   createdAt: string;
   ids: string[];
+  badge?: string | null;
 };
 
 /** Só curtidas e votos viram "Fulano e mais N". */
@@ -39,7 +42,7 @@ export function groupNotifications(rows: NotificationRow[]): NotificationGroup[]
     const key = GROUPABLE.has(r.type) ? `${r.type}:${r.targetId}:${unread ? "u" : "r"}` : r.id;
     let g = byKey.get(key);
     if (!g) {
-      g = { key, type: r.type, targetType: r.targetType, targetId: r.targetId, actors: [], unread, createdAt: r.createdAt, ids: [] };
+      g = { key, type: r.type, targetType: r.targetType, targetId: r.targetId, actors: [], unread, createdAt: r.createdAt, ids: [], ...(r.badge ? { badge: r.badge } : {}) };
       byKey.set(key, g);
       groups.push(g);
     }

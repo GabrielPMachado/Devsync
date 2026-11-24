@@ -1,4 +1,4 @@
-import { FREE_FRAMES, isAccent, isBannerPreset, isStatus } from "./profile-style";
+import { isAccent, isBannerPreset, isFrameKey, isStatus } from "./profile-style";
 
 export const NAME_MAX = 80;
 export const BIO_MAX = 500;
@@ -102,7 +102,7 @@ export function validateProfile(input: ProfileInput): { ok: true; value: Profile
   if (value.status && !isStatus(value.status)) errors.status = "invalid";
   if (value.bannerPreset && !isBannerPreset(value.bannerPreset)) errors.bannerPreset = "invalid";
   // Bordas por conquista entram com as insígnias (o banco confere quem liberou).
-  if (value.avatarFrame && !FREE_FRAMES.includes(value.avatarFrame)) errors.avatarFrame = "invalid";
+  if (value.avatarFrame && !isFrameKey(value.avatarFrame)) errors.avatarFrame = "invalid";
   if (value.accent && !isAccent(value.accent)) errors.accent = "invalid";
   for (const [key, parse] of [
     ["github", githubUser],
