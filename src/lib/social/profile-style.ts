@@ -25,7 +25,8 @@ export const ACCENT_COLORS: Record<Accent, string> = {
 
 /** Insígnias que liberam bordas (o catálogo completo de insígnias vive em badges.ts). */
 export type FrameBadge = "mentor" | "builder" | "founder";
-export type FrameDef = { key: string; requiresBadge?: FrameBadge };
+export type FrameKey = "azul" | "ciano" | "gradiente" | "neutra" | "neon" | "colchetes" | "dourada";
+export type FrameDef = { key: FrameKey; requiresBadge?: FrameBadge };
 
 export const FRAMES: readonly FrameDef[] = [
   { key: "azul" },
@@ -37,7 +38,7 @@ export const FRAMES: readonly FrameDef[] = [
   { key: "dourada", requiresBadge: "founder" },
 ];
 export type AvatarFrame = string;
-export const FREE_FRAMES = FRAMES.filter((f) => !f.requiresBadge).map((f) => f.key);
+export const FREE_FRAMES: readonly string[] = FRAMES.filter((f) => !f.requiresBadge).map((f) => f.key);
 
 const has = (list: readonly string[]) => (v: string) => list.includes(v);
 export const isStatus = has(STATUSES) as (v: string) => v is ProfileStatus;

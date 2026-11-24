@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { ProfileForm } from "@/components/social/profile-form";
+import { BadgesSection } from "@/components/badges/badges-section";
+import { EditorSection } from "@/components/social/profile-editor/editor-section";
+import { ProfileEditor } from "@/components/social/profile-editor/profile-editor";
 import { getViewer } from "@/lib/auth/viewer";
 import { listTags } from "@/lib/projects/queries";
 import { getProfile } from "@/lib/social/queries";
@@ -15,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SettingsPage() {
   const t = await getTranslations("Settings");
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 md:px-6 md:py-10">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 md:px-6 md:py-10">
       <div className="mb-6 flex flex-col gap-1">
         <h1 className="font-display text-2xl font-bold text-text-primary">{t("title")}</h1>
         <p className="text-sm text-text-muted">{t("subtitle")}</p>
@@ -32,12 +34,20 @@ async function Form() {
   if (!viewer?.username) redirect("/entrar?next=%2Fconfiguracoes");
   const [profile, tags] = await Promise.all([getProfile(viewer.username), listTags()]);
   if (!profile) redirect("/");
+  const tb = await getTranslations("Badges");
+  const earned = profile.badges.map((b) => b.badge);
   return (
-    <ProfileForm
+    <ProfileEditor
       username={profile.username}
       tags={tags}
-      earnedBadges={profile.badges.map((b) => b.badge)}
-      shownBadges={profile.shownBadges}
+      avatarUrl={profile.avatarUrl}
+      bannerUrl={profile.bannerUrl}
+      unlockedBadges={earned}
+      badgesSection={
+        <EditorSection id="insignias" title={tb("sectionTitle")} help={tb("sectionHint")}>
+          <BadgesSection earned={earned} initial={profile.shownBadges} />
+        </EditorSection>
+      }
       initial={{
         displayName: profile.displayName ?? "",
         bio: profile.bio ?? "",

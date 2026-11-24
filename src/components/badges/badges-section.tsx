@@ -32,9 +32,9 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
   }
 
   return (
-    <fieldset id="insignias" className="flex flex-col gap-3">
-      <legend className="text-base font-semibold text-text-primary">{t("sectionTitle")}</legend>
-      <p className="text-sm text-text-muted">{t("sectionHint")}</p>
+    // Título e ajuda vêm do cartão do editor (EditorSection); a legenda fica para leitores de tela.
+    <fieldset id="insignias" className="flex scroll-mt-24 flex-col gap-3">
+      <legend className="sr-only">{t("sectionTitle")}</legend>
       {/* Diz à ação de salvar que a seção veio no formulário (sem ela, as exibidas não mudam). */}
       <input type="hidden" name="shownBadgesSet" value="1" />
       {shown.map((b) => (
