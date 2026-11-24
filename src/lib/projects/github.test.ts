@@ -96,6 +96,27 @@ describe("absolutizeReadme", () => {
   });
 });
 
+describe("absolutizeReadme em código", () => {
+  it("não mexe em blocos de código nem em código inline", () => {
+    const md = "```js\nfn[0](ctx)\n```\n`arr[0](x)` e [doc](a.md)\n~~~\n[b](c)\n~~~";
+    expect(absolutizeReadme(md, repo)).toBe("```js\nfn[0](ctx)\n```\n`arr[0](x)` e [doc](https://github.com/ana/kanban/blob/main/a.md)\n~~~\n[b](c)\n~~~");
+  });
+  it("bloco sem fechamento vai até o fim", () => {
+    expect(absolutizeReadme("```\n[a](b)", repo)).toBe("```\n[a](b)");
+  });
+  it("link entre <> fica como está", () => {
+    expect(absolutizeReadme("[a](<docs/a b.md>)", repo)).toBe("[a](<docs/a b.md>)");
+  });
+});
+
+describe("listRepos aceita link do perfil", () => {
+  it("github.com/ana vira ana", async () => {
+    const fetchFn = vi.fn(async () => res(200, []));
+    await listRepos("https://github.com/ana/", fetchFn);
+    expect(fetchFn).toHaveBeenCalledWith(expect.stringContaining("/users/ana/repos"), expect.anything());
+  });
+});
+
 describe("importDraft", () => {
   const available = ["react", "typescript", "supabase"];
   it("preenche tudo e usa a homepage como demo", () => {

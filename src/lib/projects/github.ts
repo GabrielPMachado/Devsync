@@ -1,3 +1,4 @@
+import { githubUser } from "@/lib/social/profile-rules";
 import { DESCRIPTION_MAX, TAGS_MAX, TITLE_MIN } from "./rules";
 
 /** Importar projeto do GitHub: API pública, chamada do navegador, sem token. */
@@ -66,8 +67,9 @@ type ApiRepo = {
 
 /** Repositórios públicos do usuário, mais recentes primeiro, sem forks. */
 export async function listRepos(user: string, fetchFn: FetchFn = fetch): Promise<GithubRepo[]> {
-  const u = user.trim().replace(/^@/, "");
-  if (!USER_RE.test(u)) throw new GithubError("not_found");
+  // Aceita "@ana", "ana" ou o link do perfil, como na tela de configurações.
+  const u = githubUser(user.trim());
+  if (!u) throw new GithubError("not_found");
   const r = await call(`${API}/users/${u}/repos?per_page=100&sort=pushed&type=owner`, fetchFn);
   if (r.status === 404) throw new GithubError("not_found");
   if (!r.ok) throw new GithubError("network");
@@ -152,13 +154,19 @@ export function mapTags(names: string[], available: string[]): string[] {
   return out;
 }
 
-/** Links relativos do README passam a apontar para o arquivo no GitHub. */
+// Blocos de código (``` ou ~~~, até o fim se não fecharem), código inline e links markdown.
+const README_TOKENS = /^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[`~]*[ \t]*$|(?![\s\S]))|(`+)[^`][\s\S]*?\2|\]\(\s*([^)\s]+)([^)]*)\)/gm;
+
+/**
+ * Links relativos do README passam a apontar para o arquivo no GitHub.
+ * Código fica intacto. Limites aceitos: links entre <> e definições de referência ([x]: a.md) não mudam.
+ */
 export function absolutizeReadme(md: string, repo: GithubRepo): string {
   const base = `${repo.htmlUrl}/blob/${repo.defaultBranch}/`;
-  return md.replace(/\]\(\s*([^)\s]+)([^)]*)\)/g, (all, url: string, rest: string) => {
-    if (/^([a-z][a-z0-9+.-]*:|#|\/\/)/i.test(url)) return all;
+  return md.replace(README_TOKENS, (all: string, _fence?: string, _tick?: string, url?: string, rest?: string) => {
+    if (!url || /^([a-z][a-z0-9+.-]*:|#|\/\/|<)/i.test(url)) return all;
     const path = url.replace(/^\.\//, "").replace(/^\/+/, "");
-    return `](${base}${path}${rest})`;
+    return `](${base}${path}${rest ?? ""})`;
   });
 }
 

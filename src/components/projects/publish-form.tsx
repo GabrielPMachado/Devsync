@@ -3,7 +3,7 @@
 import { CircleCheck, Clock, Info, Link2, LoaderCircle, Package, Send, Shield, TriangleAlert, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
 import { TextField } from "@/components/ui/text-field";
@@ -68,6 +68,9 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
 
   const toggleTag = (slug: string) => setChosen((c) => (c.includes(slug) ? c.filter((s) => s !== slug) : c.length >= TAGS_MAX ? c : [...c, slug]));
 
+  // Demo que veio da última importação: reimportar um repo sem site não deve herdá-la.
+  const importedLink = useRef<string | null>(null);
+
   function applyImport(d: ImportDraft) {
     setTitle(d.title);
     setDescription(d.description);
@@ -77,7 +80,8 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
     if (d.demoLink) {
       setMode("link");
       setLink(d.demoLink);
-    }
+    } else if (importedLink.current && link === importedLink.current) setLink("");
+    importedLink.current = d.demoLink;
     setErrors({});
   }
 

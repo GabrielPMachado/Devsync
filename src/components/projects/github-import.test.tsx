@@ -117,4 +117,33 @@ describe("Importar do GitHub", () => {
     expect(await screen.findByText("Não deu para falar com o GitHub. Tente de novo.")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText("Título")).toHaveValue(""));
   });
+
+  it("reimportar um repo sem site tira a demo do anterior", async () => {
+    setup();
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar kanban" }));
+    await screen.findByText("Importado de ana/kanban. Confira antes de publicar.");
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar blog" }));
+    await screen.findByText("Importado de ana/blog. Confira antes de publicar.");
+    expect(screen.getByLabelText("Link da demo")).toHaveValue("");
+    expect(screen.getByLabelText("Site do projeto")).toHaveValue("");
+  });
+
+  it("busca antiga que volta depois não substitui a nova", async () => {
+    let releaseOld: (v: GithubRepo[]) => void = () => {};
+    const listRepos = vi.fn((u: string) => (u === "velho" ? new Promise<GithubRepo[]>((r) => (releaseOld = r)) : Promise.resolve([repo("novo")])));
+    setup({ user: null, listRepos });
+    open();
+    const field = screen.getByLabelText("Usuário do GitHub");
+    fireEvent.change(field, { target: { value: "velho" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    fireEvent.change(field, { target: { value: "novo" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    await screen.findByRole("list", { name: "Repositórios de novo" });
+    releaseOld([repo("antigo")]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByRole("list", { name: "Repositórios de novo" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Usar antigo" })).not.toBeInTheDocument();
+  });
 });

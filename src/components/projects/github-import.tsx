@@ -2,10 +2,11 @@
 
 import { CircleCheck, LoaderCircle, Search, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { GithubIcon } from "@/components/icons/github";
 import { buttonClasses } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
+import { githubUser } from "@/lib/social/profile-rules";
 import { GithubError, importDraft, type GithubRepo, type ImportDraft, type RepoDetails } from "@/lib/projects/github";
 
 export type GithubServices = {
@@ -34,17 +35,21 @@ export function GithubImport({ services, tags, onImport }: { services: GithubSer
   // Erro ao ler o repositório escolhido: a lista continua na tela.
   const [pickError, setPickError] = useState<GithubError | null | undefined>(undefined);
   const filterId = useId();
+  // Só a última busca vale: uma resposta antiga que chega depois é ignorada.
+  const request = useRef(0);
 
   async function load(name: string) {
     const u = name.trim().replace(/^@/, "");
     if (!u) return;
+    const id = ++request.current;
     setState({ kind: "loading" });
     setFilter("");
     setPickError(undefined);
     try {
-      setState({ kind: "list", user: u, repos: await services.listRepos(u) });
+      const repos = await services.listRepos(u);
+      if (id === request.current) setState({ kind: "list", user: githubUser(u) ?? u, repos });
     } catch (e) {
-      setState({ kind: "error", error: e instanceof GithubError ? e : null });
+      if (id === request.current) setState({ kind: "error", error: e instanceof GithubError ? e : null });
     }
   }
 
