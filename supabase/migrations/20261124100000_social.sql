@@ -23,7 +23,7 @@ $$;
 
 -- Quem seguir -----------------------------------------------------------------
 -- Perfis ativos, com @, que não são quem chama nem já seguidos por ele. Primeiro
--- quem tem mais tecnologias em comum, depois quem tem mais seguidores.
+-- quem usa mais das tecnologias que quem chama usa ou acompanha, depois quem tem mais seguidores.
 -- Visitante recebe os mais seguidos. page_size vai de 1 a 50.
 
 create function public.suggested_profiles(page_size integer default 5)
@@ -37,8 +37,10 @@ language sql stable security invoker set search_path = '' as $$
     and not exists (select 1 from public.follows f where f.follower_id = auth.uid() and f.followee_id = p.id)
   order by
     (select count(*) from public.profile_tags theirs
-     join public.profile_tags mine on mine.tag_id = theirs.tag_id and mine.profile_id = auth.uid()
-     where theirs.profile_id = p.id) desc,
+     where theirs.profile_id = p.id
+       and theirs.tag_id in (select pt.tag_id from public.profile_tags pt where pt.profile_id = auth.uid()
+                             union
+                             select tf.tag_id from public.tag_follows tf where tf.profile_id = auth.uid())) desc,
     p.followers_count desc,
     p.created_at desc,
     p.id

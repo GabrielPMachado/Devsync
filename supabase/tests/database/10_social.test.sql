@@ -1,6 +1,6 @@
 begin;
 \ir ../helpers.psql
-select plan(10);
+select plan(11);
 
 select tests.create_user('ana@x.dev', 'ana') as ana \gset
 select tests.create_user('bruno@x.dev', 'bruno') as bruno \gset
@@ -67,8 +67,17 @@ select is((select count(*) from public.suggested_profiles(50) s join public.prof
   'never suggests profiles without @');
 select is(tests.suggested(2), array['carla', 'bruno'], 'shared technologies first, then followers');
 
+-- Tags acompanhadas também contam como interesse de quem chama.
+reset role;
+-- Fábio é o mais seguido de todos, mas não usa react; Dora acompanha react.
+select tests.create_user('fabio@x.dev', 'fabio') as fabio \gset
+insert into public.follows (follower_id, followee_id) values (:'ana', :'fabio'), (:'bruno', :'fabio'), (:'carla', :'fabio');
+insert into public.tag_follows (profile_id, tag_id) select :'dora'::uuid, id from public.tags where slug = 'react';
+select tests.login_as(:'dora');
+select ok((tests.suggested(1))[1] in ('ana', 'carla'), 'followed tags count as shared interest');
+
 select tests.as_anon();
-select is((tests.suggested(1))[1], 'bruno', 'visitors get the most followed');
+select is((tests.suggested(1))[1], 'fabio', 'visitors get the most followed');
 
 select * from finish();
 rollback;

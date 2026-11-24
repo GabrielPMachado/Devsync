@@ -31,8 +31,9 @@ describe("validateProfile", () => {
     }
   });
 
-  it("de 3 a 10 tecnologias, sem repetir", () => {
-    expect(validateProfile({ ...base, tags: ["react", "React", "css"] })).toMatchObject({ ok: false, errors: { tags: "min" } });
+  it("até 10 tecnologias, sem repetir (nenhuma também vale)", () => {
+    expect(validateProfile({ ...base, tags: ["react", "React", " css "] })).toMatchObject({ ok: true, value: { tags: ["react", "css"] } });
+    expect(validateProfile({ ...base, tags: [] })).toMatchObject({ ok: true });
     expect(validateProfile({ ...base, tags: Array.from({ length: 11 }, (_, i) => `t${i}`) })).toMatchObject({ ok: false, errors: { tags: "max" } });
   });
 });

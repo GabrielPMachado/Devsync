@@ -2,7 +2,7 @@
 
 export type NotificationType = "follow" | "comment" | "reply" | "answer" | "accepted" | "like" | "vote" | "detail_request" | "demo_unavailable";
 export type NotificationTarget = "profile" | "project" | "question" | "answer" | "comment";
-export type Actor = { username: string | null; displayName: string | null; avatarUrl: string | null };
+export type Actor = { id?: string; username: string | null; displayName: string | null; avatarUrl: string | null };
 
 export type NotificationRow = {
   id: string;

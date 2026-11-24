@@ -23,12 +23,12 @@ export type ProjectCardData = {
 
 export type ProjectPageData = ProjectCardData & { authorId: string; repoUrl: string | null; siteUrl: string | null; updatedAt: string };
 
-const CARD = `id, slug, title, description_md, likes_count, comments_count, created_at, updated_at, author_id, repo_url, site_url,
+export const PROJECT_CARD_FIELDS = `id, slug, title, description_md, likes_count, comments_count, created_at, updated_at, author_id, repo_url, site_url,
   author:profiles!projects_author_id_fkey(username, display_name, avatar_url),
   demo:demos(id, kind, status, url, version),
   project_tags(tags(slug))`;
 
-type Row = {
+export type ProjectRow = {
   id: string;
   slug: string;
   title: string;
@@ -45,7 +45,7 @@ type Row = {
   project_tags: { tags: { slug: string } | null }[];
 };
 
-function toPage(r: Row): ProjectPageData {
+export function toPage(r: ProjectRow): ProjectPageData {
   return {
     id: r.id,
     slug: r.slug,
@@ -74,18 +74,18 @@ async function client() {
 export async function listProjects(limit = 30): Promise<ProjectCardData[]> {
   const supabase = await client();
   if (!supabase) return [];
-  const { data, error } = await supabase.from("projects").select(CARD).order("created_at", { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from("projects").select(PROJECT_CARD_FIELDS).order("created_at", { ascending: false }).limit(limit);
   if (error) throw new Error(`Falha ao listar projetos: ${error.message}`);
-  return ((data ?? []) as unknown as Row[]).map(toPage);
+  return ((data ?? []) as unknown as ProjectRow[]).map(toPage);
 }
 
 /** Memorizada por pedido: a página e o generateMetadata leem o mesmo projeto. */
 export const getProject = cache(async (slug: string): Promise<ProjectPageData | null> => {
   const supabase = await client();
   if (!supabase) return null;
-  const { data, error } = await supabase.from("projects").select(CARD).eq("slug", slug).maybeSingle();
+  const { data, error } = await supabase.from("projects").select(PROJECT_CARD_FIELDS).eq("slug", slug).maybeSingle();
   if (error) throw new Error(`Falha ao ler o projeto: ${error.message}`);
-  return data ? toPage(data as unknown as Row) : null;
+  return data ? toPage(data as unknown as ProjectRow) : null;
 });
 
 export async function getComments(projectId: string): Promise<CommentRow[]> {
@@ -99,7 +99,7 @@ export async function getComments(projectId: string): Promise<CommentRow[]> {
     .order("created_at", { ascending: true })
     .limit(500);
   if (error) throw new Error(`Falha ao ler os comentários: ${error.message}`);
-  type C = { id: string; parent_id: string | null; body_md: string; created_at: string; author_id: string; author: Row["author"] };
+  type C = { id: string; parent_id: string | null; body_md: string; created_at: string; author_id: string; author: ProjectRow["author"] };
   return ((data ?? []) as unknown as C[]).map((c) => ({
     id: c.id,
     parentId: c.parent_id,

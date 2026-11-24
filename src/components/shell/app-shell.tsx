@@ -1,10 +1,13 @@
-import { Bell, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { Logo } from "@/components/brand/logo";
 import { buttonClasses } from "@/components/ui/button";
+import { NotificationBell } from "@/components/social/notification-bell";
+import { SearchBox } from "@/components/social/search-box";
 import { getViewer } from "@/lib/auth/viewer";
+import { unreadCount } from "@/lib/social/notification-queries";
 import { NavLinks, NavLinksView, TabBar, TabBarView } from "./nav-links";
 import { UserMenu } from "./user-menu";
 
@@ -39,16 +42,11 @@ function TopBar() {
             <NavLinks />
           </Suspense>
         </nav>
-        {/* A busca chega no subprojeto 6; por enquanto o campo só mostra onde ela vai ficar. */}
-        <div className="mx-auto hidden h-9 w-full max-w-md items-center gap-2 rounded-md border border-border-default bg-bg-base px-3 text-sm text-text-subtle lg:flex" aria-hidden="true">
-          <Search className="size-4" />
-          <span className="flex-1 truncate">{t("search")}</span>
-          <kbd className="rounded-sm border border-border-default px-1.5 font-mono text-[10px]">Ctrl K</kbd>
-        </div>
+        <SearchBox className="mx-auto hidden w-full max-w-md lg:flex" />
         <div className="ml-auto flex items-center gap-1 md:gap-2">
-          <button type="button" className={`${icon} lg:hidden`} aria-label={t("searchShort")} disabled>
+          <Link href="/busca" className={`${icon} lg:hidden`} aria-label={t("searchShort")}>
             <Search className="size-5" aria-hidden="true" />
-          </button>
+          </Link>
           <Suspense fallback={<div className="size-8" />}>
             <AccountArea />
           </Suspense>
@@ -60,10 +58,11 @@ function TopBar() {
 
 async function AccountArea() {
   const viewer = await getViewer();
-  return <AccountButtons viewer={viewer} />;
+  const unread = viewer?.username ? await unreadCount(viewer.id) : 0;
+  return <AccountButtons viewer={viewer} unread={unread} />;
 }
 
-function AccountButtons({ viewer }: { viewer: Awaited<ReturnType<typeof getViewer>> }) {
+function AccountButtons({ viewer, unread }: { viewer: Awaited<ReturnType<typeof getViewer>>; unread: number }) {
   const t = useTranslations("Nav");
   const icon = "flex size-9 items-center justify-center rounded-md text-icon-muted hover:bg-bg-hover hover:text-icon-default";
   if (!viewer?.username) {
@@ -75,9 +74,9 @@ function AccountButtons({ viewer }: { viewer: Awaited<ReturnType<typeof getViewe
   }
   return (
     <>
-      <Link href="/notificacoes" className={`${icon} hidden md:flex`} aria-label={t("notifications")}>
-        <Bell className="size-5" aria-hidden="true" />
-      </Link>
+      <span className="hidden md:flex">
+        <NotificationBell userId={viewer.id} initial={unread} />
+      </span>
       <span className="hidden md:inline-flex">
         <Link href="/projetos/novo" className={buttonClasses({ size: "sm" })}>
           <Plus className="size-4" aria-hidden="true" />
@@ -96,5 +95,7 @@ function AccountButtons({ viewer }: { viewer: Awaited<ReturnType<typeof getViewe
 
 async function ViewerTabBar() {
   const viewer = await getViewer();
-  return <TabBar profileHref={viewer?.username ? `/@${viewer.username}` : "/entrar"} />;
+  const signedIn = !!viewer?.username;
+  const unread = signedIn ? await unreadCount(viewer!.id) : 0;
+  return <TabBar profileHref={signedIn ? `/@${viewer!.username}` : "/entrar"} userId={signedIn ? viewer!.id : null} unread={unread} />;
 }

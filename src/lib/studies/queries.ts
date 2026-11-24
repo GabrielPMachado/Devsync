@@ -60,7 +60,7 @@ export type ListTab = "recent" | "unanswered" | "following";
 type Row = Record<string, unknown>;
 type AuthorRow = { username: string | null; display_name: string | null; avatar_url: string | null } | null;
 
-const QUESTION_FIELDS =
+export const QUESTION_FIELDS =
   "id, slug, title, body_md, answers_count, accepted_answer_id, created_at, author:profiles!questions_author_id_fkey(username, display_name, avatar_url), question_tags(tags(slug))";
 
 function toAuthor(row: AuthorRow | AuthorRow[]): Author {
@@ -89,7 +89,7 @@ export function excerptOf(md: string, max = 220): string {
   return plain.length > max ? `${plain.slice(0, max - 1).trimEnd()}…` : plain;
 }
 
-function toSummary(row: Row): QuestionSummary {
+export function toSummary(row: Record<string, unknown>): QuestionSummary {
   return {
     id: row.id as string,
     slug: row.slug as string,

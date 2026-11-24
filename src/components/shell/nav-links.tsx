@@ -4,6 +4,8 @@ import { Bell, BookOpen, FolderGit2, House, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CountBadge } from "@/components/social/notification-bell";
+import { useUnread } from "@/components/social/unread-store";
 
 const MAIN = [
   { href: "/", key: "home", Icon: House },
@@ -48,11 +50,12 @@ export function NavLinksView({ pathname }: { pathname: string }) {
 }
 
 /** Abas de baixo no celular (5 abas, como no Figma). */
-export function TabBar({ profileHref }: { profileHref: string }) {
-  return <TabBarView profileHref={profileHref} pathname={usePathname()} />;
+export function TabBar({ profileHref, userId = null, unread = 0 }: { profileHref: string; userId?: string | null; unread?: number }) {
+  const count = useUnread(userId, unread);
+  return <TabBarView profileHref={profileHref} pathname={usePathname()} unread={userId ? count : 0} />;
 }
 
-export function TabBarView({ profileHref, pathname }: { profileHref: string; pathname: string }) {
+export function TabBarView({ profileHref, pathname, unread = 0 }: { profileHref: string; pathname: string; unread?: number }) {
   const t = useTranslations("Nav");
   const tabs = [
     ...MAIN,
@@ -72,7 +75,10 @@ export function TabBarView({ profileHref, pathname }: { profileHref: string; pat
                 aria-current={on ? "page" : undefined}
                 className={`flex flex-col items-center gap-1 pt-2 pb-1 text-[11px] font-medium ${on ? "text-text-primary" : "text-text-muted"}`}
               >
-                <Icon className={`size-5.5 ${on ? "text-brand-accent" : ""}`} aria-hidden="true" />
+                <span className="relative">
+                  <Icon className={`size-5.5 ${on ? "text-brand-accent" : ""}`} aria-hidden="true" />
+                  {key === "notifications" && unread > 0 ? <CountBadge count={unread} /> : null}
+                </span>
                 {t(key)}
               </Link>
             </li>
