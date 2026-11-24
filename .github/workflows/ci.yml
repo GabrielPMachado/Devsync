@@ -40,7 +40,8 @@ jobs:
           # App OAuth falso: o E2E só confere o redirecionamento para o GitHub.
           SUPABASE_AUTH_GITHUB_CLIENT_ID: ci-client-id
           SUPABASE_AUTH_GITHUB_SECRET: ci-secret
-        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,realtime
+        # O Realtime fica ligado: o E2E social confere o sino de notificações ao vivo.
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
 
       - name: Testes do banco (pgTAP)
         run: supabase test db

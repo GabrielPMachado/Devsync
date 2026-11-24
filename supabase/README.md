@@ -50,6 +50,8 @@ supabase db push
 | `answers_ordered(question_id)` | Respostas na ordem da seção 5.4. Mostre o selo "mais votada recentemente" quando a primeira não for a aceita e houver aceita. |
 | `search_content(q, tag_slugs, kinds)` | Busca em perguntas, projetos e perfis. `kinds` aceita `question`, `project`, `profile`. |
 | `home_feed(before, page_size)` | Feed de início. Para a próxima página, passe o `created_at` do último item. |
+| `trending_projects(page_size)` | Explorar: projetos em alta (curtidas dos últimos 7 dias com peso por tempo). Devolve `id` e `score`. |
+| `suggested_profiles(page_size)` | "Quem seguir": perfis não seguidos, com tecnologias em comum primeiro. Visitante recebe os mais seguidos. |
 | `admin_set_hidden`, `admin_suspend_profile`, `admin_set_demo_status`, `admin_resolve_report`, `admin_mark_duplicate` | Página `/admin`. Só admins. |
 
 ## Erros próprios

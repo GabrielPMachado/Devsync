@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    return [{ source: "/@:username", destination: "/u/:username" }];
+    return [{ source: "/@:username/:path*", destination: "/u/:username/:path*" }];
   },
   experimental: {
     // Foto de perfil vai pela Server Action: até 2 MB (AVATAR_MAX_BYTES) mais o resto do formulário.
