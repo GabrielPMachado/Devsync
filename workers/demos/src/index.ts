@@ -1,5 +1,6 @@
 import { defaultDeps, type Deps, type Env, type LinkMessage, type ZipMessage } from "./env";
 import { errorResponse, withCors } from "./http";
+import { buildProgress, failStaleBuilds, receiveBuildZip, startBuild } from "./builds";
 import { embedCheck, recheckLink, scheduleLinkChecks, verifyDemo } from "./links";
 import { processZip } from "./process-zip";
 import { parseDemoHost, serveDemo } from "./serve";
@@ -9,6 +10,10 @@ const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const UPLOAD_FILE = new RegExp(`^/uploads/(${UUID})/(\\d+)$`);
 const UPLOAD_COMPLETE = new RegExp(`^/uploads/(${UUID})/complete$`);
 const DEMO_VERIFY = new RegExp(`^/demos/(${UUID})/verify$`);
+const BUILD_PROGRESS = new RegExp(`^/builds/(${UUID})/progress$`);
+const BUILD_ZIP = new RegExp(`^/builds/(${UUID})/zip$`);
+
+const LINK_CHECK_CRON = "0 6 * * *";
 
 /** Segundos que o cliente espera depois de passar do limite (o período do binding). */
 const RATE_LIMIT_PERIOD = 60;
@@ -16,6 +21,12 @@ const RATE_LIMIT_PERIOD = 60;
 async function api(req: Request, env: Env, deps: Deps): Promise<Response> {
   const { pathname } = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, { status: 204 });
+  // Chamadas do run de build (token OIDC do GitHub): fora do limite por IP, porque
+  // vários runs podem sair do mesmo IP do GitHub.
+  let m = BUILD_PROGRESS.exec(pathname);
+  if (m && req.method === "POST") return buildProgress(req, env, m[1]!, deps);
+  m = BUILD_ZIP.exec(pathname);
+  if (m && req.method === "PUT") return receiveBuildZip(req, env, m[1]!, deps);
   if (env.API_LIMITER) {
     const key = req.headers.get("cf-connecting-ip") ?? "desconhecido";
     const { success } = await env.API_LIMITER.limit({ key });
@@ -26,7 +37,8 @@ async function api(req: Request, env: Env, deps: Deps): Promise<Response> {
     }
   }
   if (req.method === "POST" && pathname === "/uploads") return createUpload(req, env, deps);
-  let m = UPLOAD_FILE.exec(pathname);
+  if (req.method === "POST" && pathname === "/builds") return startBuild(req, env, deps);
+  m = UPLOAD_FILE.exec(pathname);
   if (m && req.method === "PUT") return receiveUpload(req, env, m[1]!, Number(m[2]), deps);
   m = UPLOAD_COMPLETE.exec(pathname);
   if (m && req.method === "POST") return completeUpload(req, env, m[1]!, deps);
@@ -64,5 +76,9 @@ export async function handleQueue(batch: MessageBatch<ZipMessage | LinkMessage>,
 export default {
   fetch: (req, env) => handleFetch(req, env, defaultDeps()),
   queue: (batch, env) => handleQueue(batch, env, defaultDeps()),
-  scheduled: (_controller, env, ctx) => ctx.waitUntil(scheduleLinkChecks(env, defaultDeps())),
+  scheduled: (controller, env, ctx) => {
+    // A cada 15 min: builds parados. Às 06:00 UTC: também a checagem diária dos links.
+    if (controller.cron === LINK_CHECK_CRON) ctx.waitUntil(scheduleLinkChecks(env, defaultDeps()));
+    ctx.waitUntil(failStaleBuilds(env, defaultDeps()));
+  },
 } satisfies ExportedHandler<Env, ZipMessage | LinkMessage>;
