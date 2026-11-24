@@ -22,7 +22,8 @@ export type PreviewData = {
 };
 
 /** Prévia ao vivo do cabeçalho do perfil. */
-export function ProfilePreview({ data, compact = false }: { data: PreviewData; compact?: boolean }) {
+/** No celular fica compacta (banner baixo, sem bio e links); completa a partir de lg. */
+export function ProfilePreview({ data }: { data: PreviewData }) {
   const t = useTranslations("Settings");
   const style = useTranslations("ProfileStyle");
   const name = data.displayName.trim() || data.username;
@@ -33,7 +34,7 @@ export function ProfilePreview({ data, compact = false }: { data: PreviewData; c
 
   return (
     <section aria-label={t("preview")} className="overflow-hidden rounded-xl border border-border-default bg-bg-surface">
-      <div aria-hidden="true" className={compact ? "h-16" : "h-24"} style={{ background: banner }} />
+      <div aria-hidden="true" className="h-16 lg:h-24" style={{ background: banner }} />
       <div className="flex flex-col gap-2 px-4 pb-4">
         <span className={`-mt-8 inline-flex self-start rounded-full border-4 border-bg-surface ${FRAME_RINGS[data.avatarFrame] ?? ""}`}>
           <Avatar name={name} src={data.avatarUrl} size="lg" />
@@ -57,9 +58,9 @@ export function ProfilePreview({ data, compact = false }: { data: PreviewData; c
             </span>
           ) : null}
         </div>
-        {!compact && data.bio.trim() ? <p className="line-clamp-3 text-sm text-text-secondary">{data.bio.trim()}</p> : null}
-        {!compact && data.links.length ? (
-          <ul className="flex flex-wrap gap-2">
+        {data.bio.trim() ? <p className="hidden line-clamp-3 text-sm lg:block text-text-secondary">{data.bio.trim()}</p> : null}
+        {data.links.length ? (
+          <ul className="hidden flex-wrap gap-2 lg:flex">
             {data.links.map((l) => (
               <li key={l.key} className="rounded-sm border border-border-default px-2 py-0.5 text-xs" style={{ color: accent }}>
                 {l.label}

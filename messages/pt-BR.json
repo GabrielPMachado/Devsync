@@ -496,7 +496,10 @@
     "youtubeError": "Use o @ do seu canal, como @anacoda.",
     "appearanceError": "Escolha uma opção da lista.",
     "unsaved": "Você tem mudanças não salvas.",
-    "saved": "Tudo salvo"
+    "saved": "Tudo salvo",
+    "bioError": "Use até 500 caracteres.",
+    "fixErrors": "Confira os campos marcados em vermelho.",
+    "discardConfirm": "Sair sem salvar? Suas mudanças vão se perder."
   },
   "Notifications": {
     "title": "Notificações",

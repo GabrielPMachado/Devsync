@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useActionState, useEffect, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { saveProfile, type SaveProfileState } from "@/app/(app)/configuracoes/actions";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
@@ -44,6 +44,12 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
   const [v, setV] = useState<ProfileInput>(() => ({ ...initial, ...(state.values ?? {}) }));
   const [dirty, setDirty] = useState(false);
   const e = state.errors ?? {};
+  const hasErrors = Object.keys(e).length > 0;
+  const formRef = useRef<HTMLFormElement>(null);
+  // Depois de um salvar recusado, leva o foco ao primeiro campo com problema.
+  useEffect(() => {
+    if (hasErrors) formRef.current?.querySelector<HTMLElement>("[aria-invalid=true]")?.focus();
+  }, [state, hasErrors]);
   const set = <K extends keyof ProfileInput>(key: K, value: ProfileInput[K]) => {
     setV((old) => ({ ...old, [key]: value }));
     setDirty(true);
@@ -67,7 +73,7 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
   const appearanceError = e.bannerPreset || e.avatarFrame || e.accent || e.avatarUrl || e.bannerUrl;
 
   return (
-    <form action={action} noValidate className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+    <form ref={formRef} action={action} noValidate className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
       <aside className="lg:sticky lg:top-20 lg:order-2">
         <ProfilePreview
           data={{
@@ -102,7 +108,7 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
               <label htmlFor="status" className="text-sm font-semibold text-text-secondary">
                 {t("status")}
               </label>
-              <select id="status" className="h-11 rounded-md border border-border-default bg-bg-base px-3 text-sm text-text-primary focus:border-border-focus focus:outline-none" {...field("status")}>
+              <select id="status" aria-invalid={e.status ? true : undefined} className="h-11 rounded-md border border-border-default bg-bg-base px-3 text-sm text-text-primary focus:border-border-focus focus:outline-none" {...field("status")}>
                 <option value="">{t("statusNone")}</option>
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -118,6 +124,7 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
             </label>
             <textarea
               id="bio"
+              aria-describedby="bio-nota"
               rows={4}
               maxLength={BIO_MAX}
               placeholder={t("bioPlaceholder")}
@@ -125,7 +132,10 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
               className={`rounded-md border bg-bg-base px-3 py-2.5 text-sm text-text-primary placeholder:text-text-subtle focus:border-border-focus focus:outline-none ${e.bio ? "border-status-danger" : "border-border-default"}`}
               {...field("bio")}
             />
-            <p className="text-xs text-text-muted">{t("bioCount", { count: v.bio.length, max: BIO_MAX })}</p>
+            <p id="bio-nota" className={`text-xs ${e.bio ? "text-status-danger-text" : "text-text-muted"}`}>
+              {e.bio ? `${t("bioError")} ` : ""}
+              {t("bioCount", { count: v.bio.length, max: BIO_MAX })}
+            </p>
           </div>
         </EditorSection>
 
@@ -165,11 +175,23 @@ export function ProfileEditor({ initial, username, tags, avatarUrl, bannerUrl, u
 
         {/* No celular fica acima da barra de abas; no computador, presa ao fim da tela. */}
         <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-xl border border-border-default bg-bg-surface/95 px-4 py-3 backdrop-blur md:bottom-4">
-          <p className="text-xs text-text-muted" aria-live="polite">
-            {state.error ? <span className="text-status-danger-text">{t("error")}</span> : dirty ? t("unsaved") : t("saved")}
-          </p>
+          {state.error || hasErrors ? (
+            <p role="alert" className="text-xs text-status-danger-text">
+              {state.error ? t("error") : t("fixErrors")}
+            </p>
+          ) : (
+            <p className="text-xs text-text-muted" aria-live="polite">
+              {dirty ? t("unsaved") : t("saved")}
+            </p>
+          )}
           <div className="flex gap-2">
-            <Link href={`/@${username}`} className={buttonClasses({ variant: "ghost" })}>
+            <Link
+              href={`/@${username}`}
+              className={buttonClasses({ variant: "ghost" })}
+              onClick={(ev) => {
+                if (dirty && !window.confirm(t("discardConfirm"))) ev.preventDefault();
+              }}
+            >
               {t("cancel")}
             </Link>
             <Button type="submit" disabled={pending || v.tags.length > PROFILE_TAGS_MAX}>

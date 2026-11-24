@@ -12,7 +12,7 @@ type Props = {
   avatarUrl: string | null;
   value: string;
   onChange: (frame: string) => void;
-  /** Insígnias da pessoa. Sem a lista, todas as bordas ficam liberadas. */
+  /** Insígnias da pessoa. Sem a lista, as bordas por conquista ficam bloqueadas. */
   unlockedBadges?: string[];
 };
 
@@ -21,11 +21,11 @@ export function FramePicker({ name, avatarUrl, value, onChange, unlockedBadges }
   const t = useTranslations("Settings");
   const style = useTranslations("ProfileStyle");
   const baseId = useId();
-  const locked = FRAMES.filter((f) => f.requiresBadge && unlockedBadges && !unlockedBadges.includes(f.requiresBadge));
+  const locked = FRAMES.filter((f) => f.requiresBadge && !(unlockedBadges ?? []).includes(f.requiresBadge));
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-3 text-sm font-semibold text-text-secondary">{t("frame")}</legend>
-      <div role="radiogroup" aria-label={t("frame")} className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+      <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
         <Option checked={value === ""} label={t("frameNone")} short={t("frameNone")} onSelect={() => onChange("")}>
           <Avatar name={name} src={avatarUrl} size="md" />
         </Option>
@@ -89,7 +89,7 @@ function Option({
         checked ? "border-brand-accent bg-brand-accent-soft" : "border-border-default hover:border-border-strong"
       } ${disabled ? "cursor-not-allowed" : "cursor-pointer"} has-focus-visible:outline-2 has-focus-visible:outline-border-focus`}
     >
-      <input type="radio" className="sr-only" checked={checked} disabled={disabled} onChange={onSelect} aria-label={label} aria-describedby={describedBy} />
+      <input type="radio" name="avatarFrameChoice" className="sr-only" checked={checked} disabled={disabled} onChange={onSelect} aria-label={label} aria-describedby={describedBy} />
       {children}
       <span className="text-[11px] leading-tight text-text-muted">{short}</span>
     </label>

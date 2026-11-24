@@ -72,9 +72,10 @@ describe("<ProfileEditor />", () => {
     expect(data.getAll("tags")).toEqual(["react"]);
   });
 
-  it("bordas por conquista: liberadas sem lista, com cadeado quando a lista não tem a insígnia", () => {
+  it("bordas por conquista: bloqueadas sem a insígnia (e sem lista), liberadas com ela", () => {
     const { unmount } = renderEditor();
-    expect(screen.getByRole("radio", { name: "Borda néon" })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: "Borda néon" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Borda gradiente" })).toBeEnabled();
     unmount();
     renderEditor({ unlockedBadges: ["builder"] });
     expect(screen.getByRole("radio", { name: /Borda néon/ })).toBeDisabled();
@@ -91,6 +92,18 @@ describe("<ProfileEditor />", () => {
     const dirty = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(dirty);
     expect(dirty.defaultPrevented).toBe(true);
+  });
+
+  it("Cancelar com mudanças pede confirmação", () => {
+    renderEditor();
+    fireEvent.change(screen.getByLabelText("Cargo"), { target: { value: "Dev" } });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const link = screen.getByRole("link", { name: "Cancelar" });
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(confirm).toHaveBeenCalledWith("Sair sem salvar? Suas mudanças vão se perder.");
+    expect(click.defaultPrevented).toBe(true);
+    confirm.mockRestore();
   });
 
   it("tem um espaço para a seção de insígnias", () => {

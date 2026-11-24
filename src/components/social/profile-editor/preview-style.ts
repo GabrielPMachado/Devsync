@@ -21,6 +21,6 @@ export const FRAME_RINGS: Record<string, string> = {
   gradiente: "ring-4 ring-[#22D3EE] shadow-[0_0_0_6px_#2563EB]",
   neutra: "ring-4 ring-[#CBD5E1]",
   neon: "ring-4 ring-[#22D3EE] shadow-[0_0_18px_4px_#22D3EE]",
-  colchetes: "ring-4 ring-dashed ring-[#2563EB] outline-2 outline-offset-4 outline-[#22D3EE]",
+  colchetes: "ring-4 ring-[#2563EB] outline-2 outline-dashed outline-offset-4 outline-[#22D3EE]",
   dourada: "ring-4 ring-[#F59E0B] shadow-[0_0_12px_2px_#F59E0B66]",
 };
