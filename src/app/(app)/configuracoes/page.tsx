@@ -36,8 +36,11 @@ async function Form() {
     <ProfileEditor
       username={profile.username}
       tags={tags}
+<<<<<<< HEAD
       avatarUrl={profile.avatarUrl}
       bannerUrl={profile.bannerUrl}
+=======
+>>>>>>> 1069785f702d8fac9ee2b16c77c31bec209f5fbd
       initial={{
         displayName: profile.displayName ?? "",
         bio: profile.bio ?? "",
