@@ -1,6 +1,6 @@
 begin;
 \ir ../helpers.psql
-select plan(30);
+select plan(41);
 
 select tests.create_user('admin@x.dev', 'gabriel') as adm \gset
 select tests.make_admin(:'adm');
@@ -79,6 +79,24 @@ select tests.login_as(:'caio');
 select throws_ok($$ insert into demos (kind, url) values ('web_link', 'https://golpe.dev/') $$, 'P0001', 'Domínio bloqueado', 'cannot publish demo on blocked domain');
 select throws_ok($$ insert into demos (kind, url) values ('web_link', 'https://x.y.golpe.dev:8443/a') $$, 'P0001', 'Domínio bloqueado', 'subdomains with port also blocked');
 select lives_ok($$ insert into demos (kind, url) values ('web_link', 'https://naogolpe.dev/') $$, 'similar domain is fine');
+-- Truques de URL que o navegador lê como golpe.dev não passam.
+select throws_ok($$ insert into demos (kind, url) values ('web_link', E'https://golpe.dev\\@x.com/') $$, 'P0001', 'URL inválida', 'backslash userinfo trick rejected');
+select throws_ok($$ insert into demos (kind, url) values ('web_link', 'https://golpe%2Edev/') $$, 'P0001', 'URL inválida', 'percent-encoded host rejected');
+select throws_ok($$ insert into demos (kind, url) values ('web_link', 'https://golpe.dev./') $$, 'P0001', 'URL inválida', 'trailing dot rejected');
+select throws_ok($$ insert into demos (kind, url) values ('web_link', E'https://gol\tpe.dev/') $$, 'P0001', 'URL inválida', 'tab in host rejected');
+select throws_ok($$ insert into demos (kind, url) values ('web_link', 'https://ｇolpe.dev/') $$, 'P0001', 'URL inválida', 'full-width host rejected');
+select throws_ok($$ insert into demos (kind, url) values ('web_link', 'https://user@x.com/') $$, 'P0001', 'URL inválida', 'userinfo rejected');
+select lives_ok($$ insert into demos (kind, url) values ('web_link', 'https://Meu-App.netlify.app:8443/a/b?c=1#d') $$, 'normal URL with port, path, query accepted');
+select throws_ok($$ update demos set url = 'https://golpe.dev./' where url = 'https://naogolpe.dev/' $$, 'P0001', 'URL inválida', 'canonical check also on url change');
+select tests.login_as(:'bruno');
+select throws_ok($$ select is_blocked_url('https://golpe.dev') $$, '42501', null, 'members cannot probe the blocklist');
+
+-- Nem o serviço de demos nem "Reativar demo" põem no ar demo de domínio bloqueado.
+reset role;
+select throws_ok(format($$ update demos set status = 'live' where id = %L $$, :'d1'), 'P0001', 'Domínio bloqueado', 'blocked-domain demo cannot go live');
+select tests.login_as(:'adm');
+select throws_ok(format($$ select admin_set_demo_status(%L, 'live') $$, :'d1'), 'P0001', 'Domínio bloqueado', 'admin cannot reactivate while domain blocked');
+
 select tests.login_as(:'adm');
 select admin_unblock_domain('golpe.dev');
 select tests.login_as(:'caio');

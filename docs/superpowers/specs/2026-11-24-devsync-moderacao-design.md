@@ -56,3 +56,9 @@ Arquivo SQL para o SQL Editor do Supabase: aplica a migration e roda `update pro
 - pgTAP: fila agrupada, permissão (não admin não chama), domínio bloqueado (inclui subdomínio e normalização), bloqueio retroativo, resolver por alvo.
 - Vitest: regras do diálogo de denúncia, montagem do motivo, filtro de tom (desligado, ligado com resposta "ríspido", falha da IA).
 - Playwright: Bruno denuncia o comentário da Ana → admin vê na fila → oculta → o comentário some para os outros.
+
+## Limites conhecidos (da revisão)
+
+- URLs de demo precisam estar na forma canônica (host ASCII simples, sem usuário, `%`, `\`, espaços ou ponto final), para o host que o banco lê ser o mesmo que o navegador abre.
+- Um link que **redireciona** para um domínio bloqueado não é pego na publicação: o serviço de demos segue os redirecionamentos, mas não consulta a lista. Fica para o subprojeto 8 (revisão de segurança).
+- Ação e fechamento das denúncias são duas chamadas; se a segunda falhar, o admin vê o erro e pode repetir.

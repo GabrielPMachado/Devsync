@@ -115,6 +115,18 @@ describe("PublishForm", () => {
     expect(services.publish).not.toHaveBeenCalled();
   });
 
+  it("link fora da forma canônica recusado pelo banco mostra o motivo", async () => {
+    services.createLinkDemo = vi.fn(async () => {
+      throw new Error("invalid_url");
+    });
+    renderForm();
+    fillAbout();
+    fireEvent.click(screen.getByLabelText(/Link do site/));
+    fireEvent.change(screen.getByLabelText("Link da demo"), { target: { value: "https://golpe.dev./" } });
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    expect(await screen.findByText("Esse endereço não é válido.")).toBeInTheDocument();
+  });
+
   it("link aceito: cria a demo, confirma no serviço e publica", async () => {
     renderForm();
     fillAbout();

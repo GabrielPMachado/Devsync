@@ -120,6 +120,12 @@ describe("markDuplicate", () => {
     expect(db.rpc).toHaveBeenCalledWith("admin_resolve_target", { target: "question", target_id: "q1", status: "actioned" });
   });
 
+  it("endereço com barra no fim", async () => {
+    getViewer.mockResolvedValue(admin);
+    await markDuplicate("q1", "/estudos/original-abc/");
+    expect(db.questionBySlug).toHaveBeenCalledWith("original-abc");
+  });
+
   it("original não encontrada", async () => {
     getViewer.mockResolvedValue(admin);
     db.questionBySlug.mockResolvedValue({ data: null, error: null });

@@ -125,7 +125,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
             demoId = await services.createLinkDemo(url);
           } catch (e) {
             // Domínio na lista de bloqueio da moderação (gatilho no banco).
-            if (e instanceof Error && e.message === "blocked_domain") return linkRejected("blocked_domain");
+            if (e instanceof Error && (e.message === "blocked_domain" || e.message === "invalid_url")) return linkRejected(e.message);
             throw e;
           }
           setCreated({ demoId, url });

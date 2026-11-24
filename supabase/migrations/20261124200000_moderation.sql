@@ -41,17 +41,37 @@ language sql stable security definer set search_path = '' as $$
     where h.host = b.domain or h.host like '%.' || b.domain)
 $$;
 
+-- URL de demo só na forma canônica: host ASCII simples (sem usuário, "%", "\",
+-- espaços ou ponto final), porta opcional e o resto sem espaços nem "\".
+-- Assim o host que o banco lê é o mesmo que o navegador abre, e a lista de
+-- bloqueio não é contornada com https://golpe.dev\@x.com, golpe%2Edev, golpe.dev. etc.
+create function public.is_canonical_demo_url(url text) returns boolean
+language sql immutable set search_path = '' as $$
+  select url ~ '^https://([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(:[0-9]{1,5})?([/?#][^[:space:][:cntrl:]\\]*)?$'
+$$;
+
 create function public.demos_check_blocked_domain() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  if new.url is not null and public.is_blocked_url(new.url) then
+  if new.url is null then
+    return new;
+  end if;
+  -- Sem https:// quem recusa é a restrição demos.url (erro 23514).
+  if (tg_op = 'INSERT' or new.url is distinct from old.url) and new.url ~ '^https://'
+     and not public.is_canonical_demo_url(new.url) then
+    raise exception 'URL inválida' using errcode = 'P0001',
+      hint = 'Use um endereço https:// simples, sem usuário, espaços ou caracteres codificados no domínio.';
+  end if;
+  -- Demo num domínio bloqueado só existe como "blocked" (nem o serviço de demos
+  -- nem "Reativar demo" a colocam no ar).
+  if new.status <> 'blocked' and public.is_blocked_url(new.url) then
     raise exception 'Domínio bloqueado' using errcode = 'P0001',
       hint = 'Este domínio foi bloqueado pela moderação da Devsync.';
   end if;
   return new;
 end $$;
 
-create trigger demos_check_blocked_domain before insert or update of url on public.demos
+create trigger demos_check_blocked_domain before insert or update of url, status on public.demos
   for each row execute function public.demos_check_blocked_domain();
 
 -- Bloqueia o domínio e tira do ar na hora as demos que apontam para ele.
@@ -193,4 +213,5 @@ revoke execute on function
   public.admin_resolve_target(public.report_target, uuid, public.report_status),
   public.is_blocked_url(text)
   from public, anon;
+revoke execute on function public.is_blocked_url(text) from authenticated;
 revoke execute on function public.demos_check_blocked_domain() from public, anon, authenticated;

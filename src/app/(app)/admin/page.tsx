@@ -2,7 +2,7 @@ import { ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DomainsPanel } from "@/components/moderation/domains-panel";
 import { QueueCard } from "@/components/moderation/queue-card";
@@ -31,9 +31,8 @@ export default function AdminPage({ searchParams }: Props) {
 
 async function Admin({ searchParams }: Pick<Props, "searchParams">) {
   const viewer = await getViewer();
-  if (!viewer) redirect("/entrar?next=%2Fadmin");
-  // Para quem não é admin a página não existe (o banco também recusa as RPCs).
-  if (!viewer.isAdmin) notFound();
+  // Para quem não é admin (logado ou não) a página não existe; o banco também recusa as RPCs.
+  if (!viewer?.isAdmin) notFound();
 
   const query = await searchParams;
   const raw = typeof query.aba === "string" ? query.aba : "abertas";

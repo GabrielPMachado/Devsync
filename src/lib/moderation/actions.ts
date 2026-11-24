@@ -92,15 +92,16 @@ export async function moderate(input: { target: ReportTarget; targetId: string; 
 export async function markDuplicate(questionId: string, original: string): Promise<AdminResult> {
   const supabase = await adminClient();
   if (!supabase) return { error: "forbidden" };
-  const slug = original.trim().match(/(?:\/estudos\/)?([a-z0-9-]{1,160})(?:[?#].*)?$/)?.[1];
+  const slug = original.trim().replace(/\/+$/, "").match(/(?:\/estudos\/)?([a-z0-9-]{1,160})(?:[?#].*)?$/)?.[1];
   if (!slug) return { error: "notFound" };
   const { data } = await supabase.from("questions").select("id").eq("slug", slug).maybeSingle();
   if (!data) return { error: "notFound" };
   if (data.id === questionId) return { error: "invalid" };
   const { error } = await supabase.rpc("admin_mark_duplicate", { question_id: questionId, original_id: data.id });
   if (error) return { error: "unknown" };
-  await supabase.rpc("admin_resolve_target", { target: "question", target_id: questionId, status: "actioned" });
+  const resolved = await supabase.rpc("admin_resolve_target", { target: "question", target_id: questionId, status: "actioned" });
   revalidatePath("/admin");
+  if (resolved.error) return { error: "unknown" };
   return { ok: true };
 }
 

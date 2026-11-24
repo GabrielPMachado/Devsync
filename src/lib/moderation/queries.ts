@@ -63,7 +63,10 @@ export async function getQueue(status: "open" | "resolved"): Promise<QueueItem[]
   const statuses = status === "open" ? (["open"] as const) : (["actioned", "dismissed"] as const);
   const results = await Promise.all(statuses.map((s) => supabase.rpc("admin_report_queue", { p_status: s })));
   const rows = results.flatMap((r, i) => ((r.data ?? []) as Row[]).map((row) => toQueueItem(row, statuses[i] === "open" ? null : statuses[i])));
-  if (status === "resolved") rows.sort((a, b) => (b.resolvedAt ?? "").localeCompare(a.resolvedAt ?? ""));
+  if (status === "resolved") {
+    rows.sort((a, b) => (b.resolvedAt ?? "").localeCompare(a.resolvedAt ?? ""));
+    return rows.slice(0, 50);
+  }
   return rows;
 }
 
