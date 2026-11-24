@@ -39,3 +39,18 @@ Testes: `github.test.ts` cobrindo cada um + Review Focus.
 - Página lê o usuário (`getGithubLogin()`: profiles.links.github, senão user_metadata.user_name do login GitHub) e passa a `ConnectedPublishForm`.
 - `security-headers.ts`: `https://api.github.com` em connect-src (+ teste).
 - Verificação: `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`.
+
+## Parte 2: demo a partir dos arquivos
+
+### Task 4: `src/lib/projects/github-demo.ts`
+- `type SiteSource = { ref: string; folder: string; files: { path: string; size: number }[] }`
+- `type SiteLookup = { kind: "found"; source: SiteSource } | { kind: "needs_build" } | { kind: "none" } | { kind: "too_big" }`
+- `findSiteSource(repo, fetchFn?) => Promise<SiteLookup>`: árvore de `gh-pages` (404 = não tem) e da branch padrão (`/git/trees/<ref>?recursive=1`); `truncated` ou >500 arquivos/>60 MB = too_big; lê o index.html por raw para `needsBuild`.
+- `pickFolder(paths) => string | null` (ordem: dist, build, docs, out, raiz), `needsBuild(html) => boolean`, `isDemoFile(path) => boolean`.
+- `buildDemoZip(repo, source, fetchFn?) => Promise<File>`: baixa por raw (6 de cada vez), caminhos relativos à pasta, zip com fflate, nome `<repo>.zip`.
+- Testes: `github-demo.test.ts`.
+
+### Task 5: formulário
+- `ImportDraft.site: SiteLookup | null` (null quando há homepage). `GithubServices` ganha `findSiteSource` e `buildDemoZip`.
+- Modo upload sem arquivo mas com fonte do GitHub: no envio monta o zip e segue o fluxo. Caixa "Arquivos do GitHub" com "Escolher um .zip" para trocar. Mensagens para needs_build/none/too_big.
+- Testes em `github-import.test.tsx`.
