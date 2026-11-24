@@ -48,12 +48,23 @@ Depois da compra:
 
 Pronto: publicar projeto com zip passa a funcionar em produção.
 
+### 2.1 Build automático pelo GitHub (grátis)
+
+Repositório do GitHub que precisa de build (React, Vite, Next com export estático…) vira demo sozinho: o serviço de demos dispara um GitHub Actions num repositório **público** só para isso (Actions em repositório público não cobra minutos). Detalhes em [`builder/README.md`](../builder/README.md). Faça depois do passo 2:
+
+1. **Repositório de builds.** GitHub > New repository: nome `devsync-builds`, **Public**, com README. Crie o arquivo `.github/workflows/build-demo.yml` com o conteúdo de [`builder/build-demo.yml`](../builder/build-demo.yml) (Add file > Create new file, cole e faça commit na `main`).
+2. **Token para disparar.** GitHub > Settings > Developer settings > Personal access tokens > Fine-grained tokens > Generate new token: Repository access = **Only select repositories** > `devsync-builds`; Permissions > Repository > **Actions: Read and write**. Validade de 1 ano. Copie o token.
+3. **No repositório da Devsync** (Settings > Secrets and variables > Actions): segredo `BUILDER_GITHUB_TOKEN` = o token; variável `BUILDER_REPO` = `GabrielPMachado/devsync-builds`. Rode de novo "Publicar serviço de demos".
+4. **Ligar no site.** Vercel > Environment Variables: `NEXT_PUBLIC_DEMO_BUILDS` = `1` e Redeploy. Sem isso, o formulário continua só mostrando o aviso "precisa ser compilado".
+5. **Banco.** Rode `aplicar-build-de-demos.sql` no SQL Editor (se ainda não estiver aplicado).
+
 ## 3. Conferência final
 
 - Abra o site no celular e use "Adicionar à tela inicial": o ícone da Devsync aparece e o app abre em tela cheia.
 - `https://devsync-br.vercel.app/sitemap.xml` e `/robots.txt` abrem.
 - Cadastre o site no [Google Search Console](https://search.google.com/search-console) e envie o sitemap.
 - Publique um projeto com zip e abra a demo.
+- Importe do GitHub um projeto Vite e publique: as etapas do build aparecem e a demo abre no fim.
 
 ## O que fica para depois (com custo)
 

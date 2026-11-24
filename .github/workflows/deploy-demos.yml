@@ -8,6 +8,8 @@ name: Publicar serviço de demos
 #   Segredo  SUPABASE_SERVICE_ROLE_KEY  chave service_role do Supabase
 #   Segredo  UPLOAD_SIGNING_SECRET      `openssl rand -hex 32`
 #   Segredo  SAFE_BROWSING_API_KEY      opcional
+#   Variável BUILDER_REPO               opcional: repositório de builds (ex.: GabrielPMachado/devsync-builds)
+#   Segredo  BUILDER_GITHUB_TOKEN       opcional: token fine-grained com Actions: write no BUILDER_REPO
 # Passo a passo completo: docs/lancamento.md
 
 on:
@@ -88,11 +90,14 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           UPLOAD_SIGNING_SECRET: ${{ secrets.UPLOAD_SIGNING_SECRET }}
           SAFE_BROWSING_API_KEY: ${{ secrets.SAFE_BROWSING_API_KEY }}
+          BUILDER_GITHUB_TOKEN: ${{ secrets.BUILDER_GITHUB_TOKEN }}
+          BUILDER_REPO: ${{ vars.BUILDER_REPO }}
         run: |
           secrets_file="$RUNNER_TEMP/demos-secrets.json"
           trap 'rm -f "$secrets_file"' EXIT
           node -e '
-            const keys = ["SUPABASE_SERVICE_ROLE_KEY", "UPLOAD_SIGNING_SECRET", "SAFE_BROWSING_API_KEY"];
+            // BUILDER_REPO não é segredo, mas vai junto para não exigir outra publicação.
+            const keys = ["SUPABASE_SERVICE_ROLE_KEY", "UPLOAD_SIGNING_SECRET", "SAFE_BROWSING_API_KEY", "BUILDER_GITHUB_TOKEN", "BUILDER_REPO"];
             const out = Object.fromEntries(keys.filter((k) => process.env[k]).map((k) => [k, process.env[k]]));
             require("fs").writeFileSync(process.argv[1], JSON.stringify(out), { mode: 0o600 });
           ' "$secrets_file"
