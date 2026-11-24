@@ -4,7 +4,8 @@ import { MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/ui/avatar";
 import { ACCENT_COLORS, isAccent, isBannerPreset, isStatus } from "@/lib/social/profile-style";
-import { BANNER_BACKGROUNDS, FRAME_RINGS } from "./preview-style";
+import { AvatarFrame } from "@/components/profile/avatar-frame";
+import { ProfileBanner } from "@/components/profile/profile-banner";
 
 export type PreviewData = {
   displayName: string;
@@ -28,16 +29,15 @@ export function ProfilePreview({ data }: { data: PreviewData }) {
   const style = useTranslations("ProfileStyle");
   const name = data.displayName.trim() || data.username;
   const accent = ACCENT_COLORS[isAccent(data.accent) ? data.accent : "azul"];
-  const banner = data.bannerUrl
-    ? `center / cover no-repeat url("${data.bannerUrl.replace(/"/g, "%22")}")`
-    : BANNER_BACKGROUNDS[isBannerPreset(data.bannerPreset) ? data.bannerPreset : "padrao"];
 
   return (
     <section aria-label={t("preview")} className="overflow-hidden rounded-xl border border-border-default bg-bg-surface">
-      <div aria-hidden="true" className="h-16 lg:h-24" style={{ background: banner }} />
+      <ProfileBanner bannerUrl={data.bannerUrl} preset={isBannerPreset(data.bannerPreset) ? data.bannerPreset : null} className="h-16 lg:h-24" />
       <div className="flex flex-col gap-2 px-4 pb-4">
-        <span className={`-mt-8 inline-flex self-start rounded-full border-4 border-bg-surface ${FRAME_RINGS[data.avatarFrame] ?? ""}`}>
-          <Avatar name={name} src={data.avatarUrl} size="lg" />
+        <span className="relative -mt-8 inline-flex self-start">
+          <AvatarFrame frame={data.avatarFrame}>
+            <Avatar name={name} src={data.avatarUrl} size="lg" className="border-4 border-bg-surface" />
+          </AvatarFrame>
         </span>
         <div className="flex min-w-0 flex-col">
           <p className="truncate font-display text-lg font-bold text-text-primary">{name}</p>

@@ -455,11 +455,6 @@
     "editProfile": "Editar perfil",
     "profileSaved": "Perfil atualizado.",
     "joined": "Na Devsync desde {date}",
-    "followersLabel": "{count, plural, =1 {seguidor} other {seguidores}}",
-    "followingLabel": "seguindo",
-    "projectsLabel": "{count, plural, =1 {projeto} other {projetos}}",
-    "answersLabel": "{count, plural, =1 {resposta} other {respostas}}",
-    "acceptedLabel": "{count, plural, =1 {resposta aceita} other {respostas aceitas}}",
     "technologies": "Tecnologias",
     "profileSections": "Seções do perfil",
     "tab_projetos": "Projetos ({count})",
@@ -779,5 +774,16 @@
     "accent_verde": "Verde",
     "accent_ambar": "Âmbar",
     "accent_rosa": "Rosa"
+  },
+  "ProfileHeader": {
+    "location": "Localização:",
+    "links": "Links de {name}",
+    "link_github": "GitHub",
+    "link_linkedin": "LinkedIn",
+    "link_x": "X",
+    "link_youtube": "YouTube",
+    "link_site": "Site",
+    "followers": "{count, plural, =1 {# seguidor} other {# seguidores}}",
+    "following": "{count, number} seguindo"
   }
 }

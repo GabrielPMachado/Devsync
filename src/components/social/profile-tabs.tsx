@@ -18,7 +18,7 @@ export function ProfileTabs({ base, active, counts }: { base: string; active: Pr
                 href={tab === "projetos" ? base : `${base}?aba=${tab}`}
                 aria-current={on ? "page" : undefined}
                 scroll={false}
-                className={`-mb-px inline-flex border-b-2 px-0.5 py-2.5 text-sm whitespace-nowrap ${on ? "border-brand-accent font-semibold text-text-primary" : "border-transparent text-text-muted hover:text-text-primary"}`}
+                className={`-mb-px inline-flex border-b-2 px-0.5 py-2.5 text-sm whitespace-nowrap ${on ? "border-[var(--accent,var(--color-brand-accent))] font-semibold text-text-primary" : "border-transparent text-text-muted hover:text-text-primary"}`}
               >
                 {t(`tab_${tab}`, { count: counts[tab] })}
               </Link>
