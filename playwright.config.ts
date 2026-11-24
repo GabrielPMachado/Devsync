@@ -11,6 +11,9 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: "off",
+    // O service worker fica de fora dos testes (page.route não vê o que passa por ele).
+    // e2e/launch.spec.ts libera para testar a PWA.
+    serviceWorkers: "block",
   },
   projects: [
     {
