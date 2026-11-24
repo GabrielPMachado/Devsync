@@ -31,7 +31,7 @@ const tags = [
 function renderEditor(extra: Partial<Parameters<typeof ProfileEditor>[0]> = {}) {
   return render(
     <NextIntlClientProvider locale="pt-BR" messages={messages}>
-      <ProfileEditor initial={initial} username="ana" tags={tags} avatarUrl={null} bannerUrl={null} {...extra} />
+      <ProfileEditor initial={initial} username="ana" userId="u1" tags={tags} avatarUrl={null} bannerUrl={null} {...extra} />
     </NextIntlClientProvider>,
   );
 }
