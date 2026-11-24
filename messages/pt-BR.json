@@ -1,7 +1,20 @@
 {
   "Metadata": {
     "title": "Devsync",
-    "description": "A rede social para desenvolvedores: projetos com demo funcionando, estudos em perguntas e respostas e uma comunidade sem grosseria."
+    "description": "A rede social para desenvolvedores: projetos com demo funcionando, estudos em perguntas e respostas e uma comunidade sem grosseria.",
+    "shortName": "Devsync",
+    "ogAlt": "Devsync: Connect. Share. Develop.",
+    "tagline": "Connect. Share. Develop."
+  },
+  "Status": {
+    "errorTitle": "A Devsync deu uma pausa rápida",
+    "errorText": "Pode ser uma manutenção ou instabilidade do nosso lado. Seus dados estão seguros. Tente de novo em alguns instantes.",
+    "retry": "Tentar de novo",
+    "home": "Ir para o início",
+    "notFoundTitle": "Página não encontrada",
+    "notFoundText": "O link pode estar errado ou o conteúdo foi removido.",
+    "offlineTitle": "Você está sem internet",
+    "offlineText": "Assim que a conexão voltar, a Devsync abre de novo."
   },
   "Home": {
     "status": "Em construção",

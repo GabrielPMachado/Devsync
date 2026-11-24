@@ -39,7 +39,7 @@ test("denúncia → fila do /admin → ocultar → some para os outros", async (
 
   // Quem não é admin não acha o /admin.
   await bruno.page.goto("/admin", { waitUntil: "networkidle" });
-  await expect(bruno.page.getByRole("heading", { name: "404" })).toBeVisible();
+  await expect(bruno.page.getByRole("heading", { name: "Página não encontrada" })).toBeVisible();
   await expect(bruno.page.getByRole("heading", { name: "Moderação" })).toHaveCount(0);
 
   // O moderador vê a denúncia agrupada e oculta a resposta.

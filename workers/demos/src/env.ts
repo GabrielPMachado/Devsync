@@ -13,6 +13,8 @@ export interface Env {
   DEMOS_BUCKET: R2Bucket;
   ZIP_QUEUE: Queue<ZipMessage>;
   LINK_QUEUE: Queue<LinkMessage>;
+  /** Limite de chamadas da API por IP (binding de rate limit). Sem ele, não limita (dev e testes). */
+  API_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
 }
 
 export interface ZipMessage {

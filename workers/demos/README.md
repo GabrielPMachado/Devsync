@@ -60,7 +60,7 @@ Limites: 25 MB compactado, 500 arquivos, 60 MB descompactado (cabe na memória d
 ### Riscos conhecidos
 
 - O iframe da spec tem `allow-popups`: uma demo pode abrir uma janela nova e escrever HTML nela com a origem da demo, sem passar pelo redirecionamento. Fica como está porque muitas demos abrem links; reavaliar se aparecer abuso (tirar `allow-popups` ou usar `allow-popups-to-escape-sandbox` sem `allow-same-origin`).
-- `/complete`, `/embed-check` e `/verify` não têm limite de chamadas próprio (o limite de 5 envios por dia vale na criação). Rate limit fica para o subprojeto de lançamento.
+- Limite de chamadas: em produção, 30 chamadas da API por minuto por IP (binding `API_LIMITER`), com `429` e `Retry-After: 60`. Fora de produção (dev e testes) não há limite. O limite de 5 envios por dia continua valendo na criação.
 - Zips enviados e não concluídos ficam em `uploads/`: configurar uma regra de ciclo de vida no R2 (apagar após 1 dia).
 
 ## Checagem diária
@@ -81,11 +81,13 @@ O cron (`0 6 * * *`, 03:00 em São Paulo) enfileira os links `live` e `unavailab
 
 Bindings: R2 `DEMOS_BUCKET` (`devsync-demos`), filas `demo-zips` e `demo-links`.
 
-## Antes de publicar
+## Publicar
 
-Nada foi publicado na conta Cloudflare. Para o lançamento:
+Nada foi publicado na conta Cloudflare ainda. A configuração de produção está pronta em `wrangler.jsonc` (`env.production`) e a publicação é feita pelo workflow **Publicar serviço de demos** (`.github/workflows/deploy-demos.yml`), rodado à mão no GitHub. O passo a passo completo, com o que comprar, está em [`docs/lancamento.md`](../../docs/lancamento.md).
 
-1. Domínio próprio com rota curinga para o Worker.
-2. Workers Paid (US$ 5/mês): descompactar um zip grande passa do limite de CPU do plano grátis (10 ms por pedido) e de subrequests (50; um zip de 500 arquivos faz ~500 gravações no R2).
-3. `wrangler r2 bucket create devsync-demos` (com regra de ciclo de vida em `uploads/`), `wrangler queues create demo-zips`, `wrangler queues create demo-links`, segredos com `wrangler secret put`.
-4. Aplicar a migration `20261123000900_demo_service.sql` no Supabase.
+Resumo do que precisa existir antes:
+
+1. Domínio próprio na Cloudflare, com DNS curinga `*` (e o raiz) com proxy ligado. O workflow troca `DOMINIO_DAS_DEMOS` por ele.
+2. Workers Paid (US$ 5/mês): filas e descompactar zip grande (limite de CPU e de subrequests do grátis).
+3. Segredos e a variável `DEMOS_DOMAIN` no GitHub. Na primeira vez, marque "Criar bucket R2 e filas".
+4. No site (Vercel): `NEXT_PUBLIC_DEMOS_URL=https://<domínio>` e um novo deploy (a CSP do site libera o domínio das demos no build).

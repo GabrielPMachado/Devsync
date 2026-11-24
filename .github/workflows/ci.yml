@@ -77,6 +77,15 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
 
+      # Teste de carga leve (subprojeto 8): páginas públicas com o Supabase local.
+      - name: Carga leve
+        run: |
+          npm run start -- --port 3100 > /tmp/next.log 2>&1 &
+          up=""
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3100/ && up=1 && break; sleep 1; done
+          [ -n "$up" ] || { echo "::error::O site não subiu para o teste de carga"; cat /tmp/next.log; exit 1; }
+          node scripts/carga.mjs http://localhost:3100 --conexoes 20 --segundos 20 --p95 1500 || { tail -50 /tmp/next.log; exit 1; }
+
       - name: Relatório do Playwright
         if: failure()
         uses: actions/upload-artifact@v4

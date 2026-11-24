@@ -3,7 +3,7 @@
 // SAFE_BROWSING_API_KEY (opcional).
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "devsync-demos",
+  "name": "devsync-demos-dev",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
   "vars": {
@@ -25,5 +25,42 @@
     ]
   },
   // Checagem diária dos links de demo (06:00 UTC = 03:00 em São Paulo).
-  "triggers": { "crons": ["0 6 * * *"] }
+  "triggers": { "crons": ["0 6 * * *"] },
+
+  // Produção (lançamento). Publicada pelo workflow .github/workflows/deploy-demos.yml,
+  // que troca DOMINIO_DAS_DEMOS pelo domínio comprado (variável DEMOS_DOMAIN do GitHub).
+  // Bindings e vars não são herdados entre ambientes no Wrangler: por isso repetidos aqui.
+  "env": {
+    "production": {
+      "name": "devsync-demos",
+      "workers_dev": false,
+      "routes": [
+        { "pattern": "DOMINIO_DAS_DEMOS/*", "zone_name": "DOMINIO_DAS_DEMOS" },
+        { "pattern": "*.DOMINIO_DAS_DEMOS/*", "zone_name": "DOMINIO_DAS_DEMOS" }
+      ],
+      "vars": {
+        "DEMOS_HOST": "DOMINIO_DAS_DEMOS",
+        "SITE_URL": "https://devsync-br.vercel.app",
+        "FRAME_ANCESTORS": "https://devsync-br.vercel.app",
+        "SUPABASE_URL": "https://ogbkwdyzpzrayeupgtcx.supabase.co",
+        // Chave pública (publishable), a mesma do site. Os segredos vão por `wrangler secret put`.
+        "SUPABASE_ANON_KEY": "sb_publishable_OIuu4MTrUeb5SrI6NvOupA_jHsGJvPH"
+      },
+      "r2_buckets": [{ "binding": "DEMOS_BUCKET", "bucket_name": "devsync-demos" }],
+      "queues": {
+        "producers": [
+          { "binding": "ZIP_QUEUE", "queue": "demo-zips" },
+          { "binding": "LINK_QUEUE", "queue": "demo-links" }
+        ],
+        "consumers": [
+          { "queue": "demo-zips", "max_batch_size": 1, "max_retries": 4 },
+          { "queue": "demo-links", "max_batch_size": 5, "max_retries": 2 }
+        ]
+      },
+      // 30 chamadas da API por minuto por IP (envio, checagem de link, verificação).
+      "ratelimits": [{ "name": "API_LIMITER", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }],
+      "triggers": { "crons": ["0 6 * * *"] },
+      "observability": { "enabled": true }
+    }
+  }
 }
