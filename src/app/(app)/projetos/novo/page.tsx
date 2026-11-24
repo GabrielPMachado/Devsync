@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NewProjectPage() {
   const t = await getTranslations("Publish");
   return (
-    <main className="mx-auto grid w-full max-w-[1120px] flex-1 gap-8 px-4 py-6 md:px-6 md:py-10 lg:grid-cols-[minmax(0,760px)_1fr]">
+    <main className="mx-auto grid grid-cols-1 w-full max-w-[1120px] flex-1 gap-8 px-4 py-6 md:px-6 md:py-10 lg:grid-cols-[minmax(0,760px)_1fr]">
       <Suspense fallback={null}>
         <Gate area="private" next="/projetos/novo" />
       </Suspense>

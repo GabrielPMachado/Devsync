@@ -43,7 +43,7 @@ export function ProfileForm({ initial, username, tags }: Props) {
         />
         <p className="text-xs text-text-muted">{t("bioCount", { count: bio.length, max: BIO_MAX })}</p>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <TextField label={t("github")} name="github" prefix="github.com/" autoCapitalize="none" spellCheck={false} defaultValue={values.github} error={e.github ? t("githubError") : undefined} />
         <TextField label={t("site")} name="site" type="url" inputMode="url" placeholder="https://" defaultValue={values.site} error={e.site ? t("siteError") : undefined} />
       </div>

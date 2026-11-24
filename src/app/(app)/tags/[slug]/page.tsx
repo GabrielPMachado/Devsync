@@ -53,7 +53,7 @@ async function Content({ params }: { params: Params }) {
       <section aria-labelledby="t-projetos" className="flex flex-col gap-4">
         <h2 id="t-projetos" className="font-display text-lg font-bold text-text-primary">{t("projectsTitle")}</h2>
         {tag.projects.length ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {tag.projects.map((p) => (
               <ProjectCard key={p.id} project={p} basePath={`/tags/${tag.slug}`} />
             ))}

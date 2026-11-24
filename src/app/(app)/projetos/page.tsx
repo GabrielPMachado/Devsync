@@ -37,7 +37,7 @@ async function List() {
   const [projects, t] = await Promise.all([listProjects(), getTranslations("Projects")]);
   if (projects.length === 0) return <p className="rounded-xl border border-dashed border-border-default px-4 py-12 text-center text-sm text-text-muted">{t("empty")}</p>;
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {projects.map((p) => (
         <ProjectCard key={p.id} project={p} basePath="/projetos" />
       ))}
