@@ -77,3 +77,30 @@ test("editar o perfil e ver os links e tecnologias", async ({ browser }) => {
   await expect(page.getByRole("link", { name: "carla.dev" })).toHaveAttribute("href", "https://carla.dev");
   await expect(page.getByRole("link", { name: "postgresql", exact: true })).toHaveAttribute("href", "/tags/postgresql");
 });
+
+test("editar perfil: cargo, status, links novos e aparência ficam salvos", async ({ browser }) => {
+  test.setTimeout(90_000);
+  const { page, username } = await newMember(browser, "Dora");
+  await page.goto("/configuracoes", { waitUntil: "networkidle" });
+  for (const name of ["Aparência", "Sobre você", "Links", "Tecnologias"]) {
+    await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
+  }
+  const preview = page.getByRole("region", { name: "Prévia do perfil" });
+
+  await page.getByLabel("Cargo").fill("Dev back-end na Acme");
+  await page.getByLabel("Status").selectOption("open_to_work");
+  await page.getByLabel("LinkedIn").fill("https://www.linkedin.com/in/dora-dev/");
+  await page.getByRole("radio", { name: "Circuito" }).check({ force: true });
+  await page.getByRole("radio", { name: "Borda ciano" }).check({ force: true });
+  await expect(preview.getByText("Dev back-end na Acme")).toBeVisible();
+  await expect(preview.getByText("Aberto a oportunidades")).toBeVisible();
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page).toHaveURL(new RegExp(`/@${username}\\?salvo=1$`));
+
+  await page.goto("/configuracoes", { waitUntil: "networkidle" });
+  await expect(page.getByLabel("Cargo")).toHaveValue("Dev back-end na Acme");
+  await expect(page.getByLabel("Status")).toHaveValue("open_to_work");
+  await expect(page.getByLabel("LinkedIn")).toHaveValue("dora-dev");
+  await expect(page.getByRole("radio", { name: "Circuito" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Borda ciano" })).toBeChecked();
+});
