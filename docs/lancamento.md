@@ -16,6 +16,8 @@ Depois, em **Advisors > Security Advisor**, os avisos "Public Can Execute SECURI
 - `admin_*`: só funcionam para admin (conferem o papel por dentro).
 - `demo_uploads` sem política: tabela só do serviço de demos (chave `service_role`). Ninguém do site lê ou escreve nela.
 
+**E-mail de login (obrigatório antes de abrir ao público, grátis).** O envio de e-mail padrão do Supabase só manda para quem é da equipe do projeto e poucas mensagens por hora: o link mágico não chegaria para os usuários. Crie uma conta grátis no [Resend](https://resend.com) (3 mil e-mails/mês), gere uma chave SMTP e preencha em **Authentication > Emails > SMTP Settings** (host `smtp.resend.com`, porta 465, usuário `resend`, senha = a chave). Sem domínio próprio, o Resend só envia do endereço de teste; com o domínio das demos ou do site, verifique o domínio no Resend.
+
 Em **Authentication > URL Configuration**, confira que `https://devsync-br.vercel.app/**` está nas Redirect URLs.
 
 ## 2. Serviço de demos (Cloudflare)
