@@ -48,6 +48,8 @@ test.describe("lançamento: PWA, SEO e segurança", () => {
       await context.setOffline(true);
       await page.goto("/estudos").catch(() => {});
       await expect(page.getByRole("heading", { name: "Você está sem internet" })).toBeVisible();
+      // Sem rede o CSS do site não carrega: a página precisa do estilo inline.
+      await expect(page.getByRole("main")).toHaveCSS("background-color", "rgb(7, 11, 20)");
       await context.setOffline(false);
     });
   });

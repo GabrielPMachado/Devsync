@@ -3,7 +3,7 @@
 // SAFE_BROWSING_API_KEY (opcional).
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "devsync-demos",
+  "name": "devsync-demos-dev",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
   "vars": {
