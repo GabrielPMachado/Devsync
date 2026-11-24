@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import messages from "../../../messages/pt-BR.json";
 import { GithubError, type GithubRepo } from "@/lib/projects/github";
+import type { SiteLookup } from "@/lib/projects/github-demo";
 import { PublishForm, type PublishServices } from "./publish-form";
 
 const tags = [
@@ -40,6 +41,8 @@ function setup(github: Partial<NonNullable<PublishServices["github"]>> = {}) {
       user: "ana",
       listRepos: vi.fn(async () => [repo("kanban", { homepage: "https://kanban.ana.dev", topics: ["reactjs"] }), repo("blog")]),
       repoDetails: vi.fn(async () => ({ readme: "# Kanban", languages: ["TypeScript"] })),
+      findSiteSource: vi.fn(async () => ({ kind: "found", source: { ref: "gh-pages", folder: "", files: [{ path: "index.html", size: 5 }, { path: "app.js", size: 5 }] } })),
+      buildDemoZip: vi.fn(async () => new File([new Uint8Array(20)], "blog.zip", { type: "application/zip" })),
       ...github,
     },
   } as unknown as PublishServices;
@@ -119,7 +122,7 @@ describe("Importar do GitHub", () => {
   });
 
   it("reimportar um repo sem site tira a demo do anterior", async () => {
-    setup();
+    setup({ findSiteSource: vi.fn(async () => ({ kind: "none" }) as SiteLookup) });
     open();
     fireEvent.click(await screen.findByRole("button", { name: "Usar kanban" }));
     await screen.findByText("Importado de ana/kanban. Confira antes de publicar.");
@@ -145,5 +148,54 @@ describe("Importar do GitHub", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(screen.getByRole("list", { name: "Repositórios de novo" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Usar antigo" })).not.toBeInTheDocument();
+  });
+
+  it("repo sem site publicado: os arquivos viram a demo enviada no publicar", async () => {
+    const services = setup();
+    (services.createUpload as ReturnType<typeof vi.fn>).mockResolvedValue({ demoId: "d1", uploadUrl: "http://u" });
+    (services.putZip as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (services.completeUpload as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (services.readDemo as ReturnType<typeof vi.fn>).mockResolvedValue({ status: "live", rejection_reason: null });
+    (services.publish as ReturnType<typeof vi.fn>).mockResolvedValue({ error: "unknown" });
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar blog" }));
+    expect(await screen.findByText("Arquivos do GitHub")).toBeInTheDocument();
+    expect(screen.getByText("ana/blog · branch gh-pages · 2 arquivos")).toBeInTheDocument();
+    expect(services.github!.findSiteSource).toHaveBeenCalledWith(expect.objectContaining({ fullName: "ana/blog" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    await waitFor(() => expect(services.publish).toHaveBeenCalled());
+    expect(services.github!.buildDemoZip).toHaveBeenCalledWith(expect.objectContaining({ fullName: "ana/blog" }), expect.objectContaining({ ref: "gh-pages" }));
+    expect(services.putZip).toHaveBeenCalledWith("http://u", expect.objectContaining({ name: "blog.zip" }));
+  });
+
+  it("repo com site publicado não procura arquivos", async () => {
+    const services = setup();
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar kanban" }));
+    await screen.findByText("Importado de ana/kanban. Confira antes de publicar.");
+    expect(services.github!.findSiteSource).not.toHaveBeenCalled();
+  });
+
+  it.each<[SiteLookup["kind"], string]>([
+    ["needs_build", "Esse repositório precisa ser compilado antes de virar demo."],
+    ["none", "Não achamos um index.html no repositório"],
+    ["too_big", "O site do repositório passa de 500 arquivos ou 60 MB."],
+  ])("explica quando os arquivos não servem (%s)", async (kind, text) => {
+    setup({ findSiteSource: vi.fn(async () => ({ kind }) as SiteLookup) });
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar blog" }));
+    expect(await screen.findByText(text, { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText("Arquivos do GitHub")).not.toBeInTheDocument();
+  });
+
+  it("dá para trocar os arquivos do GitHub por um .zip", async () => {
+    setup();
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar blog" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Enviar um .zip em vez disso" }));
+    expect(screen.queryByText("Arquivos do GitHub")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    expect(await screen.findByText("Escolha o .zip do site.", { exact: false })).toBeInTheDocument();
   });
 });

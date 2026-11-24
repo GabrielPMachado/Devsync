@@ -241,7 +241,18 @@
     "rate_limit": "O GitHub limitou as buscas por agora. Tente de novo às {time}.",
     "rate_limit_later": "O GitHub limitou as buscas por agora. Tente de novo mais tarde.",
     "network": "Não deu para falar com o GitHub. Tente de novo.",
-    "privateNote": "Só repositórios públicos aparecem aqui."
+    "privateNote": "Só repositórios públicos aparecem aqui.",
+    "fromGithub": "Arquivos do GitHub",
+    "fromGithubInfo": "{repo} · {where} · {count, plural, one {# arquivo} other {# arquivos}}",
+    "ghPages": "branch gh-pages",
+    "rootFolder": "raiz",
+    "folder": "pasta {folder}",
+    "fromGithubHelp": "No envio, a Devsync baixa esses arquivos e publica como a demo.",
+    "useZipInstead": "Enviar um .zip em vez disso",
+    "fetching": "Baixando os arquivos do GitHub…",
+    "site_needs_build": "Esse repositório precisa ser compilado antes de virar demo. Rode o build e publique a pasta dist numa branch gh-pages, ou envie aqui o .zip da pasta dist.",
+    "site_none": "Não achamos um index.html no repositório (nem em gh-pages, dist, build, docs ou out). Envie um .zip ou use o link do site.",
+    "site_too_big": "O site do repositório passa de 500 arquivos ou 60 MB. Envie um .zip menor."
   },
   "Projects": {
     "metaTitle": "Projetos · Devsync",

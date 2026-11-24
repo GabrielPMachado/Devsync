@@ -5,6 +5,7 @@ import { publishProject } from "@/app/(app)/projetos/actions";
 import { completeUpload, createUpload, embedCheck, putZip, verifyDemo, type DemoRow } from "@/lib/demos/client";
 import { demosBaseUrl } from "@/lib/demos/url";
 import { listRepos, repoDetails } from "@/lib/projects/github";
+import { buildDemoZip, findSiteSource } from "@/lib/projects/github-demo";
 import { createClient } from "@/lib/supabase/client";
 import { PublishForm, type PublishServices } from "./publish-form";
 
@@ -33,7 +34,10 @@ export function ConnectedPublishForm({ tags, githubUser }: { tags: { slug: strin
         return data.id as string;
       },
       publish: publishProject,
-      github: { user: githubUser, listRepos: (u) => listRepos(u), repoDetails: (r) => repoDetails(r) },
+      github: { user: githubUser, listRepos: (u) => listRepos(u), repoDetails: (r) => repoDetails(r),
+        findSiteSource: (r) => findSiteSource(r),
+        buildDemoZip: (r, s) => buildDemoZip(r, s),
+      },
     };
   }, [githubUser]);
   return <PublishForm tags={tags} services={services} />;
