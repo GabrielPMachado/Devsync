@@ -36,7 +36,7 @@ create index user_badges_badge_idx on public.user_badges (badge);
 
 alter table public.user_badges enable row level security;
 create policy "insígnias são públicas" on public.user_badges for select using (true);
-revoke insert, update, delete, truncate on public.user_badges from anon, authenticated;
+revoke all on public.user_badges from anon, authenticated;
 grant select on public.user_badges to anon, authenticated;
 grant select, insert, update, delete on public.user_badges to service_role;
 
@@ -58,8 +58,20 @@ begin
 end $$;
 revoke execute on function private.award_badge(uuid, text) from public, anon, authenticated;
 
--- Membro fundador: os 1.000 primeiros a escolher um @. A trava evita passar de
--- 1.000 quando duas pessoas escolhem ao mesmo tempo.
+-- Membro fundador: os 1.000 primeiros a escolher um @. O contador só sobe (uma
+-- conta fundadora apagada não libera vaga) e a trava evita passar de 1.000
+-- quando duas pessoas escolhem ao mesmo tempo.
+create table private.founder_slots (id boolean primary key default true check (id), used integer not null default 0);
+insert into private.founder_slots default values;
+
+-- Trava por pessoa antes de contar: dois projetos (ou duas aceitas) ao mesmo
+-- tempo não deixam o limite passar sem a insígnia.
+create function private.lock_badges(who uuid) returns void
+language sql security definer set search_path = '' as $$
+  select pg_advisory_xact_lock(hashtext('devsync_badges'), hashtext(who::text))
+$$;
+revoke execute on function private.lock_badges(uuid) from public, anon, authenticated;
+
 create function private.badges_on_username() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
@@ -67,7 +79,11 @@ begin
     return null; -- trocar de @ não conta como chegar agora
   end if;
   perform pg_advisory_xact_lock(hashtext('devsync_founder_badge'));
-  if (select count(*) from public.user_badges where badge = 'founder') < 1000 then
+  if exists (select 1 from public.user_badges where profile_id = new.id and badge = 'founder') then
+    return null;
+  end if;
+  update private.founder_slots set used = used + 1 where used < 1000;
+  if found then
     perform private.award_badge(new.id, 'founder');
   end if;
   return null;
@@ -89,8 +105,10 @@ create trigger profiles_badges_followers after update of followers_count on publ
 create function private.badges_on_project() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare
-  total integer := (select count(*) from public.projects where author_id = new.author_id);
+  total integer;
 begin
+  perform private.lock_badges(new.author_id);
+  total := (select count(*) from public.projects where author_id = new.author_id);
   perform private.award_badge(new.author_id, 'first_project');
   if total >= 5 then
     perform private.award_badge(new.author_id, 'builder');
@@ -128,6 +146,7 @@ begin
   if answerer is null or answerer = new.author_id then
     return null;
   end if;
+  perform private.lock_badges(answerer);
   total := private.accepted_count(answerer);
   perform private.award_badge(answerer, 'first_accepted');
   if total >= 10 then
@@ -179,12 +198,14 @@ create trigger profiles_check_badges before update of shown_badges, avatar_frame
 
 -- Backfill: quem já cumpre as regras hoje ganha sem notificação -------------
 
+-- Não guardamos quando cada um escolheu o @: a ordem de cadastro é a melhor aproximação.
 insert into public.user_badges (profile_id, badge, awarded_at)
 select id, 'founder', created_at from public.profiles
 where username is not null
 order by created_at, id
 limit 1000
 on conflict do nothing;
+update private.founder_slots set used = (select count(*) from public.user_badges where badge = 'founder');
 
 insert into public.user_badges (profile_id, badge, awarded_at)
 select author_id, 'first_project', min(created_at) from public.projects group by author_id
@@ -279,7 +300,8 @@ begin
   revoke insert, update, delete on public.notifications from anon;
   revoke insert, update on public.notifications from authenticated;
   grant update (read_at) on public.notifications to authenticated;
-  revoke insert, update, delete, truncate on public.user_badges from anon, authenticated;
+  revoke all on public.user_badges from anon, authenticated;
+  grant select on public.user_badges to anon, authenticated;
   revoke insert, update, delete on public.reports from anon;
   revoke insert, update, delete on public.reports from authenticated;
   grant insert (target_type, target_id, reason) on public.reports to authenticated;

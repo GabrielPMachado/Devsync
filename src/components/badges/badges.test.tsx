@@ -19,8 +19,7 @@ describe("ProfileBadges", () => {
     wrap(<ProfileBadges badges={["mentor", "founder", "curious", "popular"]} name="Ana" />);
     const list = screen.getByRole("list", { name: "Insígnias de Ana" });
     expect(list.querySelectorAll("li")).toHaveLength(3);
-    expect(screen.getByLabelText("Mentor")).toBeInTheDocument();
-    expect(screen.getAllByRole("tooltip").map((t) => t.textContent)).toEqual(["Mentor", "Membro fundador", "Curioso"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Mentor", "Membro fundador", "Curioso"]);
   });
 
   it("sem insígnias, não ocupa espaço", () => {

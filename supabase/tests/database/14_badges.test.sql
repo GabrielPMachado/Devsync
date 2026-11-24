@@ -1,6 +1,6 @@
 begin;
 \ir ../helpers.psql
-select plan(27);
+select plan(29);
 
 -- Insígnias conquistadas (parte 2 do perfil personalizado).
 -- Gravadas por gatilhos na hora da conquista; ninguém escreve pela API.
@@ -28,11 +28,16 @@ select is(tests.badges(:'ana'), array['founder'], 'quem escolhe o @ entre os 1.0
 select is(tests.badges(:'semnome'), '{}'::text[], 'sem @, ainda não é fundador');
 select is(tests.badge_notifications(:'ana'), array['founder'], 'a conquista gera notificação com a insígnia');
 
--- Simula 1.000 fundadores já existentes: quem chega depois não ganha.
-insert into public.user_badges (profile_id, badge)
-  select tests.create_user('f' || g || '@x.dev'), 'founder' from generate_series(1, 998) g;
+-- Simula 1.000 vagas usadas: quem chega depois não ganha, mesmo se um fundador sair.
+update private.founder_slots set used = 1000;
+delete from auth.users where id = :'bruno';
+select tests.create_user('bruno2@x.dev', 'bruno') as bruno \gset
+select is(tests.badges(:'bruno'), '{}'::text[], 'depois de 1.000 fundadores, ninguém mais ganha (vaga de quem saiu não volta)');
+update private.founder_slots set used = 999;
 update public.profiles set username = 'carla' where id = :'semnome';
-select is(tests.badges(:'semnome'), '{}'::text[], 'depois de 1.000 fundadores, ninguém mais ganha');
+select is(tests.badges(:'semnome'), array['founder'], 'a milésima vaga ainda vale');
+update public.profiles set username = 'dora' where id = (select tests.create_user('dora@x.dev'));
+select is((select used from private.founder_slots), 1000, 'o contador para em 1.000');
 
 -- Projetos --------------------------------------------------------------------
 insert into public.projects (author_id, title) values (:'ana', 'Proj 1');
@@ -84,7 +89,7 @@ update public.profiles set followers_count = 10 where id = :'bruno';
 select ok('popular' = any (tests.badges(:'bruno')), 'perder seguidores não tira popular');
 
 -- Insígnia repetida não gera notificação de novo.
-select is(tests.badge_notifications(:'bruno'), array['curious', 'founder', 'popular'], 'uma notificação por insígnia, sem repetir');
+select is(tests.badge_notifications(:'bruno'), array['curious', 'popular'], 'uma notificação por insígnia, sem repetir');
 
 -- API: leitura pública, escrita proibida ------------------------------------
 select tests.as_anon();

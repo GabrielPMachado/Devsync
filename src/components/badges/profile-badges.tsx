@@ -13,11 +13,14 @@ export function ProfileBadges({ badges, name }: Props) {
     <ul className="inline-flex items-center gap-1.5 align-middle" aria-label={t("shown", { name })}>
       {shown.map((b) => (
         <li key={b} className="group relative inline-flex">
-          <span tabIndex={0} className="inline-flex rounded-full" aria-label={t(`${b}_name`)}>
+          {/* Botão sem ação: dá parada de Tab e toque para mostrar o nome (dica visual). */}
+          <button type="button" className="inline-flex cursor-default rounded-full">
             <BadgeIcon badge={b} />
-          </span>
+            <span className="sr-only">{t(`${b}_name`)}</span>
+          </button>
           <span
             role="tooltip"
+            aria-hidden="true"
             className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md border border-border-default bg-bg-elevated px-2 py-1 text-xs font-medium text-text-primary opacity-0 shadow-lg transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
           >
             {t(`${b}_name`)}
