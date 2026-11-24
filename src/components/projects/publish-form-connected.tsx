@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { publishProject } from "@/app/(app)/projetos/actions";
-import { completeUpload, createUpload, embedCheck, putZip, verifyDemo, type DemoRow } from "@/lib/demos/client";
+import { completeUpload, createUpload, embedCheck, putZip, startBuild, verifyDemo, type BuildRow, type DemoRow } from "@/lib/demos/client";
 import { demosBaseUrl } from "@/lib/demos/url";
 import { listRepos, repoDetails } from "@/lib/projects/github";
 import { buildDemoZip, findSiteSource } from "@/lib/projects/github-demo";
@@ -33,6 +33,16 @@ export function ConnectedPublishForm({ tags, githubUser }: { tags: { slug: strin
         if (error || !data) throw new Error(error?.message ?? "demo");
         return data.id as string;
       },
+      // Build automático: ligado com NEXT_PUBLIC_DEMO_BUILDS=1 (depois de configurar o repositório de builds).
+      ...(process.env.NEXT_PUBLIC_DEMO_BUILDS === "1"
+        ? {
+            startBuild: (o, repo, ref) => startBuild(o, repo, ref),
+            readBuild: async (id) => {
+              const { data } = await supabase.from("demo_builds").select("stage, error, log, framework").eq("id", id).maybeSingle();
+              return data as BuildRow | null;
+            },
+          }
+        : {}),
       publish: publishProject,
       github: { user: githubUser, listRepos: (u) => listRepos(u), repoDetails: (r) => repoDetails(r),
         findSiteSource: (r) => findSiteSource(r),

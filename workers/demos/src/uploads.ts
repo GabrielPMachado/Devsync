@@ -14,15 +14,10 @@ export async function requireUser(req: Request, env: Env, deps: Deps) {
   return token && user ? { token, user } : null;
 }
 
-const unauthorized = () => errorResponse(401, "Entre na Devsync para continuar");
-
-/** POST /uploads: cria a demo como o usuário (RLS e limites do banco valem). */
-export async function createUpload(req: Request, env: Env, deps: Deps): Promise<Response> {
-  const auth = await requireUser(req, env, deps);
-  if (!auth) return unauthorized();
-  let demo: { id: string; version: number };
+/** Cria a demo `web_upload` como o usuário: e-mail confirmado, limite diário e suspensão valem. */
+export async function insertUploadDemo(env: Env, token: string, deps: Deps): Promise<{ id: string; version: number } | Response> {
   try {
-    demo = await userRest(env, auth.token, deps.fetch).insert("demos", { kind: "web_upload" });
+    return await userRest(env, token, deps.fetch).insert<{ id: string; version: number }>("demos", { kind: "web_upload" });
   } catch (err) {
     if (err instanceof SupabaseError) {
       if (err.code === "DS001") return errorResponse(429, err.message);
@@ -31,6 +26,16 @@ export async function createUpload(req: Request, env: Env, deps: Deps): Promise<
     }
     throw err;
   }
+}
+
+export const unauthorized = () => errorResponse(401, "Entre na Devsync para continuar");
+
+/** POST /uploads: cria a demo como o usuário (RLS e limites do banco valem). */
+export async function createUpload(req: Request, env: Env, deps: Deps): Promise<Response> {
+  const auth = await requireUser(req, env, deps);
+  if (!auth) return unauthorized();
+  const demo = await insertUploadDemo(env, auth.token, deps);
+  if (demo instanceof Response) return demo;
   const version = demo.version ?? 1;
   const expires = deps.now() + UPLOAD_TTL_MS;
   const sig = await signUpload(env.UPLOAD_SIGNING_SECRET, demo.id, version, expires);

@@ -10,6 +10,12 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   UPLOAD_SIGNING_SECRET: string;
   SAFE_BROWSING_API_KEY?: string;
+  /** Repositório público que compila demos (ex.: GabrielPMachado/devsync-builds). Sem ele, o build fica desligado. */
+  BUILDER_REPO?: string;
+  /** ID numérico do BUILDER_REPO (opcional, recomendado): o token tem de vir desse repositório, não só do nome. */
+  BUILDER_REPO_ID?: string;
+  /** Token do GitHub (fine-grained, só o BUILDER_REPO, Actions: write) para disparar o workflow. */
+  BUILDER_GITHUB_TOKEN?: string;
   DEMOS_BUCKET: R2Bucket;
   ZIP_QUEUE: Queue<ZipMessage>;
   LINK_QUEUE: Queue<LinkMessage>;

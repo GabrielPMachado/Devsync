@@ -64,7 +64,7 @@ async function download(url: string, fetchFn: FetchFn): Promise<Response> {
 
 /** Procura um site pronto: branch gh-pages, senão a branch padrão. */
 export async function findSiteSource(repo: GithubRepo, fetchFn: FetchFn = fetch): Promise<SiteLookup> {
-  let built = false;
+  let built = false; // achou código para compilar (o build automático da Devsync resolve)
   for (const ref of ["gh-pages", repo.defaultBranch]) {
     const tree = await readTree(repo, ref, fetchFn);
     if (!tree) continue;
@@ -72,6 +72,8 @@ export async function findSiteSource(repo: GithubRepo, fetchFn: FetchFn = fetch)
     const folder = pickFolder(blobs.map((b) => b.path));
     if (folder === null) {
       if (tree.truncated) return { kind: "too_big" };
+      // Projeto Node sem site pronto (Next, Vite sem index.html na raiz…): a Devsync compila.
+      if (ref === repo.defaultBranch && blobs.some((b) => b.path === "package.json")) built = true;
       continue;
     }
     const files = blobs.filter((b) => b.path.startsWith(folder) && isDemoFile(b.path)).map((b) => ({ path: b.path, size: b.size ?? 0 }));

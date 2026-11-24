@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import messages from "../../../messages/pt-BR.json";
 import { GithubError, type GithubRepo } from "@/lib/projects/github";
 import type { SiteLookup } from "@/lib/projects/github-demo";
+import type { BuildRow } from "@/lib/demos/client";
 import { PublishForm, type PublishServices } from "./publish-form";
 
 const tags = [
@@ -25,7 +26,7 @@ const repo = (name: string, over: Partial<GithubRepo> = {}): GithubRepo => ({
   ...over,
 });
 
-function setup(github: Partial<NonNullable<PublishServices["github"]>> = {}) {
+function setup(github: Partial<NonNullable<PublishServices["github"]>> = {}, extra: Partial<PublishServices> = {}) {
   const services = {
     base: new URL("http://demos.localhost:8787"),
     token: vi.fn(async () => "tok"),
@@ -45,6 +46,7 @@ function setup(github: Partial<NonNullable<PublishServices["github"]>> = {}) {
       buildDemoZip: vi.fn(async () => new File([new Uint8Array(20)], "blog.zip", { type: "application/zip" })),
       ...github,
     },
+    ...extra,
   } as unknown as PublishServices;
   render(
     <NextIntlClientProvider locale="pt-BR" messages={messages} timeZone="America/Sao_Paulo">
@@ -218,5 +220,65 @@ describe("Importar do GitHub", () => {
     expect(await screen.findByText("O .zip passa de 25 MB.")).toBeInTheDocument();
     expect(screen.queryByText("Arquivos do GitHub")).not.toBeInTheDocument();
     expect(services.createUpload).not.toHaveBeenCalled();
+  });
+});
+
+describe("build automático", () => {
+  function setupBuild(rows: BuildRow[]) {
+    const queue = [...rows];
+    const services = setup(
+      { findSiteSource: vi.fn(async () => ({ kind: "needs_build" }) as SiteLookup) },
+      {
+        startBuild: vi.fn(async () => ({ demoId: "d9", buildId: "b9" })),
+        readBuild: vi.fn(async () => (queue.length > 1 ? queue.shift()! : queue[0]!)),
+        sleep: async () => {},
+      },
+    );
+    (services.publish as ReturnType<typeof vi.fn>).mockResolvedValue({ error: "unknown" });
+    return services;
+  }
+  const row = (stage: BuildRow["stage"], extra: Partial<BuildRow> = {}): BuildRow => ({ stage, error: null, log: null, framework: "vite", ...extra });
+
+  it("repo que precisa de build é compilado na nuvem e publicado", async () => {
+    const services = setupBuild([row("queued"), row("installing"), row("building"), row("validating"), row("ready")]);
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar blog" }));
+    expect(await screen.findByText("Compilado na nuvem")).toBeInTheDocument();
+    expect(screen.getByText("ana/blog · branch main")).toBeInTheDocument();
+    expect(screen.queryByText("Esse repositório precisa ser compilado", { exact: false })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    await waitFor(() => expect(services.publish).toHaveBeenCalledWith(expect.objectContaining({ demoId: "d9" })));
+    expect(services.startBuild).toHaveBeenCalledWith(expect.objectContaining({ token: "tok" }), "ana/blog", "main");
+    expect(services.readBuild).toHaveBeenCalledWith("b9");
+    expect(screen.getByText("Instalando dependências")).toBeInTheDocument();
+    expect(screen.getByText("Detectado: vite")).toBeInTheDocument();
+  });
+
+  it("build que falha mostra o motivo e o log, sem publicar", async () => {
+    const services = setupBuild([row("building"), row("failed", { error: "build_failed", log: "error TS2304: Cannot find name 'x'" })]);
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar blog" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Publicar projeto" }));
+    expect(await screen.findByText("O build não deu certo")).toBeInTheDocument();
+    expect(screen.getByText("O build falhou. Veja o log abaixo.")).toBeInTheDocument();
+    expect(screen.getByText("error TS2304: Cannot find name 'x'")).toBeInTheDocument();
+    expect(services.publish).not.toHaveBeenCalled();
+  });
+
+  it("zip recusado na validação usa o motivo do serviço de demos", async () => {
+    setupBuild([row("validating"), row("failed", { error: "no_index" })]);
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar blog" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Publicar projeto" }));
+    expect(await screen.findByText("Não achamos o index.html na raiz do .zip (nem numa única pasta).")).toBeInTheDocument();
+  });
+
+  it("dá para trocar o build por um .zip", async () => {
+    setupBuild([row("ready")]);
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Usar blog" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Enviar um .zip em vez disso" }));
+    expect(screen.queryByText("Compilado na nuvem")).not.toBeInTheDocument();
   });
 });
