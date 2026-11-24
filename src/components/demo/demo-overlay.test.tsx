@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import messages from "../../../messages/pt-BR.json";
 import { DemoOverlay, type DemoView } from "./demo-overlay";
 
+vi.mock("@/lib/moderation/actions", () => ({ reportContent: vi.fn() }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/projetos" }));
 vi.stubEnv("NEXT_PUBLIC_DEMOS_URL", "http://demos.localhost:8787");
 
 const project = { title: "Kanban colaborativo", slug: "kanban-abc123", author: { username: "gabriel", displayName: "Gabriel", avatarUrl: null } };

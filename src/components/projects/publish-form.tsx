@@ -121,7 +121,13 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
         if (!demoId) {
           const pre = await services.embedCheck(o, url);
           if (!pre.embeddable) return linkRejected(pre.reason);
-          demoId = await services.createLinkDemo(url);
+          try {
+            demoId = await services.createLinkDemo(url);
+          } catch (e) {
+            // Domínio na lista de bloqueio da moderação (gatilho no banco).
+            if (e instanceof Error && (e.message === "blocked_domain" || e.message === "invalid_url")) return linkRejected(e.message);
+            throw e;
+          }
           setCreated({ demoId, url });
         }
         const verified = await services.verifyDemo(o, demoId);

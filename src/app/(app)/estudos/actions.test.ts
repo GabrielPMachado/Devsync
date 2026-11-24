@@ -49,6 +49,8 @@ vi.mock("next/navigation", () => ({
 }));
 const refresh = vi.fn();
 vi.mock("next/cache", () => ({ refresh: () => refresh() }));
+const checkTone = vi.fn<(text: string) => Promise<{ flagged: boolean }>>(async () => ({ flagged: false }));
+vi.mock("@/lib/moderation/tone", () => ({ checkTone: (text: string) => checkTone(text) }));
 
 const actions = await import("./actions");
 
@@ -65,6 +67,8 @@ beforeEach(() => {
   results = {};
   refresh.mockClear();
   getViewer.mockResolvedValue(member);
+  checkTone.mockClear();
+  checkTone.mockResolvedValue({ flagged: false });
 });
 
 describe("askQuestion", () => {
@@ -141,6 +145,21 @@ describe("postAnswer", () => {
     expect(state).toEqual({ ok: 1 });
     expect(calls[0]).toMatchObject({ table: "answers", op: "insert", payload: { question_id: "q1", body_md: "Use revalidatePath", tech_version: "Next.js 16" } });
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("texto ríspido volta com aviso e não é gravado", async () => {
+    checkTone.mockResolvedValue({ flagged: true });
+    const state = await actions.postAnswer("q1", "slug", { ok: 2 }, form({ body: "Pergunta boba, pesquisa no Google", techVersion: "" }));
+    expect(state).toEqual({ ok: 2, toneWarning: true });
+    expect(checkTone).toHaveBeenCalledWith("Pergunta boba, pesquisa no Google");
+    expect(calls).toEqual([]);
+  });
+
+  it("publicar assim mesmo pula o filtro", async () => {
+    checkTone.mockResolvedValue({ flagged: true });
+    const state = await actions.postAnswer("q1", "slug", {}, form({ body: "Pergunta boba", techVersion: "", confirmTone: "1" }));
+    expect(state).toEqual({ ok: 1 });
+    expect(checkTone).not.toHaveBeenCalled();
   });
 
   it("resposta vazia não é gravada", async () => {

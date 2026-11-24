@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { addComment, deleteComment } from "@/app/(app)/projetos/actions";
+import { ReportButton } from "@/components/moderation/report-button";
+import { ToneWarning } from "@/components/moderation/tone-warning";
 import { Avatar } from "@/components/ui/avatar";
 import { buttonClasses } from "@/components/ui/button";
 import type { CommentNode, CommentRow } from "@/lib/comments/tree";
@@ -84,6 +86,7 @@ function CommentItem({ comment: c, path, viewerId, onReply }: { comment: Comment
               {t("reply")}
             </button>
           ) : null}
+          {viewerId !== c.authorId ? <ReportButton target="comment" targetId={c.id} signedIn={!!viewerId} /> : null}
           {viewerId === c.authorId ? (
             <button
               type="button"
@@ -111,20 +114,25 @@ function CommentForm(props: { projectId: string; path: string; parentId: string 
   const id = useId();
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [toneWarning, setToneWarning] = useState(false);
   const [pending, start] = useTransition();
+  const send = (confirmTone: boolean) =>
+    start(async () => {
+      const res = await addComment(props.projectId, body, props.parentId, props.path, confirmTone);
+      if (res.toneWarning) return setToneWarning(true);
+      setToneWarning(false);
+      if (res.error) return setError(res.error === "empty" ? t("empty_error") : res.error === "tooLong" ? t("tooLong") : t("unknown"));
+      setBody("");
+      setError(null);
+      props.onDone?.();
+      router.refresh();
+    });
   return (
     <form
       className="flex flex-col gap-2"
       onSubmit={(e) => {
         e.preventDefault();
-        start(async () => {
-          const res = await addComment(props.projectId, body, props.parentId, props.path);
-          if (res.error) return setError(res.error === "empty" ? t("empty_error") : res.error === "tooLong" ? t("tooLong") : t("unknown"));
-          setBody("");
-          setError(null);
-          props.onDone?.();
-          router.refresh();
-        });
+        send(false);
       }}
     >
       <label htmlFor={id} className="sr-only">
@@ -133,6 +141,7 @@ function CommentForm(props: { projectId: string; path: string; parentId: string 
       <div className="flex items-start gap-3">
         <textarea
           id={id}
+          name="comment"
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={props.parentId ? 2 : 3}
@@ -145,6 +154,15 @@ function CommentForm(props: { projectId: string; path: string; parentId: string 
           {pending ? t("sending") : props.submit}
         </button>
       </div>
+      {toneWarning && !pending ? (
+        <ToneWarning
+          onRevise={() => {
+            setToneWarning(false);
+            document.getElementById(id)?.focus();
+          }}
+          confirm={{ kind: "button", onClick: () => send(true) }}
+        />
+      ) : null}
       {error ? (
         <p role="alert" className="text-xs text-status-danger-text">
           {error}

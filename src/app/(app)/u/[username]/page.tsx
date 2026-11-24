@@ -4,6 +4,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { ReportButton } from "@/components/moderation/report-button";
 import { Avatar } from "@/components/ui/avatar";
 import { buttonClasses } from "@/components/ui/button";
 import { TagChip } from "@/components/ui/tag-chip";
@@ -67,7 +68,9 @@ async function Profile({ params }: { params: Params }) {
                 {nav("signOut")}
               </button>
             </form>
-          ) : null}
+          ) : (
+            <ReportButton target="profile" targetId={profile.id} signedIn={!!viewer?.username} className="mb-2" />
+          )}
         </div>
         <div>
           <h1 className="font-display text-2xl font-bold text-text-primary">{name}</h1>

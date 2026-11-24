@@ -52,6 +52,9 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+const checkTone = vi.fn<(text: string) => Promise<{ flagged: boolean }>>(async () => ({ flagged: false }));
+vi.mock("@/lib/moderation/tone", () => ({ checkTone: (text: string) => checkTone(text) }));
+
 const { publishProject, toggleLike, addComment, deleteComment } = await import("./actions");
 
 const input = { title: "Kanban colaborativo", description: "Um quadro.", tags: ["react", "nextjs"], repoUrl: "https://github.com/a/b", siteUrl: "", demoId: "d1" };
@@ -59,6 +62,7 @@ const input = { title: "Kanban colaborativo", description: "Um quadro.", tags: [
 beforeEach(() => {
   vi.clearAllMocks();
   getViewer.mockResolvedValue(viewer);
+  checkTone.mockResolvedValue({ flagged: false });
   db.demo.mockResolvedValue({ data: { owner_id: "u1", status: "live" }, error: null });
   db.deleteProject.mockResolvedValue({ error: null });
   db.insertProject.mockResolvedValue({ data: { id: "p1", slug: "kanban-colaborativo-abc123" }, error: null });
@@ -158,6 +162,15 @@ describe("comentários", () => {
   it("comenta e responde", async () => {
     await expect(addComment("p1", " Ficou ótimo! ", "c1", "/projetos/x")).resolves.toEqual({});
     expect(db.insertComment).toHaveBeenCalledWith({ target_type: "project", target_id: "p1", parent_id: "c1", body_md: "Ficou ótimo!" });
+  });
+
+  it("comentário ríspido volta com aviso; confirmado, publica", async () => {
+    checkTone.mockResolvedValue({ flagged: true });
+    await expect(addComment("p1", "que lixo", null, "/projetos/x")).resolves.toEqual({ toneWarning: true });
+    expect(db.insertComment).not.toHaveBeenCalled();
+    await expect(addComment("p1", "que lixo", null, "/projetos/x", true)).resolves.toEqual({});
+    expect(db.insertComment).toHaveBeenCalledTimes(1);
+    expect(checkTone).toHaveBeenCalledTimes(1);
   });
 
   it("apaga o próprio comentário", async () => {

@@ -25,6 +25,9 @@ export function ConnectedPublishForm({ tags }: { tags: { slug: string; name: str
       },
       createLinkDemo: async (url) => {
         const { data, error } = await supabase.from("demos").insert({ kind: "web_link", url }).select("id").single();
+        // Recusas do banco (moderação): viram motivos conhecidos de DemoReasons.
+        if (error?.message === "Domínio bloqueado") throw new Error("blocked_domain");
+        if (error?.message === "URL inválida") throw new Error("invalid_url");
         if (error || !data) throw new Error(error?.message ?? "demo");
         return data.id as string;
       },

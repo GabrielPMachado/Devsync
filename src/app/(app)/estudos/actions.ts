@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth/viewer";
+import { checkTone } from "@/lib/moderation/tone";
 import { splitTags, validateAnswer, validateQuestion, type AnswerErrors, type QuestionErrors } from "@/lib/studies/rules";
 import { createClient } from "@/lib/supabase/server";
 
@@ -13,7 +14,8 @@ import { createClient } from "@/lib/supabase/server";
  */
 
 export type QuestionFormState = { errors?: QuestionErrors & { form?: "unknown" }; invalidTags?: string[] };
-export type AnswerFormState = { errors?: AnswerErrors & { form?: "unknown" }; ok?: number };
+/** toneWarning: o texto pode soar ríspido; o formulário oferece revisar ou publicar assim mesmo (confirmTone=1). */
+export type AnswerFormState = { errors?: AnswerErrors & { form?: "unknown" }; ok?: number; toneWarning?: boolean };
 
 const questionPath = (slug: string) => `/estudos/${slug}`;
 
@@ -108,7 +110,16 @@ export async function editQuestion(questionId: string, slug: string, _prev: Ques
 }
 
 function readAnswer(formData: FormData) {
-  return { body: formData.get("body")?.toString() ?? "", techVersion: (formData.get("techVersion")?.toString() ?? "").trim() };
+  return {
+    body: formData.get("body")?.toString() ?? "",
+    techVersion: (formData.get("techVersion")?.toString() ?? "").trim(),
+    confirmTone: formData.get("confirmTone") === "1",
+  };
+}
+
+/** Filtro de tom: avisa e deixa a pessoa decidir. Nunca bloqueia. */
+async function soundsHarsh(input: { body: string; confirmTone: boolean }) {
+  return !input.confirmTone && (await checkTone(input.body)).flagged;
 }
 
 export async function postAnswer(questionId: string, slug: string, prev: AnswerFormState, formData: FormData): Promise<AnswerFormState> {
@@ -116,6 +127,7 @@ export async function postAnswer(questionId: string, slug: string, prev: AnswerF
   const input = readAnswer(formData);
   const errors = validateAnswer(input);
   if (Object.keys(errors).length > 0) return { errors };
+  if (await soundsHarsh(input)) return { ok: prev.ok, toneWarning: true };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -132,6 +144,7 @@ export async function editAnswer(answerId: string, slug: string, _prev: AnswerFo
   const input = readAnswer(formData);
   const errors = validateAnswer(input);
   if (Object.keys(errors).length > 0) return { errors };
+  if (await soundsHarsh(input)) return { toneWarning: true };
 
   const supabase = await createClient();
   const { data, error } = await supabase

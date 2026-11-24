@@ -1,15 +1,15 @@
 "use client";
 
-import { LogOut, User } from "lucide-react";
+import { LogOut, ShieldCheck, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Avatar } from "@/components/ui/avatar";
 
-type Props = { name: string; username: string; avatarUrl: string | null };
+type Props = { name: string; username: string; avatarUrl: string | null; isAdmin?: boolean };
 
-/** Avatar com o menu da conta (Meu perfil, Sair). Fecha ao clicar fora ou com Esc. */
-export function UserMenu({ name, username, avatarUrl }: Props) {
+/** Avatar com o menu da conta (Meu perfil, Moderação para admins, Sair). Fecha ao clicar fora ou com Esc. */
+export function UserMenu({ name, username, avatarUrl, isAdmin = false }: Props) {
   const t = useTranslations("Nav");
   const ref = useRef<HTMLDetailsElement>(null);
 
@@ -42,6 +42,12 @@ export function UserMenu({ name, username, avatarUrl }: Props) {
           <User className="size-4" aria-hidden="true" />
           {t("myProfile")}
         </Link>
+        {isAdmin ? (
+          <Link href="/admin" onClick={() => ref.current?.removeAttribute("open")} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
+            <ShieldCheck className="size-4" aria-hidden="true" />
+            {t("moderation")}
+          </Link>
+        ) : null}
         <form action="/auth/sair" method="post">
           <button type="submit" className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
             <LogOut className="size-4" aria-hidden="true" />
