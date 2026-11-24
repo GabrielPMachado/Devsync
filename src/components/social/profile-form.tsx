@@ -70,6 +70,10 @@ export function ProfileForm({ initial, username, tags }: Props) {
           {t("technologiesHelp", { max: PROFILE_TAGS_MAX })} · {t("technologiesCount", { count: chosen.length })}
         </p>
       </fieldset>
+      {/* Campos novos ainda sem controle nesta tela: mantém o que está salvo. */}
+      {(["headline", "location", "status", "linkedin", "x", "youtube", "bannerPreset", "avatarFrame", "accent"] as const).map((k) => (
+        <input key={k} type="hidden" name={k} value={values[k]} />
+      ))}
       {state.error ? (
         <p role="alert" className="text-sm text-status-danger-text">
           {t("error")}
