@@ -74,8 +74,8 @@ export async function saveProfile(_prev: SaveProfileState, formData: FormData): 
 
   // Removeu a foto ou o banner: apaga o arquivo depois do perfil salvo (sem órfãos).
   // Falhar aqui não desfaz o salvamento: o arquivo é sobrescrito no próximo envio.
-  if (v.avatarUrl === "") await supabase.storage.from("avatars").remove([`${viewer.id}/avatar.webp`]);
-  if (v.bannerUrl === "") await supabase.storage.from("banners").remove([`${viewer.id}/banner.webp`]);
+  if (v.avatarUrl === "") await clearFolder(supabase, "avatars", viewer.id);
+  if (v.bannerUrl === "") await clearFolder(supabase, "banners", viewer.id);
 
   // Troca só a diferença: se algo falhar no meio, as tecnologias que ficam não somem.
   const { data: current, error: readError } = await supabase.from("profile_tags").select("tag_id").eq("profile_id", viewer.id);
@@ -94,4 +94,11 @@ export async function saveProfile(_prev: SaveProfileState, formData: FormData): 
 
   revalidatePath(`/u/${viewer.username}`);
   redirect(`/@${viewer.username}?salvo=1`);
+}
+
+/** Apaga tudo na pasta da pessoa (inclui fotos antigas do cadastro, como avatar-<ts>.png). */
+async function clearFolder(supabase: Awaited<ReturnType<typeof createClient>>, bucket: "avatars" | "banners", id: string) {
+  const { data } = await supabase.storage.from(bucket).list(id);
+  const paths = (data ?? []).map((f) => `${id}/${f.name}`);
+  if (paths.length) await supabase.storage.from(bucket).remove(paths);
 }

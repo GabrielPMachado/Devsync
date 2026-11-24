@@ -681,5 +681,31 @@
     "frameLocked": "Bloqueada. Para liberar, conquiste a insígnia {badge}: {how}",
     "notEarned": "Você só pode exibir insígnias que conquistou.",
     "frameNotUnlocked": "Essa borda ainda está bloqueada para você."
+  },
+  "ProfileStyle": {
+    "status_open_to_work": "Aberto a oportunidades",
+    "status_building": "Construindo algo",
+    "status_learning": "Aprendendo",
+    "status_mentoring": "Mentorando",
+    "status_freelance": "Disponível para freelas",
+    "banner_aurora": "Aurora",
+    "banner_circuito": "Circuito",
+    "banner_grade": "Grade",
+    "banner_ondas": "Ondas",
+    "banner_noite": "Noite",
+    "banner_hex": "Hexágonos",
+    "frame_azul": "Azul",
+    "frame_ciano": "Ciano",
+    "frame_gradiente": "Gradiente",
+    "frame_neutra": "Neutra",
+    "frame_neon": "Néon",
+    "frame_colchetes": "Colchetes",
+    "frame_dourada": "Dourada",
+    "accent_azul": "Azul",
+    "accent_ciano": "Ciano",
+    "accent_violeta": "Violeta",
+    "accent_verde": "Verde",
+    "accent_ambar": "Âmbar",
+    "accent_rosa": "Rosa"
   }
 }
