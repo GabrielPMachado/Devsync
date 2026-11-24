@@ -100,6 +100,12 @@ describe("findSiteSource", () => {
     expect(await findSiteSource(repo, fetchFn)).toEqual({ kind: "needs_build" });
   });
 
+  it("sem index.html mas com package.json (Next, por exemplo) precisa de build", async () => {
+    const fetchFn = async (url: string) =>
+      url.includes("/git/trees/main") ? json(200, tree(blob("package.json"), blob("app/page.tsx"))) : json(404, {});
+    expect(await findSiteSource(repo, fetchFn)).toEqual({ kind: "needs_build" });
+  });
+
   it("sem index.html em lugar nenhum", async () => {
     const fetchFn = async (url: string) => (url.includes("/git/trees/main") ? json(200, tree(blob("main.py"))) : json(404, {}));
     expect(await findSiteSource(repo, fetchFn)).toEqual({ kind: "none" });

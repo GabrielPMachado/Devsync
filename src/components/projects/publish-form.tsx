@@ -13,8 +13,8 @@ import { GithubError, type GithubRepo } from "@/lib/projects/github";
 import type { SiteSource } from "@/lib/projects/github-demo";
 import { GithubImport, type GithubServices, type ImportExtra } from "./github-import";
 import type { PublishResult } from "@/app/(app)/projetos/actions";
-import { DemoServiceError, waitForDemo, type DemoRow, type DemoServiceOptions, type EmbedResult } from "@/lib/demos/client";
-import { EMBED_BLOCKED, reasonKey } from "@/lib/demos/reasons";
+import { BUILD_STAGES, DemoServiceError, waitForBuild, waitForDemo, type BuildRow, type DemoRow, type DemoServiceOptions, type EmbedResult } from "@/lib/demos/client";
+import { EMBED_BLOCKED, REJECTION_REASONS, reasonKey } from "@/lib/demos/reasons";
 import { ZIP_MAX_BYTES } from "@/lib/demos/url";
 import type { ImportDraft } from "@/lib/projects/github";
 import { TAGS_MAX, validateProject, type ProjectErrors, type ProjectInput } from "@/lib/projects/rules";
@@ -31,6 +31,9 @@ export type PublishServices = {
   readDemo: (demoId: string) => Promise<DemoRow | null>;
   createLinkDemo: (url: string) => Promise<string>;
   publish: (input: ProjectInput & { demoId: string }) => Promise<PublishResult>;
+  /** Build automático no GitHub Actions (opcional: sem isso, repo que precisa de build só recebe o aviso). */
+  startBuild?: (o: DemoServiceOptions, repo: string, ref: string) => Promise<{ demoId: string; buildId: string }>;
+  readBuild?: (buildId: string) => Promise<BuildRow | null>;
   /** Importar do GitHub (opcional: sem isso o painel não aparece). */
   github?: GithubServices;
   sleep?: (ms: number) => Promise<void>;
@@ -39,7 +42,15 @@ export type PublishServices = {
 };
 
 type Mode = "upload" | "link";
-type Phase = "idle" | "fetching" | "uploading" | "validating" | "checkingLink" | "publishing";
+type Phase = "idle" | "fetching" | "building" | "uploading" | "validating" | "checkingLink" | "publishing";
+type BuildState = { row: BuildRow | null; failure?: { error: string | null; log: string | null } };
+
+/** Códigos de erro do build com texto próprio em DemoBuild (o resto vem de DemoReasons). */
+const BUILD_ERRORS = [
+  "clone_failed", "no_package_json", "no_build_script", "install_failed", "install_timeout", "build_failed", "build_timeout",
+  "no_output", "next_server", "too_many_files", "too_big", "upload_failed", "dispatch_failed", "stalled", "internal",
+] as const;
+const isBuildError = (code: string | null): code is (typeof BUILD_ERRORS)[number] => (BUILD_ERRORS as readonly string[]).includes(code ?? "");
 type Errors = ProjectErrors & { zip?: string; link?: string; linkBlocked?: boolean; form?: string };
 
 function isRedirect(err: unknown) {
@@ -65,7 +76,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
   const [phase, setPhase] = useState<Phase>("idle");
   const [errors, setErrors] = useState<Errors>({});
   // Demo já criada numa tentativa anterior: tentar de novo reaproveita, sem gastar outro envio do dia.
-  const [created, setCreated] = useState<{ demoId: string; file?: File; url?: string } | null>(null);
+  const [created, setCreated] = useState<{ demoId: string; file?: File; url?: string; build?: string } | null>(null);
   const descId = useId();
   const zipId = useId();
   const busy = phase !== "idle";
@@ -78,13 +89,21 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
   // Arquivos do repositório que viram a demo no envio (quando não há site publicado).
   const [githubSite, setGithubSite] = useState<{ repo: GithubRepo; source: SiteSource } | null>(null);
   const [siteNote, setSiteNote] = useState<"needs_build" | "none" | "too_big" | null>(null);
+  // Repositório que a Devsync compila no publicar (quando precisa de build).
+  const [githubBuild, setGithubBuild] = useState<GithubRepo | null>(null);
+  const [build, setBuild] = useState<BuildState | null>(null);
   const g = useTranslations("GithubImport");
+  const b = useTranslations("DemoBuild");
+  const canBuild = !!(services.startBuild && services.readBuild);
 
   function applyImport(d: ImportDraft, extra?: ImportExtra) {
     const site = extra?.site ?? null;
     setGithubSite(site?.kind === "found" ? { repo: extra!.repo, source: site.source } : null);
-    setSiteNote(site && site.kind !== "found" ? site.kind : null);
-    if (site?.kind === "found") {
+    const willBuild = site?.kind === "needs_build" && canBuild;
+    setGithubBuild(willBuild ? extra!.repo : null);
+    setBuild(null);
+    setSiteNote(site && site.kind !== "found" && !willBuild ? site.kind : null);
+    if (site?.kind === "found" || willBuild) {
       setMode("upload");
       setFile(null);
     }
@@ -116,7 +135,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
     const check = validateProject({ title, description, tags: chosen, repoUrl, siteUrl });
     const next: Errors = check.ok ? {} : { ...check.errors };
     if (mode === "upload") {
-      if (!file && !githubSite) next.zip = t("zipRequired");
+      if (!file && !githubSite && !githubBuild) next.zip = t("zipRequired");
       else if (file && file.size > ZIP_MAX_BYTES) next.zip = reasons("too_large");
     } else if (!/^https:\/\/\S+$/.test(link.trim())) next.link = t("linkRequired");
     setErrors(next);
@@ -128,6 +147,35 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
     const o: DemoServiceOptions = { base: services.base, token };
 
     try {
+      if (mode === "upload" && !file && githubBuild && services.startBuild && services.readBuild) {
+        const repo = githubBuild.fullName;
+        // Build pronto numa tentativa anterior (a publicação falhou depois): não compila de novo.
+        if (created?.build === repo) return await finish(check.value, created.demoId);
+        setPhase("building");
+        setBuild({ row: null });
+        const started = await services.startBuild(o, repo, githubBuild.defaultBranch);
+        let last: BuildRow | null = null;
+        const read = services.readBuild;
+        const result = await waitForBuild(
+          () => read(started.buildId),
+          (row) => {
+            last = row;
+            setBuild({ row });
+          },
+          { sleep: services.sleep },
+        );
+        if (result.status === "timeout") {
+          setPhase("idle");
+          setBuild(null);
+          return setErrors({ form: b("timeout") });
+        }
+        if (result.status === "failed") {
+          setPhase("idle");
+          return setBuild({ row: last, failure: { error: result.error, log: result.log } });
+        }
+        setCreated({ demoId: started.demoId, build: repo });
+        return await finish(check.value, started.demoId);
+      }
       let zip = file;
       if (mode === "upload" && !zip && githubSite && services.github) {
         // Monta o .zip com os arquivos do repositório; depois segue como um zip escolhido.
@@ -190,6 +238,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
       // redirecionamento. Não é erro: o botão segue em "Publicando…" até a página trocar.
       if (isRedirect(err)) return;
       setPhase("idle");
+      setBuild(null);
       setErrors({ form: err instanceof DemoServiceError ? err.message : err instanceof GithubError ? g("network") : t("unknown") });
     }
   }
@@ -247,7 +296,18 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
           </p>
         ) : null}
 
-        {mode === "upload" ? (
+        {mode === "upload" && githubBuild && !file ? (
+          <BuildPanel
+            repo={githubBuild}
+            build={build}
+            publishing={phase === "publishing"}
+            errorText={(code) => (isBuildError(code) ? b(`error_${code}`) : (REJECTION_REASONS as readonly string[]).includes(code ?? "") ? reasons(reasonKey(code)) : b("error_internal"))}
+            onUseZip={() => {
+              setGithubBuild(null);
+              setBuild(null);
+            }}
+          />
+        ) : mode === "upload" ? (
           phase === "fetching" || phase === "uploading" || phase === "validating" || (phase === "publishing" && file) ? (
             <div className="flex flex-col gap-3.5 rounded-lg border border-border-default bg-bg-base p-4" aria-live="polite">
               <div className="flex items-center gap-3">
@@ -434,6 +494,78 @@ function Option({ icon, title, text, checked, onChange }: { icon: ReactNode; tit
         <span className="text-xs text-text-muted">{text}</span>
       </span>
     </label>
+  );
+}
+
+function BuildPanel({
+  repo,
+  build,
+  publishing,
+  errorText,
+  onUseZip,
+}: {
+  repo: GithubRepo;
+  build: BuildState | null;
+  publishing: boolean;
+  errorText: (code: string | null) => string;
+  onUseZip: () => void;
+}) {
+  const b = useTranslations("DemoBuild");
+  const g = useTranslations("GithubImport");
+  const failed = !!build?.failure;
+  const stage = build?.row?.stage ?? "queued";
+  const current = stage === "failed" ? -1 : BUILD_STAGES.indexOf(stage);
+  const steps = BUILD_STAGES.filter((s) => s !== "ready");
+  return (
+    <div className="flex flex-col gap-3.5 rounded-lg border border-border-default bg-bg-base p-4" aria-live="polite">
+      <div className="flex items-center gap-3">
+        <span className="rounded-md bg-bg-muted p-2.5 text-text-primary">
+          <GithubIcon className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-text-primary">{b("title")}</p>
+          <p className="truncate text-xs text-text-muted">{b("info", { repo: repo.fullName, ref: repo.defaultBranch })}</p>
+        </div>
+        {build && !failed ? (
+          <span className="rounded-full border border-brand-accent/40 bg-brand-accent-soft px-2 py-0.5 text-xs font-semibold text-brand-accent">{b("badgeRunning")}</span>
+        ) : failed ? (
+          <span className="rounded-full border border-status-danger/50 bg-status-danger-soft px-2 py-0.5 text-xs font-semibold text-status-danger-text">{b("badgeFailed")}</span>
+        ) : null}
+      </div>
+      {build && !failed ? (
+        <>
+          <ul className="flex flex-col gap-2 text-sm">
+            {steps.map((s, i) => (
+              <Progress key={s} done={current > i || current === BUILD_STAGES.indexOf("ready")} active={current === i} text={b(`stage_${s}`)} />
+            ))}
+            <Progress done={false} active={publishing} text={b("stage_publishing")} />
+          </ul>
+          {build.row?.framework ? <p className="text-xs text-text-muted">{b("framework", { name: build.row.framework })}</p> : null}
+        </>
+      ) : failed ? (
+        <div role="alert" className="flex flex-col gap-2 rounded-md border border-status-danger/50 bg-status-danger-soft p-3">
+          <p className="flex items-center gap-2 text-sm font-semibold text-status-danger-text">
+            <TriangleAlert className="size-4" aria-hidden="true" />
+            {b("failedTitle")}
+          </p>
+          <p className="text-sm text-text-secondary">{errorText(build!.failure!.error)}</p>
+          {build!.failure!.log ? (
+            <details className="text-xs">
+              <summary className="cursor-pointer text-text-link">{b("showLog")}</summary>
+              <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-bg-base p-2 font-mono text-[11px] text-text-secondary">{build!.failure!.log}</pre>
+            </details>
+          ) : null}
+          <p className="text-xs text-text-muted">{b("retry")}</p>
+        </div>
+      ) : (
+        <p className="text-xs text-text-muted">{b("help")}</p>
+      )}
+      {!build || failed ? (
+        <button type="button" onClick={onUseZip} className={`${buttonClasses({ variant: "ghost", size: "sm" })} self-start`}>
+          {g("useZipInstead")}
+        </button>
+      ) : null}
+    </div>
   );
 }
 

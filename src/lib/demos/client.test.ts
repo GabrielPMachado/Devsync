@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { completeUpload, createUpload, DemoServiceError, embedCheck, putZip, verifyDemo, waitForDemo } from "./client";
+import { completeUpload, createUpload, DemoServiceError, embedCheck, putZip, startBuild, verifyDemo, waitForBuild, waitForDemo, type BuildRow } from "./client";
 
 const base = new URL("http://demos.localhost:8787");
 
@@ -71,5 +71,48 @@ describe("waitForDemo", () => {
     const result = await waitForDemo(read, { sleep: async (ms) => void (t += ms), now: () => t, timeoutMs: 90_000, intervalMs: 1_500 });
     expect(result).toEqual({ status: "timeout" });
     expect(read.mock.calls.length).toBeGreaterThanOrEqual(60);
+  });
+});
+
+describe("build automático", () => {
+  it("startBuild chama POST /builds com o repositório", async () => {
+    const calls: { url: string; body: string }[] = [];
+    const f = (async (url: URL, init: RequestInit) => {
+      calls.push({ url: String(url), body: String(init.body) });
+      return new Response(JSON.stringify({ demoId: "d1", buildId: "b1" }), { status: 201 });
+    }) as unknown as typeof fetch;
+    const res = await startBuild({ base: new URL("http://demos.localhost:8787"), token: "tok", fetch: f }, "ana/financy", "main");
+    expect(res).toEqual({ demoId: "d1", buildId: "b1" });
+    expect(calls[0]).toEqual({ url: "http://demos.localhost:8787/builds", body: JSON.stringify({ repo: "ana/financy", ref: "main" }) });
+  });
+
+  it("waitForBuild avisa cada mudança e termina em ready ou failed", async () => {
+    const rows: BuildRow[] = [
+      { stage: "queued", error: null, log: null, framework: null },
+      { stage: "installing", error: null, log: null, framework: "vite" },
+      { stage: "installing", error: null, log: null, framework: "vite" },
+      { stage: "ready", error: null, log: null, framework: "vite" },
+    ];
+    const seen: string[] = [];
+    const res = await waitForBuild(async () => rows.shift() ?? null, (r) => seen.push(r.stage), { sleep: async () => {} });
+    expect(res).toEqual({ status: "ready" });
+    expect(seen).toEqual(["queued", "installing", "ready"]);
+
+    const failed = await waitForBuild(
+      async () => ({ stage: "failed", error: "build_failed", log: "erro", framework: null }),
+      () => {},
+      { sleep: async () => {} },
+    );
+    expect(failed).toEqual({ status: "failed", error: "build_failed", log: "erro" });
+  });
+
+  it("waitForBuild desiste depois do tempo", async () => {
+    let t = 0;
+    const res = await waitForBuild(async () => ({ stage: "queued", error: null, log: null, framework: null }), () => {}, {
+      sleep: async (ms) => void (t += ms),
+      now: () => t,
+      timeoutMs: 10_000,
+    });
+    expect(res).toEqual({ status: "timeout" });
   });
 });

@@ -1,0 +1,41 @@
+# Workflow do repositório público de builds (ex.: GabrielPMachado/devsync-builds).
+# Copie este arquivo para .github/workflows/build-demo.yml nesse repositório.
+# Quem dispara é o serviço de demos (POST /builds). Passo a passo: builder/README.md
+name: Compilar demo
+run-name: build ${{ inputs.build_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id: { description: "ID do build", required: true, type: string }
+      repo: { description: "owner/nome do repositório", required: true, type: string }
+      ref: { description: "branch", required: true, type: string }
+      api: { description: "origem do serviço de demos", required: true, type: string }
+
+# Só o token OIDC (prova ao serviço de demos que é este workflow). Nenhum segredo,
+# nenhum acesso de escrita ao repositório, e nada de cache entre builds.
+permissions:
+  id-token: write
+
+jobs:
+  build:
+    name: Compilar
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Baixar o compilador da Devsync
+        env:
+          DEVSYNC_REPO: GabrielPMachado/Devsync
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse "https://github.com/$DEVSYNC_REPO.git" "$RUNNER_TEMP/devsync"
+          git -C "$RUNNER_TEMP/devsync" sparse-checkout set builder
+
+      # Sem actions de terceiros neste job (ele tem id-token: write): usa o Node que já vem no runner.
+      - name: Compilar e enviar
+        # Entradas só por variável de ambiente (nunca ${{ }} dentro do script).
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+          REPO: ${{ inputs.repo }}
+          REF: ${{ inputs.ref }}
+          API: ${{ inputs.api }}
+        run: node "$RUNNER_TEMP/devsync/builder/run.mjs"

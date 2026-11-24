@@ -66,3 +66,38 @@ export async function waitForDemo(
     await sleep(intervalMs);
   }
 }
+
+/** Build automático de um repositório público do GitHub (serviço de demos + GitHub Actions). */
+export const startBuild = (o: DemoServiceOptions, repo: string, ref?: string) =>
+  call<{ demoId: string; buildId: string }>(o, "/builds", { repo, ref });
+
+export const BUILD_STAGES = ["queued", "cloning", "installing", "building", "uploading", "validating", "ready"] as const;
+export type BuildStage = (typeof BUILD_STAGES)[number] | "failed";
+export type BuildRow = { stage: BuildStage; error: string | null; log: string | null; framework: string | null };
+export type BuildResult = { status: "ready" } | { status: "failed"; error: string | null; log: string | null } | { status: "timeout" };
+
+/** Consulta o build até ficar pronto ou falhar, avisando cada etapa nova. */
+export async function waitForBuild(
+  read: () => Promise<BuildRow | null>,
+  onUpdate: (row: BuildRow) => void,
+  opts: { intervalMs?: number; timeoutMs?: number; sleep?: (ms: number) => Promise<void>; now?: () => number } = {},
+): Promise<BuildResult> {
+  // O workflow tem 25 minutos; mais a fila do GitHub.
+  const { intervalMs = 2_000, timeoutMs = 30 * 60_000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = Date.now } = opts;
+  const deadline = now() + timeoutMs;
+  let last = "";
+  for (;;) {
+    const row = await read();
+    if (row) {
+      const key = `${row.stage}:${row.framework ?? ""}`;
+      if (key !== last) {
+        last = key;
+        onUpdate(row);
+      }
+      if (row.stage === "ready") return { status: "ready" };
+      if (row.stage === "failed") return { status: "failed", error: row.error, log: row.log };
+    }
+    if (now() >= deadline) return { status: "timeout" };
+    await sleep(intervalMs);
+  }
+}
