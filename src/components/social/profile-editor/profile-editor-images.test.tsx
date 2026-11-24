@@ -24,6 +24,7 @@ vi.mock("@/components/social/profile-image-field", async (orig) => ({
   ),
 }));
 const { ProfileEditor } = await import("./profile-editor");
+const SAVING = messages.Settings.saving;
 
 const initial: ProfileInput = {
   displayName: "Ana Souza", bio: "", headline: "", location: "", status: "", github: "", linkedin: "", x: "", youtube: "", site: "",
@@ -86,6 +87,20 @@ describe("<ProfileEditor /> imagens", () => {
     await waitFor(() => expect(saveProfile).toHaveBeenCalled());
     expect(sent().has("avatarUrl")).toBe(false);
     expect(sent().has("bannerUrl")).toBe(false);
+  });
+
+  it("enquanto envia, o botão fica travado em Salvando e não envia duas vezes", async () => {
+    let done: (v: unknown) => void = () => {};
+    preparePendingImages.mockImplementation(() => new Promise((r) => (done = r)));
+    const { container } = renderEditor();
+    fireEvent.click(screen.getByText("nova-avatar"));
+    await submit(container);
+    const button = screen.getByRole("button", { name: SAVING });
+    expect(button).toBeDisabled();
+    await submit(container);
+    expect(preparePendingImages).toHaveBeenCalledTimes(1);
+    await act(async () => done({ avatarUrl: "https://x/a.webp?v=1" }));
+    await waitFor(() => expect(saveProfile).toHaveBeenCalledTimes(1));
   });
 
   it("falha no envio mostra erro e não chama a ação", async () => {

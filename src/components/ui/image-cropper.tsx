@@ -2,7 +2,7 @@
 
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { CROP_OUTPUT, ZOOM_MAX, coverScale, initialView, panBy, zoomTo, type CropKind, type CropView, type Size } from "@/lib/images/crop-math";
 import { renderCrop } from "@/lib/images/render-crop";
@@ -27,6 +27,12 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
   const [frame, setFrame] = useState<Size>(out);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Fechou (Esc/Cancelar) enquanto gerava: a imagem que chegar depois é descartada.
+  const closed = useRef(false);
+  const cancel = () => {
+    closed.current = true;
+    onCancel();
+  };
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -54,6 +60,24 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
   }, []);
 
   const zoom = (z: number) => setView((v) => zoomTo(v, z, img, frame));
+  const zoomBy = (factor: number) => setView((v) => zoomTo(v, v.zoom * factor, img, frame));
+
+  // Roda/trackpad: zoom proporcional ao giro. Listener nativo não passivo para a
+  // página de trás não rolar junto.
+  const zoomByRef = useRef(zoomBy);
+  useLayoutEffect(() => {
+    zoomByRef.current = zoomBy;
+  });
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const onWheel = (e: globalThis.WheelEvent) => {
+      e.preventDefault();
+      zoomByRef.current(Math.exp(-e.deltaY * 0.002));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
   const pan = (dx: number, dy: number) => setView((v) => panBy(v, dx, dy, img, frame));
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -61,8 +85,8 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
     // Setas movem a "janela" sobre a imagem: seta para a esquerda mostra mais da esquerda.
     const moves: Record<string, [number, number]> = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
     if (moves[e.key]) pan(...moves[e.key]);
-    else if (e.key === "+" || e.key === "=") zoom(view.zoom * ZOOM_STEP);
-    else if (e.key === "-" || e.key === "_") zoom(view.zoom / ZOOM_STEP);
+    else if (e.key === "+" || e.key === "=") zoomBy(ZOOM_STEP);
+    else if (e.key === "-" || e.key === "_") zoomBy(1 / ZOOM_STEP);
     else return;
     e.preventDefault();
   }
@@ -80,17 +104,15 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
   function onPointerUp(e: PointerEvent<HTMLDivElement>) {
     if (drag.current?.id === e.pointerId) drag.current = null;
   }
-  function onWheel(e: WheelEvent<HTMLDivElement>) {
-    zoom(view.zoom * (e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP));
-  }
 
   async function confirm() {
     setBusy(true);
     setFailed(false);
     try {
-      onConfirm(await renderCrop(image, view, kind));
+      const blob = await renderCrop(image, view, kind);
+      if (!closed.current) onConfirm(blob);
     } catch {
-      setFailed(true);
+      if (!closed.current) setFailed(true);
     } finally {
       setBusy(false);
     }
@@ -112,7 +134,7 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
       aria-labelledby={`${hintId}-title`}
       onCancel={(e) => {
         e.preventDefault();
-        onCancel();
+        cancel();
       }}
       className="m-auto w-[min(100vw-2rem,40rem)] rounded-xl border border-border-default bg-bg-surface p-0 text-text-primary backdrop:bg-black/70"
     >
@@ -130,7 +152,6 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
-          onWheel={onWheel}
           style={{ aspectRatio: `${out.width} / ${out.height}` }}
           className="relative w-full cursor-grab touch-none select-none overflow-hidden rounded-md bg-bg-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus active:cursor-grabbing"
         >
@@ -145,7 +166,7 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
           {t("hint")}
         </p>
         <div className="flex items-center gap-3">
-          <button type="button" aria-label={t("zoomOut")} onClick={() => zoom(view.zoom / ZOOM_STEP)} className="text-text-secondary hover:text-text-primary">
+          <button type="button" aria-label={t("zoomOut")} onClick={() => zoomBy(1 / ZOOM_STEP)} className="text-text-secondary hover:text-text-primary">
             <ZoomOut className="size-5" aria-hidden="true" />
           </button>
           <label className="sr-only" htmlFor={`${hintId}-zoom`}>
@@ -161,7 +182,7 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
             onChange={(e) => zoom(Number(e.target.value))}
             className="flex-1 accent-brand-primary"
           />
-          <button type="button" aria-label={t("zoomIn")} onClick={() => zoom(view.zoom * ZOOM_STEP)} className="text-text-secondary hover:text-text-primary">
+          <button type="button" aria-label={t("zoomIn")} onClick={() => zoomBy(ZOOM_STEP)} className="text-text-secondary hover:text-text-primary">
             <ZoomIn className="size-5" aria-hidden="true" />
           </button>
         </div>
@@ -171,7 +192,7 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
           </p>
         )}
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel} disabled={busy}>
+          <Button variant="ghost" onClick={cancel}>
             {t("cancel")}
           </Button>
           <Button onClick={confirm} disabled={busy}>

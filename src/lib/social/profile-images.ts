@@ -6,24 +6,22 @@ export const IMAGE_BUCKET = { avatar: "avatars", banner: "banners" } as const;
 /** Imagem do perfil ainda não salva: manter a atual, remover, ou trocar por uma recortada. */
 export type PendingImage = { kind: "keep" } | { kind: "remove" } | { kind: "new"; blob: Blob; previewUrl: string };
 
-/** Caminho fixo por pessoa: trocar a imagem sobrescreve, sem deixar arquivos órfãos. */
-export function imagePath(userId: string, kind: CropKind): string {
-  return `${userId}/${kind}.webp`;
+/**
+ * Um arquivo novo a cada envio: o que está publicado só muda quando o perfil
+ * salva. A ação de salvar apaga os antigos da pasta (sem órfãos).
+ */
+export function imagePath(userId: string, kind: CropKind, stamp: number): string {
+  return `${userId}/${kind}-${stamp}.webp`;
 }
 
 /** Envia a imagem recortada e devolve a URL pública com ?v= para furar o cache. */
 export async function uploadProfileImage(supabase: SupabaseClient, userId: string, kind: CropKind, blob: Blob, now = Date.now()): Promise<string> {
   const bucket = supabase.storage.from(IMAGE_BUCKET[kind]);
-  const path = imagePath(userId, kind);
+  const path = imagePath(userId, kind, now);
   // O caminho é sempre .webp; se o navegador só gerou JPEG, o contentType diz a verdade.
   const { error } = await bucket.upload(path, blob, { upsert: true, contentType: blob.type, cacheControl: "3600" });
   if (error) throw new Error("upload-failed");
   return `${bucket.getPublicUrl(path).data.publicUrl}?v=${now}`;
-}
-
-/** Apaga o arquivo da pessoa. Arquivo que já não existe não é erro. */
-export async function removeProfileImage(supabase: SupabaseClient, userId: string, kind: CropKind): Promise<void> {
-  await supabase.storage.from(IMAGE_BUCKET[kind]).remove([imagePath(userId, kind)]);
 }
 
 /**

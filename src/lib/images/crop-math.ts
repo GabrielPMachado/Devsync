@@ -57,10 +57,8 @@ export function zoomTo(view: CropView, zoom: number, img: Size, frame: Size): Cr
 export function sourceRect(view: CropView, img: Size, frame: Size) {
   const v = clampView(view, img, frame);
   const size = visible(v.zoom, img, frame);
-  return {
-    sx: Math.round(v.x - size.width / 2),
-    sy: Math.round(v.y - size.height / 2),
-    sw: Math.round(size.width),
-    sh: Math.round(size.height),
-  };
+  const sx = Math.max(0, Math.round(v.x - size.width / 2));
+  const sy = Math.max(0, Math.round(v.y - size.height / 2));
+  // Arredondar separado pode passar 1 px da borda; Safari antigo não desenha nada nesse caso.
+  return { sx, sy, sw: Math.min(Math.round(size.width), img.width - sx), sh: Math.min(Math.round(size.height), img.height - sy) };
 }

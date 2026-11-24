@@ -45,6 +45,17 @@ describe("crop-math", () => {
     expect(sourceRect(initialView(sq), sq, CROP_OUTPUT.banner)).toEqual({ sx: 0, sy: 300, sw: 900, sh: 300 });
   });
 
+  test("arredondar nunca passa da borda da imagem", () => {
+    const odd = { width: 1001, height: 667 };
+    for (const z of [1, 1.3, 2.7, 3.9]) {
+      let v = zoomTo(initialView(odd), z, odd, CROP_OUTPUT.banner);
+      v = panBy(v, -99999, -99999, odd, CROP_OUTPUT.banner);
+      const r = sourceRect(v, odd, CROP_OUTPUT.banner);
+      expect(r.sx + r.sw).toBeLessThanOrEqual(odd.width);
+      expect(r.sy + r.sh).toBeLessThanOrEqual(odd.height);
+    }
+  });
+
   test("tamanho do quadro na tela não muda o recorte", () => {
     const v = zoomTo(initialView(img), 2, img, square);
     expect(sourceRect(v, img, { width: 256, height: 256 })).toEqual(sourceRect(v, img, square));

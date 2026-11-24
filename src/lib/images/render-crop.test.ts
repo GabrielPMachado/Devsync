@@ -43,6 +43,16 @@ describe("renderCrop", () => {
 });
 
 describe("loadImage", () => {
+  test("imagem que abre mantém a URL (o recorte mostra a imagem por ela)", async () => {
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:ok");
+    Object.defineProperty(HTMLImageElement.prototype, "decode", { configurable: true, value: () => Promise.resolve() });
+    const img = await loadImage(new Blob(["png"], { type: "image/png" }));
+    expect(img.src).toBe("blob:ok");
+    expect(revoke).not.toHaveBeenCalled();
+    revoke.mockRestore();
+  });
+
   test("imagem que não abre vira invalid-image e a URL é revogada", async () => {
     const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:x");

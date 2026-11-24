@@ -1,6 +1,10 @@
 import { CROP_OUTPUT, sourceRect, type CropKind, type CropView } from "./crop-math";
 
-/** Abre um arquivo de imagem no navegador. Rejeita com "invalid-image" se não for uma imagem legível. */
+/**
+ * Abre um arquivo de imagem no navegador. Rejeita com "invalid-image" se não for
+ * uma imagem legível. A URL (img.src) fica viva para o recorte mostrar a imagem:
+ * quem chamou revoga quando terminar.
+ */
 export async function loadImage(file: Blob): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
   const img = new Image();
@@ -9,10 +13,8 @@ export async function loadImage(file: Blob): Promise<HTMLImageElement> {
     await img.decode();
     return img;
   } catch {
-    throw new Error("invalid-image");
-  } finally {
-    // Depois do decode a imagem fica na memória; a URL não é mais necessária.
     URL.revokeObjectURL(url);
+    throw new Error("invalid-image");
   }
 }
 

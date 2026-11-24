@@ -83,6 +83,18 @@ describe("ImageCropper", () => {
     expect(renderCrop).not.toHaveBeenCalled();
   });
 
+  it("cancelar enquanto gera descarta a imagem", async () => {
+    let finish: (b: Blob) => void = () => {};
+    renderCrop.mockImplementationOnce(() => new Promise<Blob>((r) => (finish = r)));
+    const { onConfirm, onCancel } = show();
+    fireEvent.click(screen.getByRole("button", { name: "Usar imagem" }));
+    fireEvent(screen.getByRole("dialog", { hidden: true }), new Event("cancel", { cancelable: true }));
+    expect(onCancel).toHaveBeenCalled();
+    finish(blob);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
   it("falha ao gerar mostra erro e não confirma", async () => {
     renderCrop.mockRejectedValueOnce(new Error("render-failed"));
     const { onConfirm } = show({ kind: "banner" });

@@ -30,6 +30,7 @@ export function ProfileImageField({ kind, currentUrl, value, onChange }: Props) 
   const [source, setSource] = useState<HTMLImageElement | null>(null);
   const [error, setError] = useState<"invalid" | "tooBig" | null>(null);
   const lastPreview = useRef<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Revoga a prévia anterior quando ela deixa de ser usada (e ao desmontar).
   const preview = value.kind === "new" ? value.previewUrl : null;
@@ -54,8 +55,15 @@ export function ProfileImageField({ kind, currentUrl, value, onChange }: Props) 
     }
   }
 
-  function onCropped(blob: Blob) {
+  // Fecha o recorte: libera a URL da imagem original e devolve o foco ao botão.
+  function closeCropper() {
+    if (source) URL.revokeObjectURL(source.src);
     setSource(null);
+    inputRef.current?.focus();
+  }
+
+  function onCropped(blob: Blob) {
+    closeCropper();
     onChange({ kind: "new", blob, previewUrl: URL.createObjectURL(blob) });
   }
 
@@ -69,7 +77,7 @@ export function ProfileImageField({ kind, currentUrl, value, onChange }: Props) 
         <label className={`${buttonClasses({ variant: "secondary", size: "sm" })} cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-border-focus`}>
           <ImagePlus className="size-4" aria-hidden="true" />
           <span>{changeLabel}</span>
-          <input type="file" accept={ACCEPT} onChange={onFile} className="sr-only" aria-label={changeLabel} />
+          <input ref={inputRef} type="file" accept={ACCEPT} onChange={onFile} className="sr-only" aria-label={changeLabel} />
         </label>
         {has && (
           <button type="button" onClick={() => onChange({ kind: "remove" })} className={buttonClasses({ variant: "ghost", size: "sm" })}>
@@ -84,7 +92,7 @@ export function ProfileImageField({ kind, currentUrl, value, onChange }: Props) 
           {t(error)}
         </p>
       )}
-      {source && <ImageCropper image={source} kind={kind} onCancel={() => setSource(null)} onConfirm={onCropped} />}
+      {source && <ImageCropper image={source} kind={kind} onCancel={closeCropper} onConfirm={onCropped} />}
     </div>
   );
 }

@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Saída: foto quadrada **512×512**, banner 3:1 **1500×500**, **WebP** gerado no navegador via canvas.
-- Caminhos fixos com `upsert`: `avatars/<id>/avatar.webp`, `banners/<id>/banner.webp`; URL salva com `?v=<timestamp>`.
+- ~~Caminhos fixos com `upsert`~~ **Mudança na revisão:** um arquivo por envio (`avatars/<id>/avatar-<ts>.webp`, `banners/<id>/banner-<ts>.webp`), URL com `?v=<ts>`. Com caminho fixo, um envio seguido de falha ao salvar trocava a imagem publicada. A ação de salvar apaga os outros arquivos da pasta depois que o perfil salva (sem órfãos).
 - Só envia ao clicar em Salvar; antes disso a imagem aparece só na prévia. Sair sem salvar não muda o perfil.
 - "Remover foto" / "Remover banner": apaga o arquivo e zera a coluna; sem foto aparecem as iniciais.
 - Banco/servidor só aceitam em `avatar_url`/`banner_url`: nulo, o valor atual, ou `<SUPABASE_URL>/storage/v1/object/public/<bucket>/<id>/...`.

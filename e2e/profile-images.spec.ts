@@ -45,7 +45,7 @@ test("trocar a foto: recorta, só vale depois de salvar, e remover volta às ini
   // Sair sem salvar não muda o perfil.
   page.once("dialog", (d) => d.accept());
   await page.reload({ waitUntil: "networkidle" });
-  await expect(preview.locator("img")).toHaveCount(0);
+  await expect(preview.getByRole("img", { name: "Iris" })).toHaveCount(0);
 
   // De novo, agora salvando: a foto vai para o Storage, na pasta da pessoa.
   await page.getByLabel("Trocar foto").setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: png });
@@ -53,7 +53,7 @@ test("trocar a foto: recorta, só vale depois de salvar, e remover volta às ini
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page).toHaveURL(new RegExp(`/@${username}\\?salvo=1$`));
   const photo = page.locator('img[src*="/storage/v1/object/public/avatars/"]').first();
-  await expect(photo).toHaveAttribute("src", /\/avatar\.webp\?v=\d+$/);
+  await expect(photo).toHaveAttribute("src", /\/avatar-\d+\.webp\?v=\d+$/);
   // A imagem existe de verdade e tem 512×512.
   await expect.poll(() => photo.evaluate((img: HTMLImageElement) => `${img.naturalWidth}x${img.naturalHeight}`)).toBe("512x512");
 
@@ -77,7 +77,7 @@ test("banner enviado sai em 1500×500", async ({ browser }) => {
 
   await page.goto("/configuracoes", { waitUntil: "networkidle" });
   const html = await page.getByRole("region", { name: "Prévia do perfil" }).innerHTML();
-  const url = html.match(/https?:[^"')&]+\/banners\/[^"')&]+banner\.webp\?v=\d+/)?.[0];
+  const url = html.match(/https?:[^"')&]+\/banners\/[^"')&]+banner-\d+\.webp\?v=\d+/)?.[0];
   expect(url).toBeTruthy();
   const size = await page.evaluate(async (src) => {
     const img = new Image();

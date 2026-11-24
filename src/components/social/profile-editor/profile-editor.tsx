@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { saveProfile, type SaveProfileState } from "@/app/(app)/configuracoes/actions";
 import { ProfileImageField, previewSrc, type PendingImage } from "@/components/social/profile-image-field";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -50,7 +50,8 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
   const [dirty, setDirty] = useState(false);
   // Foto e banner só sobem ao salvar; até lá ficam pendentes (e aparecem na prévia).
   const [images, setImages] = useState<Record<CropKind, PendingImage>>({ avatar: { kind: "keep" }, banner: { kind: "keep" } });
-  const [uploading, setUploading] = useState(false);
+  // A transição cobre o envio das imagens inteiro: o botão trava do clique até a ação.
+  const [uploading, startUpload] = useTransition();
   const [uploadFailed, setUploadFailed] = useState(false);
   const shownAvatar = previewSrc(avatarUrl, images.avatar);
   const shownBanner = previewSrc(bannerUrl, images.banner);
@@ -87,24 +88,26 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
 
   /**
    * Envia as imagens pendentes e só então chama a ação com as URLs.
-   * Com algum campo inválido, não envia nada: a ação devolve os erros e a
-   * imagem publicada (mesmo caminho no Storage) não é sobrescrita à toa.
+   * Com algum campo inválido, não envia nada: a ação devolve os erros sem
+   * deixar arquivo novo à toa no Storage.
    */
-  async function submit(formData: FormData) {
+  function submit(ev: FormEvent<HTMLFormElement>) {
+    ev.preventDefault();
+    if (busy) return;
+    const formData = new FormData(ev.currentTarget);
     setUploadFailed(false);
-    if (validateProfile(v).ok) {
-      setUploading(true);
-      try {
-        const fields = await preparePendingImages(createClient(), userId, images);
-        for (const [name, value] of Object.entries(fields)) formData.set(name, value);
-      } catch {
-        setUploadFailed(true);
-        return;
-      } finally {
-        setUploading(false);
+    startUpload(async () => {
+      if (validateProfile(v).ok) {
+        try {
+          const fields = await preparePendingImages(createClient(), userId, images);
+          for (const [name, value] of Object.entries(fields)) formData.set(name, value);
+        } catch {
+          startUpload(() => setUploadFailed(true));
+          return;
+        }
       }
-    }
-    startTransition(() => action(formData));
+      startTransition(() => action(formData));
+    });
   }
 
   // As tecnologias atuais primeiro, depois o resto.
@@ -112,7 +115,7 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
   const appearanceError = e.bannerPreset || e.avatarFrame || e.accent || e.avatarUrl || e.bannerUrl;
 
   return (
-    <form ref={formRef} action={submit} noValidate className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+    <form ref={formRef} action={action} onSubmit={submit} noValidate className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
       <aside className="lg:sticky lg:top-20 lg:order-2">
         <ProfilePreview
           data={{
