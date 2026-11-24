@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const db = { update: vi.fn(), tags: vi.fn(), current: vi.fn(), removeTags: vi.fn(), insertTags: vi.fn() };
+const db = { remove: vi.fn(), update: vi.fn(), tags: vi.fn(), current: vi.fn(), removeTags: vi.fn(), insertTags: vi.fn() };
 const supabase = {
+  storage: { from: (bucket: string) => ({ remove: (paths: string[]) => db.remove(bucket, paths) }) },
   from(table: string) {
     if (table === "profiles") return { update: (v: unknown) => ({ eq: (_c: string, id: string) => ({ select: () => db.update(v, id) }) }) };
     if (table === "tags") return { select: () => ({ in: (_c: string, slugs: string[]) => db.tags(slugs) }) };
@@ -43,12 +44,26 @@ beforeEach(() => {
   db.tags.mockImplementation(async (slugs: string[]) => ({ data: slugs.map((s) => ({ id: `id-${s}` })) }));
   db.removeTags.mockResolvedValue({ error: null });
   db.insertTags.mockResolvedValue({ error: null });
+  db.remove.mockResolvedValue({ error: null });
 });
 
 describe("saveProfile", () => {
   it("grava nome, bio, links e troca só a diferença das tecnologias, depois abre o perfil", async () => {
     await expect(saveProfile({}, form(ok))).rejects.toThrow("REDIRECT /@ana?salvo=1");
-    expect(db.update).toHaveBeenCalledWith({ display_name: "Ana Souza", bio: "Front-end", links: { github: "anasouza", site: "https://ana.dev" } }, "u1");
+    expect(db.update).toHaveBeenCalledWith(
+      {
+        display_name: "Ana Souza",
+        bio: "Front-end",
+        headline: null,
+        location: null,
+        status: null,
+        banner_preset: null,
+        avatar_frame: null,
+        accent: null,
+        links: { github: "anasouza", site: "https://ana.dev" },
+      },
+      "u1",
+    );
     expect(db.insertTags).toHaveBeenCalledWith([
       { profile_id: "u1", tag_id: "id-css" },
       { profile_id: "u1", tag_id: "id-a11y" },
@@ -103,5 +118,34 @@ describe("saveProfile", () => {
   it("visitante vai para o login", async () => {
     getViewer.mockResolvedValue(null);
     await expect(saveProfile({}, form(ok))).rejects.toThrow("REDIRECT /entrar?next=%2Fconfiguracoes");
+  });
+
+  it("grava cargo, localização, status, aparência e os links novos", async () => {
+    await expect(
+      saveProfile(
+        {},
+        form({ ...ok, headline: "Dev na Acme", location: "SP", status: "building", bannerPreset: "hex", avatarFrame: "gradiente", accent: "ciano", linkedin: "linkedin.com/in/ana", x: "@ana_x", youtube: "@anacoda" }),
+      ),
+    ).rejects.toThrow("REDIRECT");
+    expect(db.update.mock.calls[0][0]).toMatchObject({
+      headline: "Dev na Acme",
+      location: "SP",
+      status: "building",
+      banner_preset: "hex",
+      avatar_frame: "gradiente",
+      accent: "ciano",
+      links: { github: "anasouza", site: "https://ana.dev", linkedin: "ana", x: "ana_x", youtube: "anacoda" },
+    });
+  });
+
+  it("foto e banner: ausentes não mexem, vazios removem, URL nova grava", async () => {
+    await expect(saveProfile({}, form(ok))).rejects.toThrow("REDIRECT");
+    expect(db.update.mock.calls[0][0]).not.toHaveProperty("avatar_url");
+    expect(db.update.mock.calls[0][0]).not.toHaveProperty("banner_url");
+    const url = "https://abc.supabase.co/storage/v1/object/public/banners/u1/banner.webp?v=2";
+    await expect(saveProfile({}, form({ ...ok, avatarUrl: "", bannerUrl: url }))).rejects.toThrow("REDIRECT");
+    expect(db.update.mock.calls[1][0]).toMatchObject({ avatar_url: null, banner_url: url });
+    expect(db.remove).toHaveBeenCalledWith("avatars", ["u1/avatar.webp"]);
+    expect(db.remove).toHaveBeenCalledTimes(1);
   });
 });
