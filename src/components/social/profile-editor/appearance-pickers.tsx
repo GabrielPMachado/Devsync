@@ -15,7 +15,7 @@ export function BannerPicker({ value, onChange, disabled }: { value: string; onC
   return (
     <fieldset className="flex flex-col gap-3" disabled={disabled}>
       <legend className="mb-3 text-sm font-semibold text-text-secondary">{t("banner")}</legend>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3">
         {options.map((o) => (
           <label key={o.key || "padrao"} className={`flex cursor-pointer flex-col gap-1.5 rounded-lg border border-border-default p-1.5 ${RING}`}>
             <input type="radio" name="bannerPresetChoice" className="sr-only" checked={value === o.key} onChange={() => onChange(o.key)} aria-label={o.label} />
