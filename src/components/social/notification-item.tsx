@@ -1,9 +1,10 @@
-import { AtSign, ChevronUp, CircleCheck, Heart, HelpCircle, MessageCircle, TriangleAlert, UserPlus } from "lucide-react";
+import { Award, AtSign, ChevronUp, CircleCheck, Heart, HelpCircle, MessageCircle, TriangleAlert, UserPlus } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import type { NotificationView } from "@/lib/social/notification-queries";
+import { isBadgeKey } from "@/lib/social/badges";
 import type { NotificationType } from "@/lib/social/notifications";
 import { FollowButton } from "./follow-button";
 
@@ -17,23 +18,25 @@ const ICONS: Record<NotificationType, { Icon: typeof Heart; color: string }> = {
   accepted: { Icon: CircleCheck, color: "text-status-success" },
   detail_request: { Icon: HelpCircle, color: "text-status-warning" },
   demo_unavailable: { Icon: TriangleAlert, color: "text-status-warning" },
+  badge: { Icon: Award, color: "text-amber-300" },
 };
 
 /** Tipos sem pessoa na frente: aparecem com um ícone no lugar da foto. */
-const SYSTEM = new Set<NotificationType>(["accepted", "demo_unavailable"]);
+const SYSTEM = new Set<NotificationType>(["accepted", "demo_unavailable", "badge"]);
 
 type Props = { n: NotificationView; now: Date; followsActor: boolean; viewerId: string };
 
 /** Uma notificação (ou um grupo: "Ana e mais 4 pessoas curtiram…"). */
 export function NotificationItem({ n, now, followsActor, viewerId }: Props) {
   const t = useTranslations("Notifications");
+  const tb = useTranslations("Badges");
   const format = useFormatter();
   const first = n.actors[0];
   const name = first?.displayName || first?.username || t("someone");
   const { Icon, color } = ICONS[n.type] ?? ICONS.comment;
   const system = SYSTEM.has(n.type) || !first;
   const b = (chunks: ReactNode) => <strong className="font-semibold text-text-primary">{chunks}</strong>;
-  const text = t.rich(n.type, { name, others: Math.max(n.actors.length - 1, 0), title: n.target?.title ?? t("removed"), b });
+  const text = t.rich(n.type, { name, others: Math.max(n.actors.length - 1, 0), title: (n.type === "badge" && n.target && isBadgeKey(n.target.title) ? tb(`${n.target.title}_name`) : null) ?? n.target?.title ?? t("removed"), b });
   const showFollowBack = n.type === "follow" && !!first?.id && !!first.username && first.id !== viewerId && !followsActor;
 
   const body = (
@@ -74,3 +77,4 @@ export function NotificationItem({ n, now, followsActor, viewerId }: Props) {
     </li>
   );
 }
+

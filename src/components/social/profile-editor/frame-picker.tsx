@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useId } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { FRAMES } from "@/lib/social/profile-style";
-import { FRAME_RINGS } from "./preview-style";
+import { AvatarFrame } from "@/components/profile/avatar-frame";
 
 type Props = {
   name: string;
@@ -42,8 +42,10 @@ export function FramePicker({ name, avatarUrl, value, onChange, unlockedBadges }
               disabled={isLocked}
               onSelect={() => onChange(f.key)}
             >
-              <span className={`relative inline-flex rounded-full ${FRAME_RINGS[f.key] ?? ""} ${isLocked ? "opacity-40" : ""}`}>
-                <Avatar name={name} src={avatarUrl} size="md" />
+              <span className={`inline-flex ${isLocked ? "opacity-40" : ""}`}>
+                <AvatarFrame frame={f.key}>
+                  <Avatar name={name} src={avatarUrl} size="md" className="border-2 border-bg-surface" />
+                </AvatarFrame>
               </span>
               {isLocked ? <Lock className="absolute top-1 right-1 size-3.5 text-text-muted" aria-hidden="true" /> : null}
             </Option>
