@@ -189,7 +189,8 @@ type Props = { bannerUrl?: string | null; preset?: string | null; className?: st
 
 export function ProfileBanner({ bannerUrl, preset, className = "" }: Props) {
   const raw = useId();
-  const base = `relative overflow-hidden rounded-2xl border border-border-default ${className}`;
+  // Cantos e borda vêm de quem usa (o perfil usa rounded-2xl com borda; a prévia não).
+  const base = `relative overflow-hidden ${className}`;
   if (bannerUrl) {
     return (
       <div aria-hidden="true" data-banner="imagem" className={base}>

@@ -66,7 +66,7 @@ export function ProfileHeader({ profile, actions, basePath, joined }: Props) {
 
   return (
     <header className="flex flex-col" style={accentStyle(profile.accent) as CSSProperties}>
-      <ProfileBanner bannerUrl={profile.bannerUrl} preset={profile.bannerPreset} className="aspect-[3/1] max-h-56 w-full md:aspect-auto md:h-52" />
+      <ProfileBanner bannerUrl={profile.bannerUrl} preset={profile.bannerPreset} className="aspect-[3/1] max-h-56 w-full rounded-2xl border border-border-default md:aspect-auto md:h-52" />
       <div className="flex flex-col gap-3 px-2 md:flex-row md:items-start md:gap-6 md:px-6">
         {/* Só a foto sobe sobre o banner; nome e botões ficam abaixo dele. */}
         <div className="relative -mt-12 self-start md:-mt-16">
