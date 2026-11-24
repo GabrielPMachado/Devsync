@@ -72,7 +72,7 @@ test("editar o perfil e ver os links e tecnologias", async ({ browser }) => {
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page).toHaveURL(new RegExp(`/@${username}\\?salvo=1$`));
   await expect(page.getByText("Perfil atualizado.")).toBeVisible();
-  await expect(page.getByText("Back-end e bancos de dados.")).toBeVisible();
+  await expect(page.getByRole("article").getByText("Back-end e bancos de dados.")).toBeVisible();
   await expect(page.getByRole("link", { name: "github.com/carla-dev" })).toHaveAttribute("href", "https://github.com/carla-dev");
   await expect(page.getByRole("link", { name: "carla.dev" })).toHaveAttribute("href", "https://carla.dev");
   await expect(page.getByRole("link", { name: "postgresql", exact: true })).toHaveAttribute("href", "/tags/postgresql");

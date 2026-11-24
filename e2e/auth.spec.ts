@@ -35,7 +35,7 @@ test.describe("login com link mágico", () => {
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByText("Olá, Ana Souza!")).toBeVisible();
     await page.getByRole("button", { name: "Menu da conta" }).click();
-    await expect(page.getByText(`@${username}`)).toBeVisible();
+    await expect(page.getByText(`@${username}`, { exact: true })).toBeVisible();
 
     await page.getByRole("link", { name: "Meu perfil" }).click();
     await expect(page).toHaveURL(new RegExp(`/@${username}$`));
