@@ -66,7 +66,8 @@ export function GithubImport({ services, tags, onImport }: { services: GithubSer
       const details = await services.repoDetails(repo);
       const draft = importDraft(repo, details, tags);
       // Sem site publicado: os arquivos do repositório podem virar a demo.
-      const site = draft.demoLink ? null : await services.findSiteSource(repo);
+      // Se a busca pelos arquivos falhar, a importação segue sem eles.
+      const site = draft.demoLink ? null : await services.findSiteSource(repo).catch(() => null);
       onImport(draft, { repo, site });
       setImported(repo.fullName);
       setOpen(false);

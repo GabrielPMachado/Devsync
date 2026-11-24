@@ -75,6 +75,22 @@ describe("findSiteSource", () => {
     expect(r).toEqual({ kind: "found", source: { ref: "main", folder: "dist/", files: [{ path: "dist/index.html", size: 10 }, { path: "dist/a.css", size: 10 }] } });
   });
 
+  it("gh-pages que precisa de build ainda tenta a pasta dist da branch padrão", async () => {
+    const fetchFn = async (url: string) => {
+      if (url.includes("/git/trees/gh-pages")) return json(200, tree(blob("index.html")));
+      if (url.includes("/git/trees/main")) return json(200, tree(blob("dist/index.html")));
+      if (url.endsWith("/gh-pages/index.html")) return new Response('<script src="/src/main.tsx"></script>');
+      return new Response("<h1>ok</h1>");
+    };
+    expect(await findSiteSource(repo, fetchFn)).toMatchObject({ kind: "found", source: { ref: "main", folder: "dist/" } });
+  });
+
+  it("branch com barra vai sem codificar a barra", async () => {
+    const fetchFn = vi.fn(async () => json(404, {}));
+    await findSiteSource({ ...repo, defaultBranch: "feat/x" }, fetchFn);
+    expect(fetchFn).toHaveBeenCalledWith("https://api.github.com/repos/ana/kanban/git/trees/feat/x?recursive=1", expect.anything());
+  });
+
   it("projeto que precisa de build", async () => {
     const fetchFn = async (url: string) => {
       if (url.includes("/git/trees/main")) return json(200, tree(blob("index.html"), blob("src/main.tsx")));

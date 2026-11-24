@@ -134,6 +134,8 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
         setPhase("fetching");
         zip = await services.github.buildDemoZip(githubSite.repo, githubSite.source);
         if (zip.size > ZIP_MAX_BYTES) {
+          // Volta para o seletor de .zip, onde o erro aparece.
+          setGithubSite(null);
           setPhase("idle");
           return setErrors({ zip: reasons("too_large") });
         }
@@ -256,7 +258,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
                   <p className="truncate text-sm font-semibold text-text-primary">{file?.name ?? (githubSite ? `${githubSite.repo.name}.zip` : null)}</p>
                   <p className="text-xs text-text-muted">{file ? formatSize(file.size) : null}</p>
                 </div>
-                <span className="rounded-full border border-brand-accent/40 bg-brand-accent-soft px-2 py-0.5 text-xs font-semibold text-brand-accent">{t("validating")}</span>
+                <span className="rounded-full border border-brand-accent/40 bg-brand-accent-soft px-2 py-0.5 text-xs font-semibold text-brand-accent">{phase === "fetching" ? g("fetchingBadge") : t("validating")}</span>
               </div>
               <ul className="flex flex-col gap-2 text-sm">
                 {phase === "fetching" ? <Progress done={false} active={phase === "fetching"} text={g("fetching")} /> : null}
@@ -319,6 +321,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
                 aria-label={t("zipLabel")}
                 onChange={(e) => {
                   setFile(e.target.files?.[0] ?? null);
+                  setSiteNote(null);
                   setErrors((er) => ({ ...er, zip: undefined }));
                 }}
               />

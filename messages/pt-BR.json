@@ -252,7 +252,8 @@
     "fetching": "Baixando os arquivos do GitHub…",
     "site_needs_build": "Esse repositório precisa ser compilado antes de virar demo. Rode o build e publique a pasta dist numa branch gh-pages, ou envie aqui o .zip da pasta dist.",
     "site_none": "Não achamos um index.html no repositório (nem em gh-pages, dist, build, docs ou out). Envie um .zip ou use o link do site.",
-    "site_too_big": "O site do repositório passa de 500 arquivos ou 60 MB. Envie um .zip menor."
+    "site_too_big": "O site do repositório passa de 500 arquivos ou 60 MB. Envie um .zip menor.",
+    "fetchingBadge": "Baixando"
   },
   "Projects": {
     "metaTitle": "Projetos · Devsync",

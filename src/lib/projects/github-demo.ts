@@ -40,7 +40,7 @@ export function needsBuild(html: string): boolean {
 type TreeItem = { path: string; type: string; size?: number };
 
 async function readTree(repo: GithubRepo, ref: string, fetchFn: FetchFn): Promise<{ truncated: boolean; items: TreeItem[] } | null> {
-  const r = await call(`${API}/repos/${repo.fullName}/git/trees/${encodeURIComponent(ref)}?recursive=1`, fetchFn);
+  const r = await call(`${API}/repos/${repo.fullName}/git/trees/${ref.split("/").map(encodeURIComponent).join("/")}?recursive=1`, fetchFn);
   if (r.status === 404 || r.status === 409) return null; // sem a branch, ou repo vazio
   if (!r.ok) throw new GithubError("network");
   const body = (await r.json()) as { truncated?: boolean; tree?: TreeItem[] };
@@ -64,6 +64,7 @@ async function download(url: string, fetchFn: FetchFn): Promise<Response> {
 
 /** Procura um site pronto: branch gh-pages, senão a branch padrão. */
 export async function findSiteSource(repo: GithubRepo, fetchFn: FetchFn = fetch): Promise<SiteLookup> {
+  let built = false;
   for (const ref of ["gh-pages", repo.defaultBranch]) {
     const tree = await readTree(repo, ref, fetchFn);
     if (!tree) continue;
@@ -77,10 +78,13 @@ export async function findSiteSource(repo: GithubRepo, fetchFn: FetchFn = fetch)
     const total = files.reduce((s, f) => s + f.size, 0);
     if (tree.truncated || files.length > SITE_MAX_FILES || total > SITE_MAX_BYTES) return { kind: "too_big" };
     const html = await (await download(rawUrl(repo, ref, `${folder}index.html`), fetchFn)).text();
-    if (needsBuild(html)) return { kind: "needs_build" };
+    if (needsBuild(html)) {
+      built = true; // gh-pages com código-fonte: ainda vale olhar a pasta dist da branch padrão
+      continue;
+    }
     return { kind: "found", source: { ref, folder, files } };
   }
-  return { kind: "none" };
+  return { kind: built ? "needs_build" : "none" };
 }
 
 /** Baixa os arquivos do site (6 de cada vez) e devolve o .zip pronto para o envio de demo. */
@@ -88,9 +92,14 @@ export async function buildDemoZip(repo: GithubRepo, source: SiteSource, fetchFn
   const out: Record<string, Uint8Array> = {};
   const queue = [...source.files];
   async function worker() {
-    for (let f = queue.shift(); f; f = queue.shift()) {
-      const r = await download(rawUrl(repo, source.ref, f.path), fetchFn);
-      out[f.path.slice(source.folder.length)] = new Uint8Array(await r.arrayBuffer());
+    try {
+      for (let f = queue.shift(); f; f = queue.shift()) {
+        const r = await download(rawUrl(repo, source.ref, f.path), fetchFn);
+        out[f.path.slice(source.folder.length)] = new Uint8Array(await r.arrayBuffer());
+      }
+    } catch (e) {
+      queue.length = 0; // um arquivo falhou: os outros param de baixar
+      throw e;
     }
   }
   await Promise.all(Array.from({ length: Math.min(6, queue.length) }, worker));
