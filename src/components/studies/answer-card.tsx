@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp, CircleCheck, Flag, History, Pencil, TrendingUp,
 import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import { acceptAnswer, toggleOutdated, voteAnswer } from "@/app/(app)/estudos/actions";
+import { ReportButton } from "@/components/moderation/report-button";
 import { Avatar } from "@/components/ui/avatar";
 import type { AnswerView } from "@/lib/studies/queries";
 import { answerNotice, displayScore } from "@/lib/studies/rules";
@@ -140,6 +141,7 @@ export function AnswerCard({ answer, question, viewerId, recentTop, now }: Props
               {t("history")}
             </Link>
           ) : null}
+          {!mine ? <ReportButton target="answer" targetId={answer.id} signedIn={!!viewerId} className="px-2" /> : null}
           {answer.techVersion ? (
             <span className="ml-1 rounded-sm border border-border-default px-2 py-0.5 font-mono text-xs text-text-muted">{answer.techVersion}</span>
           ) : null}

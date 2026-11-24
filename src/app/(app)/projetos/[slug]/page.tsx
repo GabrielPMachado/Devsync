@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { DemoFrame } from "@/components/demo/demo-frame";
 import { StatusBadge } from "@/components/demo/status-badge";
+import { ReportButton } from "@/components/moderation/report-button";
 import { Comments } from "@/components/projects/comments";
 import { LikeButton } from "@/components/projects/like-button";
 import { Markdown } from "@/components/projects/markdown";
@@ -86,7 +87,10 @@ async function Project({ params, searchParams }: Pick<Props, "params" | "searchP
             </div>
           </div>
         </div>
-        <LikeButton projectId={project.id} path={path} liked={liked} count={project.likesCount} signedIn={!!viewer?.username} />
+        <div className="flex items-center gap-3">
+          {viewer?.id !== project.authorId ? <ReportButton target="project" targetId={project.id} signedIn={!!viewer?.username} /> : null}
+          <LikeButton projectId={project.id} path={path} liked={liked} count={project.likesCount} signedIn={!!viewer?.username} />
+        </div>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">

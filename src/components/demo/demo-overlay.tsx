@@ -4,6 +4,7 @@ import { Ban, LoaderCircle, Maximize2, MessageCircle, Minimize2, Monitor, Rotate
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { ReportButton } from "@/components/moderation/report-button";
 import { Avatar } from "@/components/ui/avatar";
 import { buttonClasses } from "@/components/ui/button";
 import { demoFrameSrc, demosBaseUrl, type DemoKind, type DemoStatus } from "@/lib/demos/url";
@@ -17,19 +18,28 @@ export type DemoView = {
   status: DemoStatus;
   url: string | null;
   project: { title: string; slug: string; author: { username: string | null; displayName: string | null; avatarUrl: string | null } } | null;
+  /** Quem vê está logado (mostra "Denunciar" em vez do link para entrar). */
+  signedIn?: boolean;
+  /** Quem vê é o dono da demo (não vê "Denunciar"). */
+  mine?: boolean;
 };
 
 /** Lê a demo e o projeto dela com o Supabase do navegador. null quando a RLS esconde (suspensa, apagada). */
 export async function loadDemoView(demoId: string): Promise<DemoView | null> {
   const supabase = createClient();
-  const [{ data: demo }, { data: project }] = await Promise.all([
-    supabase.from("demos").select("id, kind, status, url").eq("id", demoId).maybeSingle(),
+  const [{ data: demo }, { data: project }, { data: session }] = await Promise.all([
+    supabase.from("demos").select("id, kind, status, url, owner_id").eq("id", demoId).maybeSingle(),
     supabase.from("projects").select("title, slug, author:profiles!projects_author_id_fkey(username, display_name, avatar_url)").eq("demo_id", demoId).limit(1).maybeSingle(),
+    supabase.auth.getSession(),
   ]);
   if (!demo) return null;
+  const { owner_id: ownerId, ...row } = demo as Omit<DemoView, "project" | "signedIn" | "mine"> & { owner_id: string };
+  const viewerId = session.session?.user.id ?? null;
   const p = project as unknown as { title: string; slug: string; author: { username: string | null; display_name: string | null; avatar_url: string | null } | null } | null;
   return {
-    ...(demo as Omit<DemoView, "project">),
+    ...row,
+    signedIn: !!viewerId,
+    mine: viewerId === ownerId,
     project: p
       ? { title: p.title, slug: p.slug, author: { username: p.author?.username ?? null, displayName: p.author?.display_name ?? null, avatarUrl: p.author?.avatar_url ?? null } }
       : null,
@@ -159,6 +169,7 @@ export function DemoOverlay({ demoId, onClose, load = loadDemoView }: Props) {
                 <MessageCircle className="size-4" aria-hidden="true" />
               </Link>
             ) : null}
+            {view && !view.mine ? <ReportButton target="demo" targetId={view.id} signedIn={!!view.signedIn} className="h-8 rounded-md px-2" /> : null}
             <span className="mx-1 hidden h-6 w-px bg-border-default md:block" aria-hidden="true" />
             <kbd className="hidden rounded-sm border border-border-default px-1.5 font-mono text-[11px] text-text-muted md:inline">Esc</kbd>
             <button ref={closeRef} type="button" className={icon} aria-label={t("close")} onClick={onClose}>

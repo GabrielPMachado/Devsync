@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import type { AnswerFormState } from "@/app/(app)/estudos/actions";
 import { buttonClasses } from "@/components/ui/button";
+import { ToneWarning } from "@/components/moderation/tone-warning";
 import { TextField } from "@/components/ui/text-field";
 import { TECH_VERSION_MAX } from "@/lib/studies/rules";
 import { MarkdownEditor } from "./markdown-editor";
@@ -26,7 +27,10 @@ export function AnswerForm({ action, initial, beginner, cancelHref }: Props) {
   const [body, setBody] = useState(initial?.body ?? "");
   const [version, setVersion] = useState(initial?.techVersion ?? "");
   const [published, setPublished] = useState(0);
+  // Aviso de tom dispensado ("Revisar texto"): guarda qual resposta do servidor foi dispensada.
+  const [revising, setRevising] = useState<AnswerFormState | null>(null);
   const errors = state.errors ?? {};
+  const toneWarning = state.toneWarning && revising !== state && !pending;
 
   // Publicou: limpa o formulário (ajuste de estado durante o render, sem efeito).
   if (state.ok && state.ok !== published) {
@@ -69,7 +73,17 @@ export function AnswerForm({ action, initial, beginner, cancelHref }: Props) {
           {t("errorUnknown")}
         </p>
       ) : null}
-      {state.ok && !pending ? (
+      {toneWarning ? (
+        <ToneWarning
+          pending={pending}
+          onRevise={() => {
+            setRevising(state);
+            document.getElementsByName("body")[0]?.focus();
+          }}
+          confirm={{ kind: "submit", name: "confirmTone", value: "1" }}
+        />
+      ) : null}
+      {state.ok && !pending && !state.toneWarning ? (
         <p role="status" className="text-sm text-status-success-text">
           {t("answerPublished")}
         </p>

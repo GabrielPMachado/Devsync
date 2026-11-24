@@ -88,7 +88,7 @@ function AccountButtons({ viewer, unread }: { viewer: Awaited<ReturnType<typeof 
         <Plus className="size-5" aria-hidden="true" />
       </Link>
       <span className="hidden md:inline-flex">
-        <UserMenu name={viewer.displayName || viewer.username} username={viewer.username} avatarUrl={viewer.avatarUrl} />
+        <UserMenu name={viewer.displayName || viewer.username} username={viewer.username} avatarUrl={viewer.avatarUrl} isAdmin={viewer.isAdmin} />
       </span>
     </>
   );

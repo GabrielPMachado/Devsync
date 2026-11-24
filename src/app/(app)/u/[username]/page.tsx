@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { GithubIcon } from "@/components/icons/github";
+import { ReportButton } from "@/components/moderation/report-button";
 import { ProjectCard } from "@/components/projects/project-card";
 import { FollowButton } from "@/components/social/follow-button";
 import { ProfileTabs, type ProfileTab } from "@/components/social/profile-tabs";
@@ -86,7 +87,10 @@ async function Profile({ params, searchParams }: { params: Params; searchParams:
               </form>
             </>
           ) : (
-            <FollowButton profileId={profile.id} username={profile.username} following={follows.has(profile.id)} signedIn={!!viewer} path={base} />
+            <>
+              <FollowButton profileId={profile.id} username={profile.username} following={follows.has(profile.id)} signedIn={!!viewer} path={base} />
+              <ReportButton target="profile" targetId={profile.id} signedIn={!!viewer?.username} />
+            </>
           )}
         </div>
       </div>

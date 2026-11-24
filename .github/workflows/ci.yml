@@ -54,6 +54,11 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
             echo "NEXT_PUBLIC_DEMOS_URL=http://demos.localhost:8787"
           } > .env.local
+          # Só para o E2E de moderação promover um admin. Nunca vai para o site.
+          {
+            echo "E2E_SUPABASE_URL=$API_URL"
+            echo "E2E_SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
 
       # Serviço de demos local (wrangler dev) para o E2E de publicar com zip.
       - name: Serviço de demos para o E2E

@@ -82,7 +82,8 @@
     "myProfile": "Meu perfil",
     "signOut": "Sair",
     "mainNav": "Navegação principal",
-    "tabs": "Abas"
+    "tabs": "Abas",
+    "moderation": "Moderação"
   },
   "Profile": {
     "joined": "Na Devsync desde {date}",
@@ -111,7 +112,8 @@
     "too_many_redirects": "O site redireciona vezes demais.",
     "x_frame_options": "Este site não permite ser exibido dentro de outro site (X-Frame-Options).",
     "csp_frame_ancestors": "Este site não permite ser exibido dentro de outro site (frame-ancestors).",
-    "unknown": "Não deu para validar a demo. Tente de novo."
+    "unknown": "Não deu para validar a demo. Tente de novo.",
+    "blocked_domain": "Esse domínio foi bloqueado pela moderação da Devsync."
   },
   "Demo": {
     "status": {
@@ -462,7 +464,6 @@
     "whoToFollow": "Quem seguir",
     "seeMore": "Ver mais",
     "unanswered": "Sem resposta",
-    
     "exploreTitle": "Explorar",
     "exploreSubtitle": "Projetos em alta, perguntas esperando resposta e gente nova para seguir.",
     "popularTags": "Tags populares",
@@ -491,5 +492,109 @@
     "questionsTitle": "Perguntas",
     "followTag": "Acompanhar",
     "followingTag": "Acompanhando"
+  },
+  "Report": {
+    "button": "Denunciar",
+    "buttonLabel": "Denunciar {what}",
+    "title": "Denunciar {what}",
+    "intro": "A denúncia é anônima para quem publicou. A moderação revisa cada caso.",
+    "reasonLegend": "Qual é o problema?",
+    "reasons": {
+      "spam": "Spam ou propaganda",
+      "rude": "Grosseria ou ofensa",
+      "inappropriate": "Conteúdo impróprio",
+      "malicious": "Golpe ou código malicioso",
+      "other": "Outro motivo"
+    },
+    "details": "Detalhes",
+    "detailsOptional": "Detalhes (opcional)",
+    "detailsPlaceholder": "Conte o que a moderação precisa saber",
+    "cancel": "Cancelar",
+    "submit": "Enviar denúncia",
+    "sending": "Enviando…",
+    "done": "Obrigado. A moderação vai analisar.",
+    "close": "Fechar",
+    "errors": {
+      "signIn": "Entre na sua conta para denunciar.",
+      "reason": "Escolha um motivo.",
+      "details": "Conte em poucas palavras o motivo.",
+      "tooLong": "Os detalhes estão longos demais.",
+      "already": "Você já denunciou isto. A moderação vai analisar.",
+      "unknown": "Não deu para enviar agora. Tente de novo."
+    },
+    "targets": {
+      "project": "projeto",
+      "question": "pergunta",
+      "answer": "resposta",
+      "comment": "comentário",
+      "demo": "demo",
+      "profile": "perfil"
+    }
+  },
+  "Tone": {
+    "title": "Seu texto pode soar ríspido",
+    "body": "Quem lê pode estar começando agora. Que tal revisar? Se achar que está tudo certo, pode publicar assim mesmo.",
+    "revise": "Revisar texto",
+    "publishAnyway": "Publicar assim mesmo"
+  },
+  "Admin": {
+    "metaTitle": "Moderação",
+    "title": "Moderação",
+    "subtitle": "Denúncias agrupadas por conteúdo. Toda ação fecha as denúncias abertas daquele item.",
+    "tabs": {
+      "open": "Abertas",
+      "resolved": "Resolvidas",
+      "domains": "Domínios bloqueados"
+    },
+    "empty": "Nenhuma denúncia aberta. Tudo limpo por aqui.",
+    "emptyResolved": "Nenhuma denúncia resolvida ainda.",
+    "reportCount": "{count, plural, one {# denúncia} other {# denúncias}}",
+    "lastReported": "última {when}",
+    "resolvedAt": "resolvida {when}",
+    "by": "por @{username}",
+    "authorSuspended": "conta suspensa",
+    "hidden": "oculto",
+    "demoBlocked": "demo suspensa",
+    "removed": "O conteúdo foi apagado.",
+    "open": "Abrir",
+    "reasons": "Motivos",
+    "actions": {
+      "hide": "Ocultar",
+      "unhide": "Mostrar de novo",
+      "blockDemo": "Suspender demo",
+      "unblockDemo": "Reativar demo",
+      "suspendAuthor": "Suspender conta",
+      "unsuspendAuthor": "Reativar conta",
+      "dismiss": "Descartar"
+    },
+    "duplicate": {
+      "label": "Repetida de",
+      "placeholder": "endereço ou slug da pergunta original",
+      "submit": "Marcar repetida"
+    },
+    "domains": {
+      "intro": "Links de demo nestes domínios (e subdomínios) são recusados, e as demos já publicadas neles saem do ar.",
+      "domain": "Domínio",
+      "domainPlaceholder": "golpe.exemplo",
+      "reason": "Motivo (opcional)",
+      "add": "Bloquear domínio",
+      "remove": "Desbloquear",
+      "empty": "Nenhum domínio bloqueado.",
+      "added": "bloqueado {when}"
+    },
+    "errors": {
+      "forbidden": "Só a moderação pode fazer isso.",
+      "invalid": "Valor inválido.",
+      "notFound": "Pergunta original não encontrada.",
+      "unknown": "Não deu certo. Tente de novo."
+    },
+    "types": {
+      "project": "Projeto",
+      "question": "Pergunta",
+      "answer": "Resposta",
+      "comment": "Comentário",
+      "demo": "Demo",
+      "profile": "Perfil"
+    }
   }
 }

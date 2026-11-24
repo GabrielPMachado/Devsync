@@ -10,6 +10,8 @@ export type Viewer = {
   username: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  /** Papel admin e conta ativa (o banco confere de novo em cada ação de moderação). */
+  isAdmin: boolean;
 };
 
 /** Quem está logado neste pedido, com o perfil. null para visitantes ou sem Supabase. */
@@ -24,7 +26,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, display_name, avatar_url")
+    .select("username, display_name, avatar_url, role, suspended_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -34,5 +36,6 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     username: profile?.username ?? null,
     displayName: profile?.display_name ?? null,
     avatarUrl: profile?.avatar_url ?? null,
+    isAdmin: profile?.role === "admin" && !profile?.suspended_at,
   };
 });

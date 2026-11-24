@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth/viewer";
+import { checkTone } from "@/lib/moderation/tone";
 import { COMMENT_MAX, validateProject, type ProjectErrors, type ProjectInput } from "@/lib/projects/rules";
 import { createClient } from "@/lib/supabase/server";
 
@@ -67,12 +68,20 @@ export async function toggleLike(projectId: string, rawPath: string): Promise<{ 
   return { liked: !existing, count: data?.likes_count ?? 0 };
 }
 
-export async function addComment(projectId: string, body: string, parentId: string | null, rawPath: string): Promise<{ error?: "empty" | "tooLong" | "unknown" }> {
+/** toneWarning: pode soar ríspido. O formulário oferece revisar ou publicar assim mesmo (confirmTone). */
+export async function addComment(
+  projectId: string,
+  body: string,
+  parentId: string | null,
+  rawPath: string,
+  confirmTone = false,
+): Promise<{ error?: "empty" | "tooLong" | "unknown"; toneWarning?: true }> {
   const path = projectPath(rawPath);
   await requireViewer(path);
   const text = body.trim();
   if (!text) return { error: "empty" };
   if (text.length > COMMENT_MAX) return { error: "tooLong" };
+  if (!confirmTone && (await checkTone(text)).flagged) return { toneWarning: true };
   const supabase = await createClient();
   const { error } = await supabase.from("comments").insert({ target_type: "project", target_id: projectId, parent_id: parentId, body_md: text });
   if (error) return { error: "unknown" };
