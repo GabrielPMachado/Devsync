@@ -7,6 +7,7 @@ import { checkUsername, completeOnboarding, type OnboardingState, type UsernameS
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
+import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
 import { AVATAR_MAX_BYTES, MIN_TAGS } from "@/lib/auth/onboarding-rules";
 import { normalizeUsername } from "@/lib/auth/username";
@@ -112,8 +113,9 @@ export function OnboardingForm({ initialName, initialUsername, avatarUrl, tags }
 
       <fieldset className="flex flex-col gap-2.5">
         <legend className="mb-2.5 text-sm font-semibold text-text-secondary">{t("tagsTitle")}</legend>
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
+        <TagGroups
+          tags={tags}
+          renderTag={(tag) => (
             <TagToggle
               key={tag.slug}
               name={tag.slug}
@@ -121,8 +123,8 @@ export function OnboardingForm({ initialName, initialUsername, avatarUrl, tags }
               checked={chosen.includes(tag.slug)}
               onChange={(e) => setChosen((c) => (e.target.checked ? [...c, tag.slug] : c.filter((s) => s !== tag.slug)))}
             />
-          ))}
-        </div>
+          )}
+        />
         {chosen.map((slug) => (
           <input key={slug} type="hidden" name="tags" value={slug} />
         ))}

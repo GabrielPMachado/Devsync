@@ -609,5 +609,15 @@
       "demo": "Demo",
       "profile": "Perfil"
     }
+  },
+  "TagCategories": {
+    "linguagens": "Linguagens",
+    "frontend": "Front-end",
+    "backend": "Back-end e APIs",
+    "mobile": "Mobile",
+    "dados": "Bancos de dados",
+    "devops": "DevOps e nuvem",
+    "temas": "Temas gerais",
+    "outros": "Outros"
   }
 }
