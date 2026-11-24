@@ -300,6 +300,8 @@ begin
   revoke insert, update, delete on public.notifications from anon;
   revoke insert, update on public.notifications from authenticated;
   grant update (read_at) on public.notifications to authenticated;
+  revoke all on public.demo_builds from anon, authenticated;
+  grant select on public.demo_builds to authenticated;
   revoke all on public.user_badges from anon, authenticated;
   grant select on public.user_badges to anon, authenticated;
   revoke insert, update, delete on public.reports from anon;
