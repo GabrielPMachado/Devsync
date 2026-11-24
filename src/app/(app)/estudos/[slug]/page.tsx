@@ -175,7 +175,7 @@ async function Question({ params }: { params: Params }) {
         <AnswerForm action={postAnswer.bind(null, question.id, question.slug)} beginner={question.tags.includes("iniciante")} />
       ) : (
         <section className="flex flex-wrap items-center gap-3 rounded-xl border border-border-default bg-bg-surface p-5">
-          <p className="flex-1 text-sm text-text-secondary">{t("signInToAnswer")}</p>
+          <p className="min-w-0 flex-1 basis-56 text-sm text-text-secondary">{t("signInToAnswer")}</p>
           <Link href={signIn} className={buttonClasses()}>
             {t("signIn")}
           </Link>

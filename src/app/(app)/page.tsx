@@ -1,9 +1,9 @@
-import { CircleHelp, FolderGit2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Suspense } from "react";
 import { HomeHero } from "@/components/home-hero";
+import { FeedComposer } from "@/components/social/feed-composer";
 import { FeedList } from "@/components/social/feed-list";
 import { LoadMore } from "@/components/social/load-more";
 import { Unanswered, WhoToFollow } from "@/components/social/side-panels";
@@ -78,21 +78,11 @@ async function Feed({ viewer }: { viewer: Viewer }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-5">
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border-default bg-bg-surface p-4">
-          <p className="flex-1 text-sm text-text-muted">{t("composer", { name: viewer.displayName || viewer.username || "" })}</p>
-          <Link href="/projetos/novo" className={buttonClasses({ variant: "secondary", size: "sm" })}>
-            <FolderGit2 className="size-4" aria-hidden="true" />
-            {t("newProject")}
-          </Link>
-          <Link href="/estudos/perguntar" className={buttonClasses({ variant: "secondary", size: "sm" })}>
-            <CircleHelp className="size-4" aria-hidden="true" />
-            {t("newQuestion")}
-          </Link>
-        </div>
+        <FeedComposer name={viewer.displayName || viewer.username || ""} />
         <h1 className="sr-only">{t("title")}</h1>
         {items.length === 0 ? (
           <>
-            <p className="rounded-xl border border-dashed border-border-default px-4 py-10 text-center text-sm text-text-muted">{t("empty")}</p>
+            <p className="rounded-xl border border-dashed border-border-default px-4 py-10 text-center text-[15px] leading-relaxed text-text-secondary">{t("empty")}</p>
             <Suspense fallback={null}>
               <Latest />
             </Suspense>

@@ -15,6 +15,7 @@
   --color-ink-600: #334155;
   --color-ink-500: #475569;
   --color-ink-400: #64748B;
+  --color-ink-350: #8493A9;
   --color-ink-300: #94A3B8;
   --color-ink-200: #CBD5E1;
   --color-ink-100: #E2E8F0;
@@ -51,7 +52,7 @@
   --color-text-primary: #F8FAFC;
   --color-text-secondary: #CBD5E1;
   --color-text-muted: #94A3B8;
-  --color-text-subtle: #64748B;
+  --color-text-subtle: #8493A9;
   --color-text-on-brand: #FFFFFF;
   --color-text-link: #22D3EE;
   --color-brand-primary: #2563EB;
