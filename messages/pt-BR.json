@@ -678,5 +678,17 @@
     "accent_verde": "Verde",
     "accent_ambar": "Âmbar",
     "accent_rosa": "Rosa"
+  },
+  "ProfileHeader": {
+    "status": "Status: {status}",
+    "location": "Localização",
+    "links": "Links de {name}",
+    "link_github": "GitHub",
+    "link_linkedin": "LinkedIn",
+    "link_x": "X",
+    "link_youtube": "YouTube",
+    "link_site": "Site",
+    "followers": "{count, plural, =1 {# seguidor} other {# seguidores}}",
+    "following": "{count} seguindo"
   }
 }
