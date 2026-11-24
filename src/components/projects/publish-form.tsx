@@ -235,7 +235,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
       </Step>
 
       <Step n={2} title={t("demoStep")} help={t("demoStepHelp")}>
-        <fieldset className="grid gap-3 md:grid-cols-2">
+        <fieldset className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <legend className="sr-only">{t("demoKind")}</legend>
           <Option icon={<Upload className="size-[18px]" aria-hidden="true" />} title={t("uploadOption")} text={t("uploadOptionHelp")} checked={mode === "upload"} onChange={() => setMode("upload")} />
           <Option icon={<Link2 className="size-[18px]" aria-hidden="true" />} title={t("linkOption")} text={t("linkOptionHelp")} checked={mode === "link"} onChange={() => setMode("link")} />
@@ -351,7 +351,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
                   {t("linkBlockedTitle")}
                 </p>
                 <p className="text-sm text-text-secondary">{t("linkBlockedText")}</p>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-lg border border-border-default bg-bg-base p-4">
                     <p className="flex items-center gap-2 text-sm font-semibold text-text-primary">
                       <Shield className="size-4 text-icon-muted" aria-hidden="true" />
@@ -374,7 +374,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
       </Step>
 
       <Step n={3} title={t("linksStep")} help={t("linksStepHelp")}>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <TextField label={t("repoLabel")} type="url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/…" error={errors.repoUrl ? t("httpsError") : undefined} />
           <TextField label={t("siteLabel")} type="url" value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} placeholder="https://" error={errors.siteUrl ? t("httpsError") : undefined} />
         </div>
