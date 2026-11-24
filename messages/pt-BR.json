@@ -286,7 +286,8 @@
     "error_too_big": "O site compilado passa do limite de tamanho (60 MB, ou 25 MB compactado).",
     "error_upload_failed": "O site foi compilado, mas o envio para a Devsync falhou. Tente de novo.",
     "error_dispatch_failed": "Não deu para iniciar o build agora. Tente de novo em instantes.",
-    "error_internal": "Algo deu errado no build. Tente de novo."
+    "error_internal": "Algo deu errado no build. Tente de novo.",
+    "error_stalled": "O build parou de responder e foi encerrado. Tente de novo."
   },
   "Projects": {
     "metaTitle": "Projetos · Devsync",

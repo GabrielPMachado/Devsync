@@ -30,10 +30,7 @@ jobs:
           git clone --depth 1 --filter=blob:none --sparse "https://github.com/$DEVSYNC_REPO.git" "$RUNNER_TEMP/devsync"
           git -C "$RUNNER_TEMP/devsync" sparse-checkout set builder
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
+      # Sem actions de terceiros neste job (ele tem id-token: write): usa o Node que já vem no runner.
       - name: Compilar e enviar
         # Entradas só por variável de ambiente (nunca ${{ }} dentro do script).
         env:

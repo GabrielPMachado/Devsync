@@ -1,6 +1,6 @@
 import { defaultDeps, type Deps, type Env, type LinkMessage, type ZipMessage } from "./env";
 import { errorResponse, withCors } from "./http";
-import { buildProgress, receiveBuildZip, startBuild } from "./builds";
+import { buildProgress, failStaleBuilds, receiveBuildZip, startBuild } from "./builds";
 import { embedCheck, recheckLink, scheduleLinkChecks, verifyDemo } from "./links";
 import { processZip } from "./process-zip";
 import { parseDemoHost, serveDemo } from "./serve";
@@ -12,6 +12,8 @@ const UPLOAD_COMPLETE = new RegExp(`^/uploads/(${UUID})/complete$`);
 const DEMO_VERIFY = new RegExp(`^/demos/(${UUID})/verify$`);
 const BUILD_PROGRESS = new RegExp(`^/builds/(${UUID})/progress$`);
 const BUILD_ZIP = new RegExp(`^/builds/(${UUID})/zip$`);
+
+const LINK_CHECK_CRON = "0 6 * * *";
 
 /** Segundos que o cliente espera depois de passar do limite (o período do binding). */
 const RATE_LIMIT_PERIOD = 60;
@@ -74,5 +76,9 @@ export async function handleQueue(batch: MessageBatch<ZipMessage | LinkMessage>,
 export default {
   fetch: (req, env) => handleFetch(req, env, defaultDeps()),
   queue: (batch, env) => handleQueue(batch, env, defaultDeps()),
-  scheduled: (_controller, env, ctx) => ctx.waitUntil(scheduleLinkChecks(env, defaultDeps())),
+  scheduled: (controller, env, ctx) => {
+    // A cada 15 min: builds parados. Às 06:00 UTC: também a checagem diária dos links.
+    if (controller.cron === LINK_CHECK_CRON) ctx.waitUntil(scheduleLinkChecks(env, defaultDeps()));
+    ctx.waitUntil(failStaleBuilds(env, defaultDeps()));
+  },
 } satisfies ExportedHandler<Env, ZipMessage | LinkMessage>;

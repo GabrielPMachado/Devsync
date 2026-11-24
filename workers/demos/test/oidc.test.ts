@@ -48,6 +48,18 @@ describe("verifyActionsToken", () => {
     expect(await verifyActionsToken("", e, deps)).toBeNull();
   });
 
+  it("com BUILDER_REPO_ID, confere o id do repositório (nome reaproveitado não vale)", async () => {
+    const ee = { ...e, BUILDER_REPO_ID: "123" };
+    expect(await verifyActionsToken(await issuer.sign(claims(SEC, { repository_id: "123" })), ee, deps)).toEqual({ runId: 4242 });
+    expect(await verifyActionsToken(await issuer.sign(claims(SEC, { repository_id: "999" })), ee, deps)).toBeNull();
+  });
+
+  it("kid desconhecido recarrega as chaves no máximo uma vez por minuto", async () => {
+    await verifyActionsToken(await issuer.sign(claims(SEC)), e, deps);
+    for (let i = 0; i < 5; i++) await verifyActionsToken(await issuer.sign(claims(SEC), { kid: `x${i}` }), e, deps);
+    expect(jwks.calls).toHaveLength(2);
+  });
+
   it("sem BUILDER_REPO configurado recusa tudo", async () => {
     expect(await verifyActionsToken(await issuer.sign(claims(SEC)), { ...env, BUILDER_REPO: undefined }, deps)).toBeNull();
   });

@@ -48,7 +48,7 @@ type BuildState = { row: BuildRow | null; failure?: { error: string | null; log:
 /** Códigos de erro do build com texto próprio em DemoBuild (o resto vem de DemoReasons). */
 const BUILD_ERRORS = [
   "clone_failed", "no_package_json", "no_build_script", "install_failed", "install_timeout", "build_failed", "build_timeout",
-  "no_output", "next_server", "too_many_files", "too_big", "upload_failed", "dispatch_failed", "internal",
+  "no_output", "next_server", "too_many_files", "too_big", "upload_failed", "dispatch_failed", "stalled", "internal",
 ] as const;
 const isBuildError = (code: string | null): code is (typeof BUILD_ERRORS)[number] => (BUILD_ERRORS as readonly string[]).includes(code ?? "");
 type Errors = ProjectErrors & { zip?: string; link?: string; linkBlocked?: boolean; form?: string };

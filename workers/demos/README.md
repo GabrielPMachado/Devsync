@@ -40,7 +40,7 @@ Todas as rotas recebem `Authorization: Bearer <access token do Supabase>`. O Wor
 
 ### Build automático
 
-O site chama `POST /builds`; o Worker cria a demo como o usuário, grava `demo_builds` e dispara o workflow `build-demo.yml` de `BUILDER_REPO`. O run (ver [`builder/README.md`](../../builder/README.md)) avisa cada etapa e envia o zip com o **token OIDC do GitHub Actions** (audiência `devsync-builds`). O Worker confere a assinatura (chaves de `token.actions.githubusercontent.com`), o repositório, o workflow na `main` e o evento `workflow_dispatch`, e prende o build ao primeiro `run_id` que falar com ele. As rotas do run ficam fora do limite por IP. Falha marca a demo `unavailable` com `rejection_reason = 'build_failed'`; o resultado da validação do zip fecha o build (gatilho `demos_sync_build`).
+O site chama `POST /builds`; o Worker cria a demo como o usuário, grava `demo_builds` e dispara o workflow `build-demo.yml` de `BUILDER_REPO`. O run (ver [`builder/README.md`](../../builder/README.md)) avisa cada etapa e envia o zip com o **token OIDC do GitHub Actions** (audiência `devsync-builds`). O Worker confere a assinatura (chaves de `token.actions.githubusercontent.com`), o repositório, o workflow na `main` e o evento `workflow_dispatch`, e prende o build ao primeiro `run_id` que falar com ele. Com `BUILDER_REPO_ID`, confere também o id do repositório. Chave desconhecida recarrega as chaves do GitHub no máximo uma vez por minuto. Um cron a cada 15 min encerra builds sem notícia há 40 min (`stalled`). As rotas do run ficam fora do limite por IP. Falha marca a demo `unavailable` com `rejection_reason = 'build_failed'`; o resultado da validação do zip fecha o build (gatilho `demos_sync_build`).
 
 CORS liberado só para as origens de `FRAME_ANCESTORS` (padrão: `SITE_URL`).
 
@@ -86,6 +86,7 @@ O cron (`0 6 * * *`, 03:00 em São Paulo) enfileira os links `live` e `unavailab
 | `UPLOAD_SIGNING_SECRET` | segredo | `openssl rand -hex 32` |
 | `SAFE_BROWSING_API_KEY` | segredo (opcional) | chave grátis do Google Cloud |
 | `BUILDER_REPO` | segredo/var (opcional) | `GabrielPMachado/devsync-builds` |
+| `BUILDER_REPO_ID` | segredo/var (opcional, recomendado) | id numérico do `BUILDER_REPO` (`https://api.github.com/repos/<repo>` → `id`) |
 | `BUILDER_GITHUB_TOKEN` | segredo (opcional) | token fine-grained, só o `BUILDER_REPO`, Actions: write |
 
 Bindings: R2 `DEMOS_BUCKET` (`devsync-demos`), filas `demo-zips` e `demo-links`.

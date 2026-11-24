@@ -6,14 +6,22 @@ export const OIDC_AUDIENCE = "devsync-builds";
 export const BUILD_WORKFLOW = "build-demo.yml";
 
 const JWKS_TTL_MS = 60 * 60_000;
+/** Recarga forçada (kid desconhecido) no máximo uma vez por minuto: token de lixo não vira chamada ao GitHub. */
+const JWKS_REFRESH_MS = 60_000;
 let cache: { at: number; keys: (JsonWebKey & { kid?: string })[] } | null = null;
+let lastForced = -Infinity;
 
 export function resetJwksCache() {
   cache = null;
+  lastForced = -Infinity;
 }
 
 async function loadKeys(deps: Deps, force: boolean) {
-  if (!force && cache && deps.now() - cache.at < JWKS_TTL_MS) return cache.keys;
+  if (cache && !force && deps.now() - cache.at < JWKS_TTL_MS) return cache.keys;
+  if (cache && force) {
+    if (deps.now() - lastForced < JWKS_REFRESH_MS) return cache.keys;
+    lastForced = deps.now();
+  }
   const res = await deps.fetch(`${OIDC_ISSUER}/.well-known/jwks`);
   if (!res.ok) throw new Error(`JWKS do GitHub respondeu ${res.status}`);
   const body = (await res.json()) as { keys?: (JsonWebKey & { kid?: string })[] };
@@ -67,6 +75,8 @@ export async function verifyActionsToken(token: string, env: Env, deps: Deps): P
   if (typeof claims.exp !== "number" || claims.exp <= now) return null;
   if (typeof claims.nbf === "number" && claims.nbf > now + 60) return null;
   if (String(claims.repository).toLowerCase() !== repo) return null;
+  // Se o repositório de builds for apagado ou renomeado, outra conta pode registrar o mesmo nome.
+  if (env.BUILDER_REPO_ID && String(claims.repository_id) !== env.BUILDER_REPO_ID) return null;
   if (String(claims.workflow_ref).toLowerCase() !== `${repo}/.github/workflows/${BUILD_WORKFLOW}@refs/heads/main`) return null;
   if (claims.event_name !== "workflow_dispatch") return null;
   const runId = Number(claims.run_id);

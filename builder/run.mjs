@@ -1,8 +1,9 @@
 // Compila a demo de um repositório público e envia ao serviço de demos da Devsync.
 // Roda no runner do GitHub Actions (workflow build-demo.yml). O código do autor só
 // roda dentro de um container Docker sem segredos: o token OIDC fica aqui fora.
+import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { collectFiles, findOutput, MAX_ZIP_BYTES, planBuild, tailLog, validateInputs } from "./lib.mjs";
 
@@ -15,6 +16,18 @@ const AUDIENCE = "devsync-builds";
 const inputs = validateInputs(process.env);
 if (!inputs) {
   console.error("Entradas inválidas");
+  // Com o ID e o endereço válidos, ainda dá para encerrar o build (senão ele fica parado).
+  const partial = validateInputs({ ...process.env, REPO: "x/x", REF: "main" });
+  if (partial) {
+    const tok = await oidcToken().catch(() => null);
+    if (tok) {
+      await fetch(`${partial.api}/builds/${partial.buildId}/progress`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${tok}`, "content-type": "application/json" },
+        body: JSON.stringify({ stage: "failed", error: "invalid_input" }),
+      }).catch(() => {});
+    }
+  }
   process.exit(1);
 }
 const work = process.env.RUNNER_TEMP ?? "/tmp";
@@ -113,6 +126,8 @@ function inContainer(script, env, timeoutMs) {
 }
 
 async function main() {
+  // A saída do build é de terceiros: o runner não pode interpretar linhas "::comando::" dela.
+  console.log(`::stop-commands::${randomUUID()}`);
   await report("cloning");
   const clone = await run("git", [
     "-c", "core.hooksPath=/dev/null", "-c", "protocol.file.allow=never",
@@ -154,7 +169,9 @@ async function main() {
   console.log(`Saída: ${out} (${files.files.length} arquivos, ${files.bytes} bytes)`);
 
   await report("uploading");
-  const zip = spawn("zip", ["-q", "-X", "-D", zipPath, "-@"], { cwd: outDir, env: cleanEnv, stdio: ["pipe", "inherit", "inherit"] });
+  if (realpathSync(outDir) !== join(realpathSync(src), out)) throw new BuildError("no_output");
+  // -y: link entra como link (e o serviço de demos recusa), nunca como o arquivo de fora.
+  const zip = spawn("zip", ["-q", "-X", "-D", "-y", zipPath, "-@"], { cwd: outDir, env: cleanEnv, stdio: ["pipe", "inherit", "inherit"] });
   zip.stdin.end(files.files.join("\n") + "\n");
   const zipCode = await new Promise((r) => zip.on("close", r));
   if (zipCode !== 0) throw new BuildError("internal", "zip falhou");

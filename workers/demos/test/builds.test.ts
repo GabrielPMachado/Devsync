@@ -1,6 +1,6 @@
 import { env } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
-import { buildProgress, receiveBuildZip, startBuild } from "../src/builds";
+import { buildProgress, failStaleBuilds, receiveBuildZip, startBuild } from "../src/builds";
 import { resetJwksCache } from "../src/oidc";
 import { zipKey } from "../src/uploads";
 import { fakeFetch, makeZip, SITE, type Call } from "./helpers";
@@ -124,6 +124,12 @@ describe("POST /builds", () => {
     expect(demo).toMatchObject({ status: "unavailable", rejection_reason: "build_failed" });
   });
 
+  it("branch padrão com nome que o compilador não aceita é 400", async () => {
+    repoInfo = { status: 200, body: { full_name: "ana/x", private: false, size: 10, default_branch: "feat+x" } };
+    expect((await start({ repo: "ana/x" })).status).toBe(400);
+    expect(net.calls.some((c) => c.url.endsWith("/rest/v1/demos"))).toBe(false);
+  });
+
   it("sem configuração do build é 503", async () => {
     const res = await startBuild(
       new Request("https://demos.test/builds", { method: "POST", headers: { authorization: "Bearer jwt-ana" }, body: "{}" }),
@@ -240,8 +246,45 @@ describe("PUT /builds/:id/zip", () => {
     expect((await put(zip)).status).toBe(403);
   });
 
+  it("reenvio depois de o zip já estar gravado segue a validação", async () => {
+    await env.DEMOS_BUCKET.put(zipKey(DEMO, 1), zip);
+    build!.stage = "uploading";
+    const sent: unknown[] = [];
+    const ee = { ...e, ZIP_QUEUE: { send: async (m: unknown) => void sent.push(m) } as unknown as Queue };
+    const res = await receiveBuildZip(
+      new Request(`https://demos.test/builds/${BUILD}/zip`, {
+        method: "PUT",
+        headers: { ...(await runnerHeaders()), "content-length": String(zip.length) },
+        body: zip,
+      }),
+      ee, BUILD, deps,
+    );
+    expect(res.status).toBe(202);
+    expect(sent).toEqual([{ demoId: DEMO, version: 1 }]);
+  });
+
   it("demo que já saiu de pendente é 409", async () => {
     demo!.status = "live";
     expect((await put(zip)).status).toBe(409);
+  });
+});
+
+describe("failStaleBuilds", () => {
+  it("encerra builds parados há mais de 40 minutos", async () => {
+    const stale = [{ id: BUILD, demo_id: DEMO }];
+    const f = fakeFetch((c: Call) => {
+      if (c.method === "GET") return Response.json(stale);
+      return new Response(null, { status: 204 });
+    });
+    await failStaleBuilds(e, { fetch: f.fetch, now: () => NOW });
+    const get = f.calls.find((c) => c.method === "GET")!;
+    const q = new URL(get.url).searchParams;
+    expect(q.get("stage")).toBe("not.in.(ready,failed)");
+    expect(q.get("updated_at")).toBe(`lt.${new Date(NOW - 40 * 60_000).toISOString()}`);
+    const patches = f.calls.filter((c) => c.method === "PATCH").map((c) => [new URL(c.url).pathname, JSON.parse(c.body!)]);
+    expect(patches).toEqual([
+      ["/rest/v1/demo_builds", { stage: "failed", error: "stalled" }],
+      ["/rest/v1/demos", { status: "unavailable", rejection_reason: "build_failed" }],
+    ]);
   });
 });

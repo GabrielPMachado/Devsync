@@ -24,8 +24,8 @@
       { "queue": "demo-links", "max_batch_size": 5, "max_retries": 2 }
     ]
   },
-  // Checagem diária dos links de demo (06:00 UTC = 03:00 em São Paulo).
-  "triggers": { "crons": ["0 6 * * *"] },
+  // Checagem diária dos links de demo (06:00 UTC = 03:00 em São Paulo) e, a cada 15 min, builds parados.
+  "triggers": { "crons": ["0 6 * * *", "*/15 * * * *"] },
 
   // Produção (lançamento). Publicada pelo workflow .github/workflows/deploy-demos.yml,
   // que troca DOMINIO_DAS_DEMOS pelo domínio comprado (variável DEMOS_DOMAIN do GitHub).
@@ -59,7 +59,7 @@
       },
       // 30 chamadas da API por minuto por IP (envio, checagem de link, verificação).
       "ratelimits": [{ "name": "API_LIMITER", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }],
-      "triggers": { "crons": ["0 6 * * *"] },
+      "triggers": { "crons": ["0 6 * * *", "*/15 * * * *"] },
       "observability": { "enabled": true }
     }
   }

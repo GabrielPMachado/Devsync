@@ -46,3 +46,10 @@ Data: 2026-11-24. Pedido: projetos importados do GitHub que precisam de build (R
 - Consulta a cada 2 s em vez de Realtime.
 - Next sem export estático: erro `next_server` com instrução de adicionar `output: 'export'`.
 - Bun: tratado como npm.
+
+## Ajustes da revisão de código
+- Cron a cada 15 min no Worker encerra builds sem notícia há 40 min (`stalled`); run com entradas inválidas ainda avisa `invalid_input`.
+- Branch padrão também passa pela regex; recarga forçada das chaves do GitHub limitada a 1 por minuto; `BUILDER_REPO_ID` opcional prende o token ao id do repositório.
+- Reenvio do zip depois de resposta perdida segue a validação em vez de falhar.
+- Pasta de saída só dentro do projeto (sem link no caminho), `zip -y`, `::stop-commands::` antes do build, sem actions de terceiros no job.
+- `public`/`docs` deixam de ser pastas de saída genéricas (só Gatsby); `packageManager` do package.json manda mais que o lockfile.

@@ -63,6 +63,17 @@ describe("planBuild", () => {
     });
   });
 
+  it("o campo packageManager manda mais que o lockfile", () => {
+    const pkg = { packageManager: "yarn@4.5.0", scripts: { build: "tsc" } };
+    expect(planBuild(pkg, files(["pnpm-lock.yaml"]))).toMatchObject({ packageManager: "yarn", install: "corepack yarn install" });
+    expect(planBuild({ ...pkg, packageManager: "pnpm@9.1.0" }, files(["yarn.lock"]))).toMatchObject({ packageManager: "pnpm" });
+  });
+
+  it("public só vale para Gatsby (em outros é a pasta de modelos)", () => {
+    expect(planBuild({ scripts: { build: "react-scripts build" }, dependencies: { "react-scripts": "5" } }, files([])).outputs).not.toContain("public");
+    expect(planBuild({ scripts: { build: "gatsby build" }, dependencies: { gatsby: "5" } }, files([])).outputs).toContain("public");
+  });
+
   it("CRA usa a pasta build e PUBLIC_URL na raiz", () => {
     const plan = planBuild({ scripts: { build: "react-scripts build" }, dependencies: { "react-scripts": "5" } }, files([]));
     expect(plan).toMatchObject({ framework: "create-react-app", env: { PUBLIC_URL: "/" } });
@@ -80,6 +91,15 @@ describe("findOutput", () => {
   it("acha a primeira pasta com index.html, inclusive um nível abaixo (Angular)", () => {
     const root = tree({ "public/index.html": "x", "dist/app/browser/index.html": "x" });
     expect(findOutput(root, ["dist", "build", "public"])).toBe("dist/app/browser");
+  });
+
+  it("ignora pasta de saída que é link para fora do projeto", () => {
+    const fora = tree({ "index.html": "segredo" });
+    const root = tree({ "src/x.js": "1" });
+    symlinkSync(fora, join(root, "dist"));
+    mkdirSync(join(root, "build"));
+    symlinkSync(fora, join(root, "build", "app"));
+    expect(findOutput(root, ["dist", "build"])).toBeNull();
     expect(findOutput(tree({ "build/index.html": "x" }), ["dist", "build"])).toBe("build");
     expect(findOutput(tree({ "src/index.html": "x" }), ["dist", "build"])).toBeNull();
   });

@@ -1,6 +1,6 @@
 // Funções puras do compilador de demos (sem dependências: roda com o Node do runner).
 // Design: docs/superpowers/specs/2026-11-24-devsync-build-de-demos-design.md
-import { lstatSync, readdirSync } from "node:fs";
+import { lstatSync, readdirSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 
 /** Mesmos limites do serviço de demos (workers/demos/src/zip.ts). */
@@ -36,7 +36,8 @@ export function validateInputs(env) {
   return { buildId, repo, ref, api };
 }
 
-const GENERIC_OUTPUTS = ["dist", "build", "out", ".output/public", "public", "docs", "www"];
+// `public` e `docs` costumam ser modelos/fonte (CRA, Vite): só entram pelo framework (Gatsby).
+const GENERIC_OUTPUTS = ["dist", "build", "out", ".output/public"];
 
 const FRAMEWORKS = [
   { dep: "next", name: "next", outputs: ["out"] },
@@ -59,9 +60,11 @@ export function planBuild(pkg, has) {
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const fw = FRAMEWORKS.find((f) => f.dep in deps);
 
-  let packageManager = "npm";
-  if (has("pnpm-lock.yaml")) packageManager = "pnpm";
-  else if (has("yarn.lock")) packageManager = "yarn";
+  // O campo packageManager manda (o corepack recusa outro gerenciador); senão, o lockfile.
+  const declared = /^(npm|pnpm|yarn)@/.exec(typeof pkg.packageManager === "string" ? pkg.packageManager : "")?.[1];
+  let packageManager = declared ?? "npm";
+  if (!declared && has("pnpm-lock.yaml")) packageManager = "pnpm";
+  else if (!declared && has("yarn.lock")) packageManager = "yarn";
 
   const install = {
     npm: has("package-lock.json") ? "npm ci --no-audit --no-fund || npm install --no-audit --no-fund" : "npm install --no-audit --no-fund",
@@ -95,14 +98,24 @@ const hasIndex = (p) => {
 
 /** Primeira pasta de saída com index.html (ela, um nível abaixo, ou <sub>/browser como no Angular). */
 export function findOutput(root, candidates) {
+  const base = realpathSync(root) + "/";
+  // Nada de link no caminho: a pasta tem de estar de verdade dentro do projeto.
+  const inside = (rel) => {
+    try {
+      return realpathSync(join(root, rel)) + "/" === base + rel + "/";
+    } catch {
+      return false;
+    }
+  };
   for (const c of candidates) {
     const dir = join(root, c);
     if (!isDir(dir)) continue;
+    if (!inside(c)) continue;
     if (hasIndex(dir)) return c;
     for (const sub of readdirSync(dir).sort()) {
       if (!isDir(join(dir, sub))) continue;
       if (hasIndex(join(dir, sub))) return `${c}/${sub}`;
-      if (hasIndex(join(dir, sub, "browser"))) return `${c}/${sub}/browser`;
+      if (inside(`${c}/${sub}/browser`) && hasIndex(join(dir, sub, "browser"))) return `${c}/${sub}/browser`;
     }
   }
   return null;

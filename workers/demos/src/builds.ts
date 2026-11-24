@@ -62,6 +62,7 @@ export async function startBuild(req: Request, env: Env, deps: Deps): Promise<Re
   if (data.private) return errorResponse(400, "Só repositórios públicos podem ser compilados");
   if (data.size > MAX_REPO_KB) return errorResponse(413, "O repositório passa de 200 MB");
   const ref = (wanted as string | null) ?? data.default_branch;
+  if (!REF.test(ref) || ref.includes("..")) return errorResponse(400, "O nome da branch padrão não é aceito pelo build");
 
   const demo = await insertUploadDemo(env, auth.token, deps);
   if (demo instanceof Response) return demo;
@@ -151,8 +152,21 @@ export async function receiveBuildZip(req: Request, env: Env, buildId: string, d
     httpMetadata: { contentType: "application/zip" },
     onlyIf: { etagDoesNotMatch: "*" },
   });
-  if (!saved) return errorResponse(409, "Este envio já foi feito");
+  // Já gravado: é o mesmo run tentando de novo depois de uma resposta perdida. Segue.
+  if (!saved && build.stage !== "uploading") return errorResponse(409, "Este envio já foi feito");
   await db.update("demo_builds", `id=eq.${buildId}`, { stage: "validating" });
   await env.ZIP_QUEUE.send({ demoId: build.demo_id, version: demo.version });
   return json({ status: "validating" }, 202);
+}
+
+/** Build sem notícia há 40 min (run cancelado, dispatch perdido, fila que falhou): encerra. */
+export const STALE_BUILD_MS = 40 * 60_000;
+
+export async function failStaleBuilds(env: Env, deps: Deps): Promise<void> {
+  const before = new Date(deps.now() - STALE_BUILD_MS).toISOString();
+  const rows = await serviceRest(env, deps.fetch).select<{ id: string; demo_id: string }>(
+    "demo_builds",
+    `stage=not.in.(ready,failed)&updated_at=lt.${before}&select=id,demo_id&limit=200`,
+  );
+  for (const row of rows) await failBuild(env, deps, row, { error: "stalled" });
 }
