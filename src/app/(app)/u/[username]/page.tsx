@@ -4,6 +4,8 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { AchievementsBlock } from "@/components/badges/achievements-block";
+import { ProfileBadges } from "@/components/badges/profile-badges";
 import { GithubIcon } from "@/components/icons/github";
 import { ReportButton } from "@/components/moderation/report-button";
 import { ProjectCard } from "@/components/projects/project-card";
@@ -69,7 +71,10 @@ async function Profile({ params, searchParams }: { params: Params; searchParams:
       <div className="-mt-14 flex flex-col gap-4 px-2 md:-mt-16 md:flex-row md:items-end md:gap-6 md:px-6">
         <Avatar name={name} src={profile.avatarUrl} size="lg" className="size-24 border-4 border-bg-base text-3xl md:size-28" />
         <div className="flex min-w-0 flex-1 flex-col gap-1 md:pb-1">
-          <h1 className="font-display text-2xl font-bold text-text-primary md:text-3xl">{name}</h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className="font-display text-2xl font-bold text-text-primary md:text-3xl">{name}</h1>
+            <ProfileBadges badges={profile.shownBadges} name={name} />
+          </div>
           <p className="font-mono text-sm text-text-muted">@{profile.username}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:pb-1">
@@ -122,6 +127,7 @@ async function Profile({ params, searchParams }: { params: Params; searchParams:
             ))}
           </div>
         ) : null}
+        <AchievementsBlock badges={profile.badges} />
       </div>
 
       <ProfileTabs base={base} active={tab} counts={{ projetos: stats.projects, perguntas: stats.questions, respostas: stats.answers }} />

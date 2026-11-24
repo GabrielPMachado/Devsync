@@ -5,6 +5,8 @@
  * Nomes e "como ganhar" ficam em messages/*.json, no grupo "Badges".
  */
 
+import { FRAMES } from "./profile-style";
+
 export const BADGE_KEYS = ["founder", "first_project", "builder", "curious", "first_accepted", "mentor", "popular"] as const;
 export type BadgeKey = (typeof BADGE_KEYS)[number];
 
@@ -13,12 +15,10 @@ export type EarnedBadge = { badge: BadgeKey; awardedAt: string };
 /** Quantas insígnias aparecem ao lado do nome. */
 export const SHOWN_BADGES_MAX = 3;
 
-/** Bordas liberadas por conquista. As outras são livres para todos. */
-export const FRAME_UNLOCKS: Readonly<Record<string, BadgeKey>> = {
-  neon: "mentor",
-  colchetes: "builder",
-  dourada: "founder",
-};
+/** Bordas liberadas por conquista (vem de FRAMES, em profile-style.ts). As outras são livres para todos. */
+export const FRAME_UNLOCKS: Readonly<Record<string, BadgeKey>> = Object.fromEntries(
+  FRAMES.filter((f) => f.requiresBadge).map((f) => [f.key, f.requiresBadge as BadgeKey]),
+);
 
 export function isBadgeKey(value: string): value is BadgeKey {
   return (BADGE_KEYS as readonly string[]).includes(value);
@@ -42,4 +42,14 @@ export function frameRequiredBadge(frame: string | null | undefined): BadgeKey |
 export function frameLocked(frame: string | null | undefined, earned: readonly string[]): boolean {
   const needed = frameRequiredBadge(frame);
   return needed !== null && !earned.includes(needed);
+}
+
+/** Insígnias do perfil: as exibidas só valem se conquistadas (o banco já garante; aqui só filtra lixo). */
+export function toBadges(shown: unknown, earned: unknown): { shownBadges: BadgeKey[]; badges: EarnedBadge[] } {
+  const badges = ((Array.isArray(earned) ? earned : []) as { badge: string; awarded_at: string }[])
+    .filter((b) => isBadgeKey(b.badge))
+    .map((b) => ({ badge: b.badge as BadgeKey, awardedAt: b.awarded_at }));
+  const has = new Set(badges.map((b) => b.badge));
+  const shownBadges = ((Array.isArray(shown) ? shown : []) as string[]).filter((b): b is BadgeKey => isBadgeKey(b) && has.has(b)).slice(0, 3);
+  return { shownBadges, badges };
 }

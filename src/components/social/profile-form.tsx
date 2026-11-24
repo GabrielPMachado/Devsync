@@ -4,16 +4,26 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { saveProfile, type SaveProfileState } from "@/app/(app)/configuracoes/actions";
+import { BadgesSection } from "@/components/badges/badges-section";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
 import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
+import type { BadgeKey } from "@/lib/social/badges";
 import { BIO_MAX, NAME_MAX, PROFILE_TAGS_MAX, type ProfileInput } from "@/lib/social/profile-rules";
 
-type Props = { initial: ProfileInput; username: string; tags: { slug: string; name: string }[] };
+type Props = {
+  initial: ProfileInput;
+  username: string;
+  tags: { slug: string; name: string }[];
+  /** Insígnias conquistadas e as exibidas hoje. Sem earnedBadges, a seção não aparece. */
+  earnedBadges?: readonly BadgeKey[];
+  shownBadges?: readonly string[];
+};
 
 /** Editar perfil: nome, bio, links e tecnologias. */
-export function ProfileForm({ initial, username, tags }: Props) {
+export function ProfileForm({ initial, username, tags, earnedBadges, shownBadges = [] }: Props) {
+  const tb = useTranslations("Badges");
   const t = useTranslations("Settings");
   const [state, action, pending] = useActionState<SaveProfileState, FormData>(saveProfile, {});
   const values = state.values ?? initial;
@@ -74,9 +84,15 @@ export function ProfileForm({ initial, username, tags }: Props) {
       {(["headline", "location", "status", "linkedin", "x", "youtube", "bannerPreset", "avatarFrame", "accent"] as const).map((k) => (
         <input key={k} type="hidden" name={k} value={values[k]} />
       ))}
+      {earnedBadges ? (
+        <>
+          <input type="hidden" name="shownBadgesSet" value="1" />
+          <BadgesSection earned={earnedBadges} initial={shownBadges} />
+        </>
+      ) : null}
       {state.error ? (
         <p role="alert" className="text-sm text-status-danger-text">
-          {t("error")}
+          {state.error === "badges" ? tb("notEarned") : state.error === "frame" ? tb("frameNotUnlocked") : t("error")}
         </p>
       ) : null}
       <div className="flex justify-end gap-2">

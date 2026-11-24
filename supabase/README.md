@@ -61,6 +61,8 @@ supabase db push
 | `DS001` | Limite de 5 envios de demo por dia |
 | `DS002` | Envio de demo sem e-mail confirmado |
 | `DS003` | Mais de 5 tags numa pergunta ou projeto |
+| `DS004` | Exibir insígnia não conquistada (ou repetida) em `shown_badges` |
+| `DS005` | Usar borda de avatar ainda bloqueada (`neon`, `colchetes`, `dourada`) |
 | `42501` | Sem permissão (RLS, coluna protegida, usuário suspenso) |
 
 ## O que fica para outros subprojetos

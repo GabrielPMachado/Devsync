@@ -38,7 +38,7 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
       {shown.map((b) => (
         <input key={b} type="hidden" name={name} value={b} />
       ))}
-      <ul className="grid gap-2 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {BADGE_KEYS.map((b) => {
           const has = earned.includes(b);
           const on = shown.includes(b);

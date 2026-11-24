@@ -30,3 +30,21 @@ describe("catálogo de insígnias", () => {
     expect(frameLocked(null, [])).toBe(false);
   });
 });
+
+describe("bordas por conquista", () => {
+  it("as três bordas bloqueadas vêm do catálogo de aparência", () => {
+    expect(FRAME_UNLOCKS).toEqual({ neon: "mentor", colchetes: "builder", dourada: "founder" });
+  });
+});
+
+describe("toBadges", () => {
+  it("lê as linhas do banco e só deixa exibir o que foi conquistado", async () => {
+    const { toBadges } = await import("./badges");
+    const r = toBadges(["mentor", "curious", "x"], [
+      { badge: "curious", awarded_at: "2026-11-24T10:00:00Z" },
+      { badge: "velha", awarded_at: "2026-11-24T10:00:00Z" },
+    ]);
+    expect(r).toEqual({ shownBadges: ["curious"], badges: [{ badge: "curious", awardedAt: "2026-11-24T10:00:00Z" }] });
+    expect(toBadges(null, null)).toEqual({ shownBadges: [], badges: [] });
+  });
+});

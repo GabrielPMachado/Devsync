@@ -36,6 +36,8 @@ async function Form() {
     <ProfileForm
       username={profile.username}
       tags={tags}
+      earnedBadges={profile.badges.map((b) => b.badge)}
+      shownBadges={profile.shownBadges}
       initial={{
         displayName: profile.displayName ?? "",
         bio: profile.bio ?? "",

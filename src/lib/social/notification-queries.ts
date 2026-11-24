@@ -30,14 +30,14 @@ export async function loadNotifications(viewerId: string, tab: string): Promise<
   if (!supabase) return [];
   let query = supabase
     .from("notifications")
-    .select("id, type, target_type, target_id, read_at, created_at, actor:profiles!notifications_actor_id_fkey(id, username, display_name, avatar_url)")
+    .select("id, type, target_type, target_id, read_at, created_at, badge, actor:profiles!notifications_actor_id_fkey(id, username, display_name, avatar_url)")
     .eq("recipient_id", viewerId);
   const types = filterFor(tab);
   if (types) query = query.in("type", types);
   const { data, error } = await query.order("created_at", { ascending: false }).limit(LIMIT);
   if (error) throw new Error(`Falha ao ler as notificações: ${error.message}`);
 
-  type R = { id: string; type: NotificationRow["type"]; target_type: NotificationTarget; target_id: string; read_at: string | null; created_at: string; actor: ActorRow };
+  type R = { id: string; type: NotificationRow["type"]; target_type: NotificationTarget; target_id: string; read_at: string | null; created_at: string; badge: string | null; actor: ActorRow };
   const rows: NotificationRow[] = ((data ?? []) as unknown as R[]).map((r) => ({
     id: r.id,
     type: r.type,
@@ -46,10 +46,15 @@ export async function loadNotifications(viewerId: string, tab: string): Promise<
     targetId: r.target_id,
     readAt: r.read_at,
     createdAt: r.created_at,
+    badge: r.badge,
   }));
   const groups = groupNotifications(rows);
   const targets = await resolveTargets(groups);
-  return groups.map((g) => ({ ...g, target: targets.get(`${g.targetType}:${g.targetId}`) ?? null }));
+  // Insígnia: o "título" é a chave (a tela traduz) e o link leva à seção de insígnias.
+  return groups.map((g) => ({
+    ...g,
+    target: g.type === "badge" ? (g.badge ? { title: g.badge, href: "/configuracoes#insignias", quote: null } : null) : (targets.get(`${g.targetType}:${g.targetId}`) ?? null),
+  }));
 }
 
 /** Busca títulos e endereços dos alvos, em poucas consultas (uma por tipo de alvo). */
