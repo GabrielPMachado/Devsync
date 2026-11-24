@@ -21,11 +21,11 @@ describe("profile-images", () => {
     expect(imagePath("u1", "banner", 42)).toBe("u1/banner-42.webp");
   });
 
-  it("upload usa caminho fixo, upsert e devolve URL com ?v=", async () => {
+  it("upload usa nome novo, sem upsert, e devolve URL com ?v=", async () => {
     const { client, upload, from } = fakeSupabase("https://x.supabase.co");
     const url = await uploadProfileImage(client, "u1", "banner", webp, 42);
     expect(from).toHaveBeenCalledWith("banners");
-    expect(upload).toHaveBeenCalledWith("u1/banner-42.webp", webp, expect.objectContaining({ upsert: true, contentType: "image/webp" }));
+    expect(upload).toHaveBeenCalledWith("u1/banner-42.webp", webp, expect.objectContaining({ upsert: false, contentType: "image/webp" }));
     expect(url).toBe("https://x.supabase.co/storage/v1/object/public/banners/u1/banner-42.webp?v=42");
   });
 

@@ -18,8 +18,9 @@ export function imagePath(userId: string, kind: CropKind, stamp: number): string
 export async function uploadProfileImage(supabase: SupabaseClient, userId: string, kind: CropKind, blob: Blob, now = Date.now()): Promise<string> {
   const bucket = supabase.storage.from(IMAGE_BUCKET[kind]);
   const path = imagePath(userId, kind, now);
+  // Nome novo a cada envio: sem upsert (que exigiria permissão de leitura e troca).
   // O caminho é sempre .webp; se o navegador só gerou JPEG, o contentType diz a verdade.
-  const { error } = await bucket.upload(path, blob, { upsert: true, contentType: blob.type, cacheControl: "3600" });
+  const { error } = await bucket.upload(path, blob, { upsert: false, contentType: blob.type, cacheControl: "3600" });
   if (error) throw new Error("upload-failed");
   return `${bucket.getPublicUrl(path).data.publicUrl}?v=${now}`;
 }

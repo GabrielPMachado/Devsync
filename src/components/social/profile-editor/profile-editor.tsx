@@ -79,6 +79,16 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
     onChange: (ev: { target: { value: string } }) => set(key, ev.target.value),
   });
 
+  // A barra Salvar fica presa embaixo: a rolagem (foco pelo teclado incluso)
+  // deixa espaço para ela não cobrir o campo em foco.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.scrollPaddingBottom = "10rem";
+    return () => {
+      root.style.scrollPaddingBottom = "";
+    };
+  }, []);
+
   // Sair com mudanças não salvas pede confirmação do navegador.
   useEffect(() => {
     if (!dirty || busy) return;

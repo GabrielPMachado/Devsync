@@ -46,6 +46,15 @@ beforeEach(() => {
   preparePendingImages.mockReset();
 });
 
+describe("<ProfileEditor /> barra Salvar", () => {
+  it("a página rola deixando espaço para a barra fixa (o foco não some atrás dela)", () => {
+    const { unmount } = renderEditor();
+    expect(document.documentElement.style.scrollPaddingBottom).toBe("10rem");
+    unmount();
+    expect(document.documentElement.style.scrollPaddingBottom).toBe("");
+  });
+});
+
 describe("<ProfileEditor /> imagens", () => {
   it("a prévia mostra a imagem pendente e a removida some", () => {
     renderEditor();
