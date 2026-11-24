@@ -7,6 +7,7 @@ import { GithubIcon } from "@/components/icons/github";
 import { buttonClasses } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { githubUser } from "@/lib/social/profile-rules";
+import type { SiteLookup, SiteSource } from "@/lib/projects/github-demo";
 import { GithubError, importDraft, type GithubRepo, type ImportDraft, type RepoDetails } from "@/lib/projects/github";
 
 export type GithubServices = {
@@ -14,7 +15,12 @@ export type GithubServices = {
   user: string | null;
   listRepos: (user: string) => Promise<GithubRepo[]>;
   repoDetails: (repo: GithubRepo) => Promise<RepoDetails>;
+  findSiteSource: (repo: GithubRepo) => Promise<SiteLookup>;
+  buildDemoZip: (repo: GithubRepo, source: SiteSource) => Promise<File>;
 };
+
+/** O que acompanha o rascunho: o repo e, sem site publicado, onde estão os arquivos do site. */
+export type ImportExtra = { repo: GithubRepo; site: SiteLookup | null };
 
 type State =
   | { kind: "idle" }
@@ -23,7 +29,7 @@ type State =
   | { kind: "list"; user: string; repos: GithubRepo[] };
 
 /** Painel "Importar do GitHub" do formulário de publicar. */
-export function GithubImport({ services, tags, onImport }: { services: GithubServices; tags: string[]; onImport: (draft: ImportDraft) => void }) {
+export function GithubImport({ services, tags, onImport }: { services: GithubServices; tags: string[]; onImport: (draft: ImportDraft, extra: ImportExtra) => void }) {
   const t = useTranslations("GithubImport");
   const format = useFormatter();
   const [open, setOpen] = useState(false);
@@ -58,7 +64,11 @@ export function GithubImport({ services, tags, onImport }: { services: GithubSer
     setPickError(undefined);
     try {
       const details = await services.repoDetails(repo);
-      onImport(importDraft(repo, details, tags));
+      const draft = importDraft(repo, details, tags);
+      // Sem site publicado: os arquivos do repositório podem virar a demo.
+      // Se a busca pelos arquivos falhar, a importação segue sem eles.
+      const site = draft.demoLink ? null : await services.findSiteSource(repo).catch(() => null);
+      onImport(draft, { repo, site });
       setImported(repo.fullName);
       setOpen(false);
     } catch (e) {

@@ -35,3 +35,14 @@ Quase todo projeto já está no GitHub. Ao publicar, a pessoa escolhe um reposit
 ## Para quem implementa
 - Lógica pura em `src/lib/projects/github.ts` (fetch injetável, testes com Vitest).
 - Painel em `src/components/projects/github-import.tsx`; `PublishServices` ganha `github`.
+
+## Parte 2: demo a partir dos arquivos do repositório (2026-11-24)
+
+Pedido de Demonity depois de testar: "ele não puxou os arquivos do GitHub". Escolheu: os arquivos do repo viram a demo.
+
+- Quando o repo não tem homepage https, a importação procura um site pronto: branch `gh-pages` (raiz), senão na branch padrão as pastas `dist/`, `build/`, `docs/`, `out/` e por fim a raiz. Vale a primeira com `index.html`.
+- Se o `index.html` aponta para código que precisa compilar (`src="/src/main.tsx"` e afins), não serve: mensagem explicando (rodar o build e publicar em `gh-pages`, ou enviar o .zip da pasta `dist`).
+- No envio, o navegador baixa os arquivos (raw.githubusercontent.com, que libera CORS; o zip pronto do GitHub não libera), monta o .zip (fflate) e segue o fluxo de upload de hoje. O Worker não muda.
+- Só extensões aceitas pelo serviço de demos; ignora pastas/arquivos ocultos e `node_modules`. Limites: 500 arquivos, 60 MB somados; o zip final ainda passa pelo limite de 25 MB.
+- Custo extra: 1 a 2 pedidos à API (árvore de arquivos); os downloads não contam no limite da API.
+- Abordagens descartadas: Worker baixar o zip do repo (exige mudar e publicar o Worker, que nem está no ar); compilar o projeto (GitHub Actions/servidor de build) fica para o futuro.

@@ -8,7 +8,10 @@ import { buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
 import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
-import { GithubImport, type GithubServices } from "./github-import";
+import { GithubIcon } from "@/components/icons/github";
+import { GithubError, type GithubRepo } from "@/lib/projects/github";
+import type { SiteSource } from "@/lib/projects/github-demo";
+import { GithubImport, type GithubServices, type ImportExtra } from "./github-import";
 import type { PublishResult } from "@/app/(app)/projetos/actions";
 import { DemoServiceError, waitForDemo, type DemoRow, type DemoServiceOptions, type EmbedResult } from "@/lib/demos/client";
 import { EMBED_BLOCKED, reasonKey } from "@/lib/demos/reasons";
@@ -36,7 +39,7 @@ export type PublishServices = {
 };
 
 type Mode = "upload" | "link";
-type Phase = "idle" | "uploading" | "validating" | "checkingLink" | "publishing";
+type Phase = "idle" | "fetching" | "uploading" | "validating" | "checkingLink" | "publishing";
 type Errors = ProjectErrors & { zip?: string; link?: string; linkBlocked?: boolean; form?: string };
 
 function isRedirect(err: unknown) {
@@ -72,7 +75,19 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
   // Demo que veio da última importação: reimportar um repo sem site não deve herdá-la.
   const importedLink = useRef<string | null>(null);
 
-  function applyImport(d: ImportDraft) {
+  // Arquivos do repositório que viram a demo no envio (quando não há site publicado).
+  const [githubSite, setGithubSite] = useState<{ repo: GithubRepo; source: SiteSource } | null>(null);
+  const [siteNote, setSiteNote] = useState<"needs_build" | "none" | "too_big" | null>(null);
+  const g = useTranslations("GithubImport");
+
+  function applyImport(d: ImportDraft, extra?: ImportExtra) {
+    const site = extra?.site ?? null;
+    setGithubSite(site?.kind === "found" ? { repo: extra!.repo, source: site.source } : null);
+    setSiteNote(site && site.kind !== "found" ? site.kind : null);
+    if (site?.kind === "found") {
+      setMode("upload");
+      setFile(null);
+    }
     setTitle(d.title);
     setDescription(d.description);
     setChosen(d.tags);
@@ -101,8 +116,8 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
     const check = validateProject({ title, description, tags: chosen, repoUrl, siteUrl });
     const next: Errors = check.ok ? {} : { ...check.errors };
     if (mode === "upload") {
-      if (!file) next.zip = t("zipRequired");
-      else if (file.size > ZIP_MAX_BYTES) next.zip = reasons("too_large");
+      if (!file && !githubSite) next.zip = t("zipRequired");
+      else if (file && file.size > ZIP_MAX_BYTES) next.zip = reasons("too_large");
     } else if (!/^https:\/\/\S+$/.test(link.trim())) next.link = t("linkRequired");
     setErrors(next);
     if (!check.ok || Object.keys(next).length > 0) return;
@@ -113,15 +128,29 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
     const o: DemoServiceOptions = { base: services.base, token };
 
     try {
-      if (mode === "upload" && file) {
-        let demoId = created?.file === file ? created.demoId : null;
+      let zip = file;
+      if (mode === "upload" && !zip && githubSite && services.github) {
+        // Monta o .zip com os arquivos do repositório; depois segue como um zip escolhido.
+        setPhase("fetching");
+        zip = await services.github.buildDemoZip(githubSite.repo, githubSite.source);
+        if (zip.size > ZIP_MAX_BYTES) {
+          // Volta para o seletor de .zip, onde o erro aparece.
+          setGithubSite(null);
+          setPhase("idle");
+          return setErrors({ zip: reasons("too_large") });
+        }
+        setFile(zip);
+        setGithubSite(null);
+      }
+      if (mode === "upload" && zip) {
+        let demoId = created?.file === zip ? created.demoId : null;
         if (!demoId) {
           setPhase("uploading");
           const upload = await services.createUpload(o);
-          await services.putZip(upload.uploadUrl, file);
+          await services.putZip(upload.uploadUrl, zip);
           await services.completeUpload(o, upload.demoId);
           demoId = upload.demoId;
-          setCreated({ demoId, file });
+          setCreated({ demoId, file: zip });
         }
         setPhase("validating");
         const id = demoId;
@@ -161,7 +190,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
       // redirecionamento. Não é erro: o botão segue em "Publicando…" até a página trocar.
       if (isRedirect(err)) return;
       setPhase("idle");
-      setErrors({ form: err instanceof DemoServiceError ? err.message : t("unknown") });
+      setErrors({ form: err instanceof DemoServiceError ? err.message : err instanceof GithubError ? g("network") : t("unknown") });
     }
   }
 
@@ -211,25 +240,59 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
           <Option icon={<Upload className="size-[18px]" aria-hidden="true" />} title={t("uploadOption")} text={t("uploadOptionHelp")} checked={mode === "upload"} onChange={() => setMode("upload")} />
           <Option icon={<Link2 className="size-[18px]" aria-hidden="true" />} title={t("linkOption")} text={t("linkOptionHelp")} checked={mode === "link"} onChange={() => setMode("link")} />
         </fieldset>
+        {siteNote ? (
+          <p role="status" className="flex gap-2 rounded-md border border-status-warning/40 bg-status-warning-soft px-3 py-2 text-sm text-text-secondary">
+            <Info className="mt-0.5 size-4 shrink-0 text-status-warning" aria-hidden="true" />
+            {g(`site_${siteNote}`)}
+          </p>
+        ) : null}
 
         {mode === "upload" ? (
-          phase === "uploading" || phase === "validating" || (phase === "publishing" && file) ? (
+          phase === "fetching" || phase === "uploading" || phase === "validating" || (phase === "publishing" && file) ? (
             <div className="flex flex-col gap-3.5 rounded-lg border border-border-default bg-bg-base p-4" aria-live="polite">
               <div className="flex items-center gap-3">
                 <span className="rounded-md bg-brand-accent-soft p-2.5 text-brand-accent">
                   <Package className="size-5" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-text-primary">{file?.name}</p>
+                  <p className="truncate text-sm font-semibold text-text-primary">{file?.name ?? (githubSite ? `${githubSite.repo.name}.zip` : null)}</p>
                   <p className="text-xs text-text-muted">{file ? formatSize(file.size) : null}</p>
                 </div>
-                <span className="rounded-full border border-brand-accent/40 bg-brand-accent-soft px-2 py-0.5 text-xs font-semibold text-brand-accent">{t("validating")}</span>
+                <span className="rounded-full border border-brand-accent/40 bg-brand-accent-soft px-2 py-0.5 text-xs font-semibold text-brand-accent">{phase === "fetching" ? g("fetchingBadge") : t("validating")}</span>
               </div>
               <ul className="flex flex-col gap-2 text-sm">
-                <Progress done={phase !== "uploading"} active={phase === "uploading"} text={t("stepSent")} />
+                {phase === "fetching" ? <Progress done={false} active={phase === "fetching"} text={g("fetching")} /> : null}
+                <Progress done={phase !== "fetching" && phase !== "uploading"} active={phase === "uploading"} text={t("stepSent")} />
                 <Progress done={phase === "publishing"} active={phase === "validating"} text={t("stepChecking")} />
                 <Progress done={false} active={phase === "publishing"} text={t("stepPublishing")} />
               </ul>
+            </div>
+          ) : githubSite && !file ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-border-default bg-bg-base p-4">
+              <div className="flex items-center gap-3">
+                <span className="rounded-md bg-bg-muted p-2.5 text-text-primary">
+                  <GithubIcon className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-text-primary">{g("fromGithub")}</p>
+                  <p className="truncate text-xs text-text-muted">
+                    {g("fromGithubInfo", {
+                      repo: githubSite.repo.fullName,
+                      where:
+                        githubSite.source.ref === "gh-pages"
+                          ? g("ghPages")
+                          : githubSite.source.folder
+                            ? g("folder", { folder: githubSite.source.folder })
+                            : g("rootFolder"),
+                      count: githubSite.source.files.length,
+                    })}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-text-muted">{g("fromGithubHelp")}</p>
+              <button type="button" onClick={() => setGithubSite(null)} className={`${buttonClasses({ variant: "ghost", size: "sm" })} self-start`}>
+                {g("useZipInstead")}
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -258,6 +321,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
                 aria-label={t("zipLabel")}
                 onChange={(e) => {
                   setFile(e.target.files?.[0] ?? null);
+                  setSiteNote(null);
                   setErrors((er) => ({ ...er, zip: undefined }));
                 }}
               />

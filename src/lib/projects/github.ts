@@ -38,7 +38,7 @@ export class GithubError extends Error {
 
 const USER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 
-async function call(url: string, fetchFn: FetchFn, accept = "application/vnd.github+json"): Promise<Response> {
+export async function call(url: string, fetchFn: FetchFn, accept = "application/vnd.github+json"): Promise<Response> {
   let r: Response;
   try {
     r = await fetchFn(url, { headers: { Accept: accept } });
