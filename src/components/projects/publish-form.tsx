@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
+import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
 import type { PublishResult } from "@/app/(app)/projetos/actions";
 import { DemoServiceError, waitForDemo, type DemoRow, type DemoServiceOptions, type EmbedResult } from "@/lib/demos/client";
@@ -170,10 +171,11 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
         </div>
         <fieldset className="flex flex-col gap-2.5">
           <legend className="mb-2.5 text-sm font-semibold text-text-secondary">{t("tagsLabel")}</legend>
-          <div className="flex max-h-44 flex-wrap gap-2 overflow-y-auto">
-            {tags.map((tag) => (
-              <TagToggle key={tag.slug} name={tag.slug} checked={chosen.includes(tag.slug)} onChange={() => toggleTag(tag.slug)} />
-            ))}
+          <div className="max-h-72 overflow-y-auto pr-1">
+            <TagGroups
+              tags={tags}
+              renderTag={(tag) => <TagToggle key={tag.slug} name={tag.slug} checked={chosen.includes(tag.slug)} onChange={() => toggleTag(tag.slug)} />}
+            />
           </div>
           <p className={`text-xs ${tagError ? "text-status-danger-text" : "text-text-muted"}`} aria-live="polite">
             {tagError ?? t("tagsHelp")}

@@ -6,6 +6,7 @@ import { useActionState, useState } from "react";
 import { saveProfile, type SaveProfileState } from "@/app/(app)/configuracoes/actions";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
+import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
 import { BIO_MAX, NAME_MAX, PROFILE_TAGS_MAX, type ProfileInput } from "@/lib/social/profile-rules";
 
@@ -48,16 +49,19 @@ export function ProfileForm({ initial, username, tags }: Props) {
       </div>
       <fieldset className="flex flex-col gap-2.5">
         <legend className="mb-2.5 text-sm font-semibold text-text-secondary">{t("technologies")}</legend>
-        <div className="flex max-h-60 flex-wrap gap-2 overflow-y-auto">
-          {ordered.map((tag) => (
-            <TagToggle
-              key={tag.slug}
-              name={tag.slug}
-              value={tag.slug}
-              checked={chosen.includes(tag.slug)}
-              onChange={(ev) => setChosen((c) => (ev.target.checked ? [...c, tag.slug] : c.filter((s) => s !== tag.slug)))}
-            />
-          ))}
+        <div className="max-h-72 overflow-y-auto pr-1">
+          <TagGroups
+            tags={ordered}
+            renderTag={(tag) => (
+              <TagToggle
+                key={tag.slug}
+                name={tag.slug}
+                value={tag.slug}
+                checked={chosen.includes(tag.slug)}
+                onChange={(ev) => setChosen((c) => (ev.target.checked ? [...c, tag.slug] : c.filter((s) => s !== tag.slug)))}
+              />
+            )}
+          />
         </div>
         {chosen.map((slug) => (
           <input key={slug} type="hidden" name="tags" value={slug} />
