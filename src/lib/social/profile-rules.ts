@@ -1,4 +1,4 @@
-import { isAccent, isBannerPreset, isFrameKey, isStatus } from "./profile-style";
+import { FREE_FRAMES, isAccent, isBannerPreset, isStatus } from "./profile-style";
 
 export const NAME_MAX = 80;
 export const BIO_MAX = 500;
@@ -49,7 +49,8 @@ export type ProfileErrors = {
 /** Tira o @, o domínio colado e a barra final; devolve o usuário se casar com o formato. */
 function handle(raw: string, domain: RegExp, format: RegExp): string | null {
   const v = raw
-    .replace(/^(https?:\/\/)?(www\.)?/i, "")
+    .replace(/[?#].*$/, "")
+    .replace(/^(https?:\/\/)?((www|m|mobile|[a-z]{2})\.)?/i, "")
     .replace(domain, "")
     .replace(/^@/, "")
     .replace(/\/+$/, "");
@@ -100,7 +101,8 @@ export function validateProfile(input: ProfileInput): { ok: true; value: Profile
   if (value.location.length > LOCATION_MAX) errors.location = "tooLong";
   if (value.status && !isStatus(value.status)) errors.status = "invalid";
   if (value.bannerPreset && !isBannerPreset(value.bannerPreset)) errors.bannerPreset = "invalid";
-  if (value.avatarFrame && !isFrameKey(value.avatarFrame)) errors.avatarFrame = "invalid";
+  // Bordas por conquista entram com as insígnias (o banco confere quem liberou).
+  if (value.avatarFrame && !FREE_FRAMES.includes(value.avatarFrame)) errors.avatarFrame = "invalid";
   if (value.accent && !isAccent(value.accent)) errors.accent = "invalid";
   for (const [key, parse] of [
     ["github", githubUser],
