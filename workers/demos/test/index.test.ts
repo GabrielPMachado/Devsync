@@ -128,3 +128,70 @@ describe("limite de chamadas da API", () => {
     expect(ok.limit).toHaveBeenCalled();
   });
 });
+
+describe("modo pastas (workers.dev grátis: /d/<id>/)", () => {
+  const DEMO = "6f1c2c1e-1111-4222-8333-444455556666";
+  const PREFIX = `demos/${DEMO}/1/`;
+  const pathEnv = { ...env, DEMOS_MODE: "path" } as typeof env;
+  const iframe = { "sec-fetch-dest": "iframe" };
+  const live = fakeFetch(() => Response.json([{ id: DEMO, kind: "web_upload", status: "live", storage_prefix: PREFIX }]));
+  const pdeps = { fetch: live.fetch, now: () => Date.now() };
+  const get = (path: string, headers: Record<string, string> = {}, e = pathEnv) =>
+    handleFetch(new Request(`https://demos.test${path}`, { headers }), e, pdeps);
+
+  beforeEach(async () => {
+    await env.DEMOS_BUCKET.put(`${PREFIX}index.html`, "<h1>pasta</h1>", { httpMetadata: { contentType: "text/html; charset=utf-8" } });
+    await env.DEMOS_BUCKET.put(`${PREFIX}assets/app.js`, "app()", { httpMetadata: { contentType: "text/javascript; charset=utf-8" } });
+  });
+
+  it("serve a demo em /d/<id>/ dentro de iframe", async () => {
+    const res = await get(`/d/${DEMO}/`, iframe);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("<h1>pasta</h1>");
+    expect(res.headers.get("content-security-policy")).toContain("frame-ancestors");
+  });
+
+  it("arquivos com caminho relativo à pasta", async () => {
+    const res = await get(`/d/${DEMO}/assets/app.js`);
+    expect(await res.text()).toBe("app()");
+  });
+
+  it("sem a barra final redireciona para a pasta (caminhos relativos funcionam)", async () => {
+    const res = await get(`/d/${DEMO}`, iframe);
+    expect(res.status).toBe(301);
+    expect(res.headers.get("location")).toBe(`/d/${DEMO}/`);
+  });
+
+  it("caminho absoluto (/assets/...) pedido de dentro da demo vai para a pasta dela", async () => {
+    const res = await get("/assets/app.js?v=2", { referer: `https://demos.test/d/${DEMO}/sobre` });
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe(`/d/${DEMO}/assets/app.js?v=2`);
+  });
+
+  it("referer de outro site não redireciona", async () => {
+    const res = await get("/assets/app.js", { referer: `https://mal.dev/d/${DEMO}/` });
+    expect(res.status).toBe(404);
+  });
+
+  it("aberta direto no navegador redireciona para a Devsync", async () => {
+    const res = await get(`/d/${DEMO}/`, { "sec-fetch-dest": "document" });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe(`https://devsync.app/demo/${DEMO}`);
+  });
+
+  it("não deixa sair da pasta com ..", async () => {
+    const res = await get(`/d/${DEMO}/%2e%2e/outra/index.html`, iframe);
+    expect(res.status).toBe(404);
+  });
+
+  it("a API continua no mesmo endereço", async () => {
+    const res = await handleFetch(new Request("https://demos.test/rota-que-nao-existe", { method: "POST" }), pathEnv, pdeps);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Rota não encontrada" });
+  });
+
+  it("no modo subdomínio, /d/<id>/ não serve demo", async () => {
+    const res = await get(`/d/${DEMO}/`, iframe, env);
+    expect(res.status).toBe(404);
+  });
+});

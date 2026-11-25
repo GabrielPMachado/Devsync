@@ -209,15 +209,15 @@ describe("Importar do GitHub", () => {
     expect(screen.getByLabelText("Título")).toHaveValue("blog");
   });
 
-  it("zip montado acima de 25 MB mostra o erro e volta para escolher um .zip", async () => {
+  it("zip montado acima de 64 MB mostra o erro e volta para escolher um .zip", async () => {
     const big = new File([new Uint8Array(1)], "blog.zip", { type: "application/zip" });
-    Object.defineProperty(big, "size", { value: 25 * 1024 * 1024 + 1 });
+    Object.defineProperty(big, "size", { value: 64 * 1024 * 1024 + 1 });
     const services = setup({ buildDemoZip: vi.fn(async () => big) });
     open();
     fireEvent.click(await screen.findByRole("button", { name: "Usar blog" }));
     await screen.findByText("Arquivos do GitHub");
     fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
-    expect(await screen.findByText("O .zip passa de 25 MB.")).toBeInTheDocument();
+    expect(await screen.findByText("O .zip passa de 64 MB.")).toBeInTheDocument();
     expect(screen.queryByText("Arquivos do GitHub")).not.toBeInTheDocument();
     expect(services.createUpload).not.toHaveBeenCalled();
   });

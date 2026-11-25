@@ -171,7 +171,7 @@ async function main() {
   await report("uploading");
   if (realpathSync(outDir) !== join(realpathSync(src), out)) throw new BuildError("no_output");
   // -y: link entra como link (e o serviço de demos recusa), nunca como o arquivo de fora.
-  const zip = spawn("zip", ["-q", "-X", "-D", "-y", zipPath, "-@"], { cwd: outDir, env: cleanEnv, stdio: ["pipe", "inherit", "inherit"] });
+  const zip = spawn("zip", ["-q", "-0", "-X", "-D", "-y", zipPath, "-@"], { cwd: outDir, env: cleanEnv, stdio: ["pipe", "inherit", "inherit"] });
   zip.stdin.end(files.files.join("\n") + "\n");
   const zipCode = await new Promise((r) => zip.on("close", r));
   if (zipCode !== 0) throw new BuildError("internal", "zip falhou");

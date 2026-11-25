@@ -6,7 +6,8 @@ import { join } from "node:path";
 /** Mesmos limites do serviço de demos (workers/demos/src/zip.ts). */
 export const MAX_FILES = 500;
 export const MAX_BYTES = 60 * 1024 * 1024;
-export const MAX_ZIP_BYTES = 25 * 1024 * 1024;
+// O zip vai sem compressão (`zip -0`): o serviço de demos no plano grátis só recorta os arquivos.
+export const MAX_ZIP_BYTES = 64 * 1024 * 1024;
 
 /** Cópia das extensões aceitas pelo serviço de demos (workers/demos/src/content-types.ts). */
 const EXTENSIONS = new Set(

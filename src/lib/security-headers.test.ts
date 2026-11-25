@@ -38,6 +38,11 @@ describe("contentSecurityPolicy", () => {
     expect(d["frame-src"]).toEqual(expect.arrayContaining(["https://*.devsync-demos.com", "https:"]));
   });
 
+  it("modo pastas: a própria origem do serviço de demos entra no iframe", () => {
+    const d = directives(contentSecurityPolicy({ ...prod, demosUrl: "http://demos.localhost:8787" }));
+    expect(d["frame-src"]).toContain("http://demos.localhost:8787");
+  });
+
   it("deixa o login do GitHub sair do formulário", () => {
     const d = directives(contentSecurityPolicy(prod));
     expect(d["form-action"]).toEqual(expect.arrayContaining(["'self'", "https://abc.supabase.co", "https://github.com"]));

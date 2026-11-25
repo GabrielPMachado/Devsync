@@ -40,8 +40,8 @@ export function contentSecurityPolicy({ supabaseUrl, demosUrl, dev }: SecurityEn
   }
   if (demos) {
     connect.push(demos.origin);
-    // Cada demo enviada fica em <id>.<host do serviço de demos>.
-    frame.push(`${demos.protocol}//*.${demos.host}`);
+    // Cada demo enviada fica em <id>.<host> (domínio próprio) ou em <host>/d/<id>/ (workers.dev).
+    frame.push(demos.origin, `${demos.protocol}//*.${demos.host}`);
   }
   if (dev) connect.push("ws:"); // recarregamento do next dev
   // Supabase local e Worker local (E2E com next start) falam http.

@@ -105,6 +105,7 @@ export async function buildDemoZip(repo: GithubRepo, source: SiteSource, fetchFn
     }
   }
   await Promise.all(Array.from({ length: Math.min(6, queue.length) }, worker));
-  const zip = zipSync(out, { level: 6 });
+  // Sem compressão: é o formato que o serviço de demos recorta sem gastar CPU.
+  const zip = zipSync(out, { level: 0 });
   return new File([zip as BlobPart], `${repo.name}.zip`, { type: "application/zip" });
 }

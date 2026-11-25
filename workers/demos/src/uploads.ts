@@ -58,7 +58,7 @@ export async function receiveUpload(req: Request, env: Env, demoId: string, vers
 
   const length = Number(req.headers.get("content-length"));
   if (!Number.isInteger(length) || length <= 0 || !req.body) return errorResponse(411, "Envie o arquivo com Content-Length");
-  if (length > LIMITS.maxZipBytes) return errorResponse(413, "O zip pode ter no máximo 25 MB");
+  if (length > LIMITS.maxZipBytes) return errorResponse(413, "O zip pode ter no máximo 64 MB");
 
   const key = zipKey(demoId, version);
   if (await env.DEMOS_BUCKET.head(key)) return errorResponse(409, "Este envio já foi feito");

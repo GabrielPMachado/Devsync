@@ -15,6 +15,7 @@ import { GithubImport, type GithubServices, type ImportExtra } from "./github-im
 import type { PublishResult } from "@/app/(app)/projetos/actions";
 import { BUILD_STAGES, DemoServiceError, waitForBuild, waitForDemo, type BuildRow, type DemoRow, type DemoServiceOptions, type EmbedResult } from "@/lib/demos/client";
 import { EMBED_BLOCKED, REJECTION_REASONS, reasonKey } from "@/lib/demos/reasons";
+import { ZipTooLargeError } from "@/lib/demos/repack";
 import { ZIP_MAX_BYTES } from "@/lib/demos/url";
 import type { ImportDraft } from "@/lib/projects/github";
 import { TAGS_MAX, validateProject, type ProjectErrors, type ProjectInput } from "@/lib/projects/rules";
@@ -25,6 +26,8 @@ export type PublishServices = {
   token: () => Promise<string | null>;
   createUpload: (o: DemoServiceOptions) => Promise<{ demoId: string; uploadUrl: string }>;
   putZip: (uploadUrl: string, file: Blob) => Promise<void>;
+  /** Prepara o zip antes do envio (reempacotar sem compressão). Lança ZipTooLargeError acima do limite. */
+  prepareZip?: (file: Blob) => Promise<Blob>;
   completeUpload: (o: DemoServiceOptions, demoId: string) => Promise<void>;
   embedCheck: (o: DemoServiceOptions, url: string) => Promise<EmbedResult>;
   verifyDemo: (o: DemoServiceOptions, demoId: string) => Promise<EmbedResult>;
@@ -194,8 +197,20 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
         let demoId = created?.file === zip ? created.demoId : null;
         if (!demoId) {
           setPhase("uploading");
+          let sent: Blob | null = zip;
+          try {
+            if (services.prepareZip) sent = await services.prepareZip(zip);
+          } catch (e) {
+            if (!(e instanceof ZipTooLargeError)) throw e;
+            sent = null;
+          }
+          // Confere antes de criar o envio: zip grande demais não gasta um dos envios do dia.
+          if (!sent || sent.size > ZIP_MAX_BYTES) {
+            setPhase("idle");
+            return setErrors({ zip: reasons("too_large") });
+          }
           const upload = await services.createUpload(o);
-          await services.putZip(upload.uploadUrl, zip);
+          await services.putZip(upload.uploadUrl, sent);
           await services.completeUpload(o, upload.demoId);
           demoId = upload.demoId;
           setCreated({ demoId, file: zip });

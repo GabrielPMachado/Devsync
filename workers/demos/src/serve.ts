@@ -86,7 +86,43 @@ function safePath(pathname: string): string | null {
   return rel === "" || rel.endsWith("/") ? `${rel}index.html` : rel;
 }
 
-export async function serveDemo(req: Request, env: Env, demoId: string, deps: Deps): Promise<Response> {
+const DEMO_PATH = /^\/d\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(\/.*)?$/i;
+
+/**
+ * Modo pastas (`DEMOS_MODE=path`): demos em `/d/<id>/` no host da API. Devolve a
+ * resposta para pedidos de demo, ou null para a API seguir.
+ * - `/d/<id>` sem barra: redireciona para `/d/<id>/` (os caminhos relativos dependem dela).
+ * - `/qualquer/coisa` pedido de dentro de uma demo (Referer `/d/<id>/...` do mesmo
+ *   host): redireciona para a pasta da demo. Assim builds com caminhos absolutos
+ *   (`/assets/app.js`, o padrão do Vite) funcionam sem reconfigurar.
+ */
+export async function routeDemoPath(req: Request, env: Env, deps: Deps): Promise<Response | null> {
+  const url = new URL(req.url);
+  const m = DEMO_PATH.exec(url.pathname);
+  if (m) {
+    const id = m[1]!.toLowerCase();
+    if (!m[2]) return new Response(null, { status: 301, headers: { location: `/d/${id}/${url.search}` } });
+    return serveDemo(req, env, id, deps, m[2]);
+  }
+  if (req.method !== "GET" && req.method !== "HEAD") return null;
+  const referer = req.headers.get("referer");
+  if (!referer) return null;
+  let from: URL;
+  try {
+    from = new URL(referer);
+  } catch {
+    return null;
+  }
+  const r = from.origin === url.origin ? DEMO_PATH.exec(from.pathname) : null;
+  if (!r) return null;
+  return new Response(null, {
+    status: 307,
+    headers: { location: `/d/${r[1]!.toLowerCase()}${url.pathname}${url.search}`, "cache-control": "no-store" },
+  });
+}
+
+/** `pathname`: caminho dentro da demo (modo pastas); sem ele, o da URL (modo subdomínio). */
+export async function serveDemo(req: Request, env: Env, demoId: string, deps: Deps, pathname?: string): Promise<Response> {
   if (req.method !== "GET" && req.method !== "HEAD") {
     return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
   }
@@ -97,7 +133,7 @@ export async function serveDemo(req: Request, env: Env, demoId: string, deps: De
   const dest = req.headers.get("sec-fetch-dest");
   if (dest === "document") return redirectToSite(env, demoId);
 
-  const path = safePath(new URL(req.url).pathname);
+  const path = safePath(pathname ?? new URL(req.url).pathname);
   if (!path) return notFound(env);
 
   const demo = await lookup(env, demoId, deps);
