@@ -577,7 +577,7 @@
     "selected": "Escolhido: {name}",
     "available": "Liberada",
     "availableToAll": "Disponível para todos",
-    "frameUnlocked": "Liberada pela insígnia {badge}. Requisito cumprido: {how}"
+    "frameUnlocked": "Pela insígnia {badge}. Requisito cumprido: {how}"
   },
   "Notifications": {
     "title": "Notificações",

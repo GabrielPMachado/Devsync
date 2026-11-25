@@ -91,7 +91,7 @@ describe("<ProfileEditor />", () => {
   it("bordas liberadas por conquista mostram na dica a insígnia e o requisito cumprido", () => {
     renderEditor({ unlockedBadges: ["mentor"] });
     const neon = screen.getByRole("radio", { name: "Borda néon" });
-    expect(neon).toHaveAccessibleDescription(/Liberada pela insígnia Mentor.*Requisito cumprido: ter 10 respostas aceitas/);
+    expect(neon).toHaveAccessibleDescription(/Liberada.*Pela insígnia Mentor.*Requisito cumprido: ter 10 respostas aceitas/);
     const tip = document.getElementById(neon.getAttribute("aria-describedby")!)!;
     expect(tip.querySelector('[data-lock="open"]')).not.toBeNull();
     expect(tip).toHaveAttribute("data-open", "false");

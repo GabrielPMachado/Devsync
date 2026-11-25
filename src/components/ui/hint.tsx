@@ -82,6 +82,8 @@ export function Hint({ content, children, className = "" }: Props) {
     },
     onBlur: () => setFocus(false),
     onKeyDown: (ev) => {
+      // Teclado depois de um toque: o clique do Espaço/setas no rádio não deve fixar a dica.
+      setPointer("mouse");
       if (ev.key === "Escape") {
         setHover(false);
         setFocus(false);

@@ -111,6 +111,7 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
                     aria-pressed={on}
                     // aria-disabled (e não disabled) para a dica ainda abrir ao passar o mouse ou tocar.
                     aria-disabled={blocked || undefined}
+                    title={blocked ? t("limit") : undefined}
                     {...hint}
                     onClick={(ev) => {
                       hint.onClick(ev);
