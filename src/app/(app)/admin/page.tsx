@@ -4,9 +4,13 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { CatalogPanel } from "@/components/moderation/catalog-panel";
 import { DomainsPanel } from "@/components/moderation/domains-panel";
+import { ProfileSearch } from "@/components/moderation/profile-search";
 import { QueueCard } from "@/components/moderation/queue-card";
 import { getViewer } from "@/lib/auth/viewer";
+import { catalogItems } from "@/lib/moderation/catalog";
+import { getCatalogRows } from "@/lib/moderation/catalog-state";
 import { getBlockedDomains, getQueue } from "@/lib/moderation/queries";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -16,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 type Props = PageProps<"/admin">;
-const TABS = { abertas: "open", resolvidas: "resolved", dominios: "domains" } as const;
+const TABS = { abertas: "open", resolvidas: "resolved", perfis: "profiles", catalogo: "catalog", dominios: "domains" } as const;
 type Tab = (typeof TABS)[keyof typeof TABS];
 
 export default function AdminPage({ searchParams }: Props) {
@@ -48,19 +52,27 @@ async function Admin({ searchParams }: Pick<Props, "searchParams">) {
         </h1>
         <p className="text-sm text-text-muted">{t("subtitle")}</p>
       </header>
-      <nav aria-label={t("title")} className="flex gap-1 border-b border-border-default">
+      <nav aria-label={t("title")} className="flex gap-1 overflow-x-auto border-b border-border-default">
         {(Object.entries(TABS) as [string, Tab][]).map(([slug, value]) => (
           <Link
             key={slug}
             href={slug === "abertas" ? "/admin" : `/admin?aba=${slug}`}
             aria-current={tab === value ? "page" : undefined}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm font-semibold ${tab === value ? "border-brand-accent text-text-primary" : "border-transparent text-text-muted hover:text-text-primary"}`}
+            className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${tab === value ? "border-brand-accent text-text-primary" : "border-transparent text-text-muted hover:text-text-primary"}`}
           >
             {t(`tabs.${value}`)}
           </Link>
         ))}
       </nav>
-      {tab === "domains" ? <DomainsPanel domains={await getBlockedDomains()} /> : <Queue mode={tab} empty={tab === "open" ? t("empty") : t("emptyResolved")} />}
+      {tab === "domains" ? (
+        <DomainsPanel domains={await getBlockedDomains()} />
+      ) : tab === "profiles" ? (
+        <ProfileSearch query={typeof query.q === "string" ? query.q : ""} />
+      ) : tab === "catalog" ? (
+        <CatalogPanel items={catalogItems(await getCatalogRows())} />
+      ) : (
+        <Queue mode={tab} empty={tab === "open" ? t("empty") : t("emptyResolved")} />
+      )}
     </div>
   );
 }

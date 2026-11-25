@@ -244,6 +244,8 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
                   ? badges("notEarned")
                   : state.error === "frame"
                     ? badges("frameNotUnlocked")
+                    : state.error === "unavailable"
+                      ? t("itemUnavailable")
                     : state.error
                       ? t("error")
                       : t("fixErrors")}

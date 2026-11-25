@@ -21,6 +21,7 @@ import {
   type Accent,
   type BannerPreset,
 } from "@/lib/social/profile-style";
+import { useCatalog } from "./catalog-context";
 import { PickerHeader } from "./picker-header";
 
 const FOCUS =
@@ -175,9 +176,13 @@ export function BannerPicker({
   const badges = useTranslations("Badges");
   const label = (p: string) =>
     p ? style(`banner_${p as BannerPreset}`) : t("bannerDefault");
-  const earned = BANNER_PRESETS.filter((p) => BANNER_UNLOCKS[p]);
-  const has = (p: BannerPreset) => unlockedBadges.includes(BANNER_UNLOCKS[p]!);
-  const unlocked = FREE_BANNERS.length + earned.filter(has).length;
+  // Desligados pela moderação somem; liberados à mão contam como conquistados.
+  const { hidden, granted } = useCatalog();
+  const shown = (p: BannerPreset) => !hidden.banner.includes(p);
+  const free = FREE_BANNERS.filter(shown);
+  const earned = BANNER_PRESETS.filter((p) => BANNER_UNLOCKS[p] && shown(p));
+  const has = (p: BannerPreset) => unlockedBadges.includes(BANNER_UNLOCKS[p]!) || granted.banner.includes(p);
+  const unlocked = free.length + earned.filter(has).length;
   const grid = "grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2.5";
 
   const option = (key: string) => {
@@ -227,13 +232,13 @@ export function BannerPicker({
         selected={label(value)}
         count={t("countUnlockedMasc", {
           unlocked,
-          total: BANNER_PRESETS.length,
+          total: free.length + earned.length,
         })}
       />
       <div className="flex flex-col gap-5">
         <Group title={t("framesFree")} className={grid}>
           {option("")}
-          {FREE_BANNERS.map(option)}
+          {free.map(option)}
         </Group>
         <Group
           title={t("framesEarned")}
@@ -317,9 +322,12 @@ export function AccentPicker({
   const style = useTranslations("ProfileStyle");
   const badges = useTranslations("Badges");
   const current = isAccent(value) ? value : "azul";
-  const earned = ACCENTS.filter((a) => ACCENT_UNLOCKS[a]);
-  const has = (a: Accent) => unlockedBadges.includes(ACCENT_UNLOCKS[a]!);
-  const unlocked = FREE_ACCENTS.length + earned.filter(has).length;
+  const { hidden, granted } = useCatalog();
+  const shown = (a: Accent) => !hidden.accent.includes(a);
+  const free = FREE_ACCENTS.filter(shown);
+  const earned = ACCENTS.filter((a) => ACCENT_UNLOCKS[a] && shown(a));
+  const has = (a: Accent) => unlockedBadges.includes(ACCENT_UNLOCKS[a]!) || granted.accent.includes(a);
+  const unlocked = free.length + earned.filter(has).length;
   const grid = "grid grid-cols-6 gap-2.5 sm:grid-cols-12";
 
   const option = (a: Accent) => {
@@ -373,11 +381,11 @@ export function AccentPicker({
       <PickerHeader
         title={t("accent")}
         selected={style(`accent_${current}`)}
-        count={t("countUnlocked", { unlocked, total: ACCENTS.length })}
+        count={t("countUnlocked", { unlocked, total: free.length + earned.length })}
       />
       <div className="flex flex-col gap-5">
         <Group title={t("framesFree")} className={grid}>
-          {FREE_ACCENTS.map(option)}
+          {free.map(option)}
         </Group>
         <Group
           title={t("framesEarned")}

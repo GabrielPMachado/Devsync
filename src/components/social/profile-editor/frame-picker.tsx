@@ -9,6 +9,7 @@ import { AvatarFrame } from "@/components/profile/avatar-frame";
 import { Avatar } from "@/components/ui/avatar";
 import { Hint, splitHint } from "@/components/ui/hint";
 import { FRAMES, type FrameDef, type FrameKey } from "@/lib/social/profile-style";
+import { useCatalog } from "./catalog-context";
 import { PickerHeader } from "./picker-header";
 
 type Props = {
@@ -39,11 +40,14 @@ export function FramePicker({
   const t = useTranslations("Settings");
   const style = useTranslations("ProfileStyle");
   const badges = useTranslations("Badges");
+  // Desligadas pela moderação somem; liberadas à mão contam como conquistadas.
+  const { hidden, granted } = useCatalog();
   const has = (f: FrameDef) =>
-    !f.requiresBadge || (unlockedBadges ?? []).includes(f.requiresBadge);
-  const free = FRAMES.filter((f) => !f.requiresBadge);
-  const earned = FRAMES.filter((f) => f.requiresBadge);
-  const unlocked = FRAMES.filter(has).length;
+    !f.requiresBadge || (unlockedBadges ?? []).includes(f.requiresBadge) || granted.frame.includes(f.key);
+  const frames = FRAMES.filter((f) => !hidden.frame.includes(f.key));
+  const free = frames.filter((f) => !f.requiresBadge);
+  const earned = frames.filter((f) => f.requiresBadge);
+  const unlocked = frames.filter(has).length;
   const current = FRAMES.find((f) => f.key === value);
 
   const art = (key: FrameKey) => (
@@ -68,7 +72,7 @@ export function FramePicker({
       <PickerHeader
         title={t("frame")}
         selected={current ? style(`frame_${current.key}`) : t("frameNone")}
-        count={t("countUnlocked", { unlocked, total: FRAMES.length })}
+        count={t("countUnlocked", { unlocked, total: frames.length })}
       />
 
       <div className="flex flex-col gap-5">
