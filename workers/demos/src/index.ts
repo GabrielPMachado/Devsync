@@ -3,6 +3,7 @@ import { errorResponse, withCors } from "./http";
 import { buildProgress, failStaleBuilds, receiveBuildZip, startBuild } from "./builds";
 import { purgeDeletedDemos } from "./deletions";
 import { embedCheck, recheckLink, scheduleLinkChecks, verifyDemo } from "./links";
+import { capturePreviews, servePreview } from "./previews";
 import { processZip } from "./process-zip";
 import { parseDemoHost, routeDemoPath, serveDemo } from "./serve";
 import { completeUpload, createUpload, receiveUpload } from "./uploads";
@@ -54,6 +55,9 @@ export async function handleFetch(req: Request, env: Env, deps: Deps): Promise<R
   const demoId = parseDemoHost(host, env.DEMOS_HOST);
   if (demoId) return serveDemo(req, env, demoId, deps);
   if (host !== env.DEMOS_HOST.toLowerCase()) return new Response("Not found", { status: 404 });
+  // Prints das demos (imagens dos cards): fora do limite da API, que conta por IP.
+  const preview = await servePreview(req, env);
+  if (preview) return preview;
   if (env.DEMOS_MODE === "path") {
     const demo = await routeDemoPath(req, env, deps);
     if (demo) return demo;
@@ -82,9 +86,10 @@ export default {
   fetch: (req, env) => handleFetch(req, env, defaultDeps()),
   queue: (batch, env) => handleQueue(batch, env, defaultDeps()),
   scheduled: (controller, env, ctx) => {
-    // A cada 15 min: builds parados e arquivos de demos excluídas. Às 06:00 UTC: também a checagem diária dos links.
+    // A cada 15 min: builds parados, arquivos de demos excluídas e prints das demos novas. Às 06:00 UTC: também a checagem diária dos links.
     if (controller.cron === LINK_CHECK_CRON) ctx.waitUntil(scheduleLinkChecks(env, defaultDeps()));
     ctx.waitUntil(failStaleBuilds(env, defaultDeps()));
     ctx.waitUntil(purgeDeletedDemos(env, defaultDeps()));
+    ctx.waitUntil(capturePreviews(env, defaultDeps()));
   },
 } satisfies ExportedHandler<Env, ZipMessage | LinkMessage>;

@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth/viewer";
 import { checkTone } from "@/lib/moderation/tone";
+import { getSupabaseEnv } from "@/lib/env";
+import { cleanOrphanCovers, trustedCoverUrl } from "@/lib/projects/covers";
 import { COMMENT_MAX, validateProject, type ProjectErrors, type ProjectInput } from "@/lib/projects/rules";
 import { createClient } from "@/lib/supabase/server";
 
@@ -18,13 +20,23 @@ async function requireViewer(path: string) {
   return viewer;
 }
 
-export type PublishResult = { error: "invalid"; errors: ProjectErrors } | { error: "demo" | "unknown" };
+/** "cover": o banco recusou a capa (fora da pasta da pessoa no Storage). */
+export type PublishResult = { error: "invalid"; errors: ProjectErrors } | { error: "demo" | "cover" | "unknown" };
+
+/** Capa: ausente = sem capa (publicar) ou não mexe (editar); "" = remove; URL = a capa enviada. */
+type CoverInput = { coverUrl?: string };
+
+/** Capa de outro servidor, bucket ou pessoa: recusada antes do banco. */
+const badCover = (url: string | undefined, userId: string) => !!url && !trustedCoverUrl(url, userId, getSupabaseEnv()?.url);
+/** O gatilho da capa recusou (mesmo código de outras recusas: confere a mensagem). */
+const coverRejected = (error: { code?: string; message?: string } | null) => error?.code === "22023" && /capa/i.test(error.message ?? "");
 
 /** Cria o projeto depois que a demo validou e abre a página dele. */
-export async function publishProject(input: ProjectInput & { demoId: string }): Promise<PublishResult> {
+export async function publishProject(input: ProjectInput & CoverInput & { demoId: string }): Promise<PublishResult> {
   const viewer = await requireViewer("/projetos/novo");
   const check = validateProject(input);
   if (!check.ok) return { error: "invalid", errors: check.errors };
+  if (badCover(input.coverUrl, viewer.id)) return { error: "cover" };
   const v = check.value;
 
   const supabase = await createClient();
@@ -37,9 +49,17 @@ export async function publishProject(input: ProjectInput & { demoId: string }): 
 
   const { data: project, error } = await supabase
     .from("projects")
-    .insert({ title: v.title, description_md: v.description, repo_url: v.repoUrl || null, site_url: v.siteUrl || null, demo_id: input.demoId })
+    .insert({
+      title: v.title,
+      description_md: v.description,
+      repo_url: v.repoUrl || null,
+      site_url: v.siteUrl || null,
+      demo_id: input.demoId,
+      ...(input.coverUrl && { cover_url: input.coverUrl }),
+    })
     .select("id, slug")
     .single();
+  if (coverRejected(error)) return { error: "cover" };
   if (error || !project) return { error: "unknown" };
 
   const { error: tagError } = await supabase.from("project_tags").insert(tags.map((t: { id: string }) => ({ project_id: project.id, tag_id: t.id })));
@@ -53,23 +73,31 @@ export async function publishProject(input: ProjectInput & { demoId: string }): 
   redirect(`/projetos/${project.slug}?publicado=1`);
 }
 
-export type UpdateResult = { error: "invalid"; errors: ProjectErrors } | { error: "notFound" | "unknown" };
+export type UpdateResult = { error: "invalid"; errors: ProjectErrors } | { error: "notFound" | "cover" | "unknown" };
 
-/** Edita textos, links e tags (a demo não muda aqui). O endereço (slug) continua o mesmo. */
-export async function updateProject(projectId: string, input: ProjectInput): Promise<UpdateResult> {
-  await requireViewer("/projetos");
+/** Edita textos, links, tags e capa (a demo não muda aqui). O endereço (slug) continua o mesmo. */
+export async function updateProject(projectId: string, input: ProjectInput & CoverInput): Promise<UpdateResult> {
+  const viewer = await requireViewer("/projetos");
   const check = validateProject(input);
   if (!check.ok) return { error: "invalid", errors: check.errors };
+  if (badCover(input.coverUrl, viewer.id)) return { error: "cover" };
   const v = check.value;
 
   const supabase = await createClient();
   // A RLS só deixa o autor editar: de outra pessoa, nenhuma linha volta.
   const { data: project, error } = await supabase
     .from("projects")
-    .update({ title: v.title, description_md: v.description, repo_url: v.repoUrl || null, site_url: v.siteUrl || null })
+    .update({
+      title: v.title,
+      description_md: v.description,
+      repo_url: v.repoUrl || null,
+      site_url: v.siteUrl || null,
+      ...(input.coverUrl !== undefined && { cover_url: input.coverUrl || null }),
+    })
     .eq("id", projectId)
     .select("slug")
     .maybeSingle();
+  if (coverRejected(error)) return { error: "cover" };
   if (error) return { error: "unknown" };
   if (!project) return { error: "notFound" };
 
@@ -79,6 +107,8 @@ export async function updateProject(projectId: string, input: ProjectInput): Pro
     if (tagError.code === "22023") return { error: "invalid", errors: { tags: "min" } };
     return { error: "unknown" };
   }
+  // Capa trocada ou removida: a antiga sai do Storage (sem órfãos).
+  if (input.coverUrl !== undefined) await cleanOrphanCovers(supabase, viewer.id).catch(() => {});
 
   revalidatePath("/projetos");
   revalidatePath(`/projetos/${project.slug}`);
@@ -87,14 +117,16 @@ export async function updateProject(projectId: string, input: ProjectInput): Pro
 
 /**
  * Exclui o projeto. O banco apaga junto tags, curtidas, comentários, notificações e a
- * demo; os arquivos da demo saem do R2 no próximo ciclo do serviço de demos.
+ * demo; os arquivos da demo saem do R2 no próximo ciclo do serviço de demos. A capa
+ * sai do Storage aqui.
  */
 export async function deleteProject(projectId: string): Promise<{ error: "notFound" | "unknown" }> {
-  await requireViewer("/projetos");
+  const viewer = await requireViewer("/projetos");
   const supabase = await createClient();
   const { error, count } = await supabase.from("projects").delete({ count: "exact" }).eq("id", projectId);
   if (error) return { error: "unknown" };
   if (!count) return { error: "notFound" };
+  await cleanOrphanCovers(supabase, viewer.id).catch(() => {});
   revalidatePath("/projetos");
   redirect("/projetos?excluido=1");
 }

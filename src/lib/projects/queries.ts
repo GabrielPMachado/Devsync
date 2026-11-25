@@ -5,9 +5,18 @@ import type { CommentAuthor, CommentRow } from "@/lib/comments/tree";
 import type { DemoKind, DemoStatus } from "@/lib/demos/url";
 import { getSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { trustedCoverUrl } from "./covers";
 import { githubLogin } from "./github";
 
-export type ProjectDemo = { id: string; kind: DemoKind; status: DemoStatus; url: string | null; version: number };
+export type ProjectDemo = {
+  id: string;
+  kind: DemoKind;
+  status: DemoStatus;
+  url: string | null;
+  version: number;
+  /** Print automático da demo (serviço de demos), usado no card quando não há capa. */
+  screenshotUrl?: string | null;
+};
 
 export type ProjectCardData = {
   id: string;
@@ -20,13 +29,15 @@ export type ProjectCardData = {
   author: CommentAuthor;
   tags: string[];
   demo: ProjectDemo | null;
+  /** Capa enviada pelo autor (Storage, 16:9). */
+  coverUrl?: string | null;
 };
 
 export type ProjectPageData = ProjectCardData & { authorId: string; repoUrl: string | null; siteUrl: string | null; updatedAt: string };
 
-export const PROJECT_CARD_FIELDS = `id, slug, title, description_md, likes_count, comments_count, created_at, updated_at, author_id, repo_url, site_url,
+export const PROJECT_CARD_FIELDS = `id, slug, title, description_md, likes_count, comments_count, created_at, updated_at, author_id, repo_url, site_url, cover_url,
   author:profiles!projects_author_id_fkey(username, display_name, avatar_url),
-  demo:demos(id, kind, status, url, version),
+  demo:demos(id, kind, status, url, version, screenshot_url),
   project_tags(tags(slug))`;
 
 export type ProjectRow = {
@@ -41,8 +52,9 @@ export type ProjectRow = {
   author_id: string;
   repo_url: string | null;
   site_url: string | null;
+  cover_url: string | null;
   author: { username: string | null; display_name: string | null; avatar_url: string | null } | null;
-  demo: ProjectDemo | null;
+  demo: (Omit<ProjectDemo, "screenshotUrl"> & { screenshot_url: string | null }) | null;
   project_tags: { tags: { slug: string } | null }[];
 };
 
@@ -60,7 +72,10 @@ export function toPage(r: ProjectRow): ProjectPageData {
     repoUrl: r.repo_url,
     siteUrl: r.site_url,
     author: { username: r.author?.username ?? null, displayName: r.author?.display_name ?? null, avatarUrl: r.author?.avatar_url ?? null },
-    demo: r.demo,
+    demo: r.demo
+      ? { id: r.demo.id, kind: r.demo.kind, status: r.demo.status, url: r.demo.url, version: r.demo.version, screenshotUrl: r.demo.screenshot_url }
+      : null,
+    coverUrl: trustedCoverUrl(r.cover_url, r.author_id, getSupabaseEnv()?.url),
     tags: r.project_tags.map((t) => t.tags?.slug).filter((s): s is string => !!s),
   };
 }

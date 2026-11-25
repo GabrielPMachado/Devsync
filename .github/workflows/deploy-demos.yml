@@ -15,6 +15,8 @@ name: Publicar serviço de demos
 #   Variável BUILDER_REPO               opcional: repositório de builds (ex.: GabrielPMachado/devsync-builds)
 #   Variável BUILDER_REPO_ID            opcional: id numérico do BUILDER_REPO
 #   Segredo  BUILDER_GITHUB_TOKEN       opcional: token fine-grained com Actions: write no BUILDER_REPO
+#   Segredo  BROWSER_RENDERING_TOKEN    opcional: token da Cloudflare só com "Browser Rendering: Edit"
+#                                       (liga o print automático das demos nos cards; cota grátis diária)
 # Passo a passo completo: docs/lancamento.md
 
 on:
@@ -117,13 +119,16 @@ jobs:
           BUILDER_GITHUB_TOKEN: ${{ secrets.BUILDER_GITHUB_TOKEN }}
           BUILDER_REPO: ${{ vars.BUILDER_REPO }}
           BUILDER_REPO_ID: ${{ vars.BUILDER_REPO_ID }}
+          BROWSER_RENDERING_TOKEN: ${{ secrets.BROWSER_RENDERING_TOKEN }}
         run: |
           secrets_file="$RUNNER_TEMP/demos-secrets.json"
           trap 'rm -f "$secrets_file"' EXIT
           node -e '
             // BUILDER_REPO não é segredo, mas vai junto para não exigir outra publicação.
-            const keys = ["SUPABASE_SERVICE_ROLE_KEY", "UPLOAD_SIGNING_SECRET", "SAFE_BROWSING_API_KEY", "BUILDER_GITHUB_TOKEN", "BUILDER_REPO", "BUILDER_REPO_ID"];
+            const keys = ["SUPABASE_SERVICE_ROLE_KEY", "UPLOAD_SIGNING_SECRET", "SAFE_BROWSING_API_KEY", "BUILDER_GITHUB_TOKEN", "BUILDER_REPO", "BUILDER_REPO_ID", "BROWSER_RENDERING_TOKEN"];
             const out = Object.fromEntries(keys.filter((k) => process.env[k]).map((k) => [k, process.env[k]]));
+            // Print automático: a API REST do Browser Rendering precisa do ID da conta.
+            if (out.BROWSER_RENDERING_TOKEN) out.CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
             require("fs").writeFileSync(process.argv[1], JSON.stringify(out), { mode: 0o600 });
           ' "$secrets_file"
           npx wrangler deploy --env "$WRANGLER_ENV" --secrets-file "$secrets_file"

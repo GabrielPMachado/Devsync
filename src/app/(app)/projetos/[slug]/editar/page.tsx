@@ -48,7 +48,7 @@ async function Edit({ params }: Pick<Props, "params">) {
         <p className="text-text-muted">{t("subtitle")}</p>
       </header>
       <EditProjectForm
-        project={{ id: project.id, slug: project.slug, title: project.title, description: project.description, tags: project.tags, repoUrl: project.repoUrl, siteUrl: project.siteUrl }}
+        project={{ id: project.id, slug: project.slug, title: project.title, description: project.description, tags: project.tags, repoUrl: project.repoUrl, siteUrl: project.siteUrl, coverUrl: project.coverUrl ?? null }}
         tags={tags}
         save={updateProject}
       />

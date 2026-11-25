@@ -14,6 +14,11 @@ export type { PendingImage } from "@/lib/social/profile-images";
 /** Limite do arquivo original, antes do recorte (a saída recortada é bem menor). */
 export const SOURCE_MAX_BYTES = 15 * 1024 * 1024;
 const ACCEPT = "image/png,image/jpeg,image/webp";
+const LABELS = {
+  avatar: { change: "changeAvatar", remove: "removeAvatar", pending: "pending" },
+  banner: { change: "changeBanner", remove: "removeBanner", pending: "pending" },
+  cover: { change: "changeCover", remove: "removeCover", pending: "pendingCover" },
+} as const;
 
 /** O que a prévia deve mostrar: a imagem nova, nenhuma (removida) ou a atual. */
 export function previewSrc(currentUrl: string | null, pending: PendingImage): string | null {
@@ -24,7 +29,7 @@ export function previewSrc(currentUrl: string | null, pending: PendingImage): st
 
 type Props = { kind: CropKind; currentUrl: string | null; value: PendingImage; onChange(v: PendingImage): void };
 
-/** Botões "Trocar" e "Remover" de foto ou banner. A imagem só sobe ao salvar o formulário. */
+/** Botões "Trocar" e "Remover" de foto, banner ou capa de projeto. A imagem só sobe ao salvar o formulário. */
 export function ProfileImageField({ kind, currentUrl, value, onChange }: Props) {
   const t = useTranslations("ImageCrop");
   const [source, setSource] = useState<HTMLImageElement | null>(null);
@@ -68,8 +73,8 @@ export function ProfileImageField({ kind, currentUrl, value, onChange }: Props) 
   }
 
   const has = previewSrc(currentUrl, value) !== null;
-  const changeLabel = kind === "avatar" ? t("changeAvatar") : t("changeBanner");
-  const removeLabel = kind === "avatar" ? t("removeAvatar") : t("removeBanner");
+  const changeLabel = t(LABELS[kind].change);
+  const removeLabel = t(LABELS[kind].remove);
 
   return (
     <div className="flex flex-col gap-2">
@@ -86,7 +91,7 @@ export function ProfileImageField({ kind, currentUrl, value, onChange }: Props) 
           </button>
         )}
       </div>
-      {value.kind === "new" && <p className="text-xs text-text-muted">{t("pending")}</p>}
+      {value.kind === "new" && <p className="text-xs text-text-muted">{t(LABELS[kind].pending)}</p>}
       {error && (
         <p role="alert" className="text-xs text-status-danger">
           {t(error)}

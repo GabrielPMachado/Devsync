@@ -59,6 +59,15 @@ vi.mock("next/navigation", () => ({
 const checkTone = vi.fn<(text: string) => Promise<{ flagged: boolean }>>(async () => ({ flagged: false }));
 vi.mock("@/lib/moderation/tone", () => ({ checkTone: (text: string) => checkTone(text) }));
 
+const cleanOrphanCovers = vi.fn(async () => {});
+vi.mock("@/lib/projects/covers", async (orig) => ({
+  ...(await orig<typeof import("@/lib/projects/covers")>()),
+  cleanOrphanCovers: (...a: unknown[]) => cleanOrphanCovers(...(a as [])),
+}));
+
+process.env.NEXT_PUBLIC_SUPABASE_URL = "https://x.supabase.co";
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon";
+
 const { publishProject, updateProject, deleteProject, toggleLike, addComment, deleteComment } = await import("./actions");
 
 const input = { title: "Kanban colaborativo", description: "Um quadro.", tags: ["react", "nextjs"], repoUrl: "https://github.com/a/b", siteUrl: "", demoId: "d1" };
@@ -121,6 +130,24 @@ describe("publishProject", () => {
     db.insertTags.mockResolvedValue({ error: { code: "DS003" } });
     await expect(publishProject(input)).resolves.toEqual({ error: "unknown" });
     expect(db.deleteProject).toHaveBeenCalledWith("p1");
+  });
+
+  it("publica com a capa enviada", async () => {
+    const coverUrl = "https://x.supabase.co/storage/v1/object/public/project-covers/u1/cover-1.webp?v=1";
+    await expect(publishProject({ ...input, coverUrl })).rejects.toThrow("REDIRECT");
+    expect(db.insertProject).toHaveBeenCalledWith(expect.objectContaining({ cover_url: coverUrl }));
+  });
+
+  it("capa de outro servidor ou de outra pessoa nem chega ao banco", async () => {
+    for (const coverUrl of ["https://evil.example/storage/v1/object/public/project-covers/u1/cover-1.webp", "https://x.supabase.co/storage/v1/object/public/project-covers/u2/cover-1.webp"]) {
+      await expect(publishProject({ ...input, coverUrl })).resolves.toEqual({ error: "cover" });
+    }
+    expect(db.insertProject).not.toHaveBeenCalled();
+  });
+
+  it("capa recusada pelo gatilho do banco volta como erro da capa", async () => {
+    db.insertProject.mockResolvedValue({ data: null, error: { code: "22023", message: "a capa precisa estar na sua pasta do Storage" } });
+    await expect(publishProject({ ...input, coverUrl: "https://x.supabase.co/storage/v1/object/public/project-covers/u1/cover-1.webp" })).resolves.toEqual({ error: "cover" });
   });
 
   it("sem login vai para /entrar", async () => {
@@ -202,6 +229,21 @@ describe("updateProject", () => {
       site_url: "https://kanban.dev",
     });
     expect(db.rpc).toHaveBeenCalledWith("set_project_tags", { project_id: "p1", tag_slugs: ["react", "nextjs"] });
+    expect(cleanOrphanCovers).not.toHaveBeenCalled();
+  });
+
+  it("troca ou remove a capa e limpa as capas que sobraram", async () => {
+    const coverUrl = "https://x.supabase.co/storage/v1/object/public/project-covers/u1/cover-2.webp?v=2";
+    await expect(updateProject("p1", { ...edit, coverUrl })).rejects.toThrow("REDIRECT");
+    expect(db.updateProject).toHaveBeenCalledWith("p1", expect.objectContaining({ cover_url: coverUrl }));
+    expect(cleanOrphanCovers).toHaveBeenCalledWith(supabase, "u1");
+    await expect(updateProject("p1", { ...edit, coverUrl: "" })).rejects.toThrow("REDIRECT");
+    expect(db.updateProject).toHaveBeenLastCalledWith("p1", expect.objectContaining({ cover_url: null }));
+  });
+
+  it("capa de outro servidor nem chega ao banco", async () => {
+    await expect(updateProject("p1", { ...edit, coverUrl: "https://evil.example/x.png" })).resolves.toEqual({ error: "cover" });
+    expect(db.updateProject).not.toHaveBeenCalled();
   });
 
   it("projeto de outra pessoa (a RLS não devolve nada) não é editado", async () => {
@@ -228,6 +270,7 @@ describe("deleteProject", () => {
     db.deleteProject.mockResolvedValue({ error: null, count: 1 });
     await expect(deleteProject("p1")).rejects.toThrow("REDIRECT /projetos?excluido=1");
     expect(db.deleteProject).toHaveBeenCalledWith("p1");
+    expect(cleanOrphanCovers).toHaveBeenCalledWith(supabase, "u1");
   });
 
   it("nada apagado (projeto de outra pessoa ou já excluído) é erro", async () => {

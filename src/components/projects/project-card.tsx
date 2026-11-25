@@ -14,19 +14,28 @@ export function ProjectCard({ project: p, basePath }: { project: ProjectCardData
   const t = useTranslations("Projects");
   const name = p.author.displayName || p.author.username || "?";
   const live = p.demo?.status === "live";
+  // Capa do autor; sem ela, o print automático da demo; sem os dois, o desenho padrão.
+  const image = p.coverUrl || p.demo?.screenshotUrl || null;
+  // O print da demo mostra o topo da página; a capa fica centralizada.
+  const position = p.coverUrl ? "object-center" : "object-top";
   return (
     <article className="flex flex-col overflow-hidden rounded-xl border border-border-default bg-bg-surface transition-colors hover:border-border-strong">
-      <div className="relative h-40 bg-[linear-gradient(135deg,rgb(37_99_235/0.45),rgb(34_211_238/0.12))]">
-        <div aria-hidden="true" className="absolute inset-x-8 top-8 bottom-0 rounded-t-lg border border-b-0 border-border-strong bg-bg-base/90 p-3">
-          <div className="mb-3 flex gap-1">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className="size-1.5 rounded-full bg-border-strong" />
-            ))}
+      <div className="relative h-40 overflow-hidden bg-[linear-gradient(135deg,rgb(37_99_235/0.45),rgb(34_211_238/0.12))]">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element -- imagem do Storage ou do serviço de demos
+          <img src={image} alt={t("coverOf", { title: p.title })} loading="lazy" decoding="async" className={`absolute inset-0 size-full object-cover ${position}`} />
+        ) : (
+          <div aria-hidden="true" className="absolute inset-x-8 top-8 bottom-0 rounded-t-lg border border-b-0 border-border-strong bg-bg-base/90 p-3">
+            <div className="mb-3 flex gap-1">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="size-1.5 rounded-full bg-border-strong" />
+              ))}
+            </div>
+            <div className="mb-2 h-2 w-2/5 rounded-full bg-brand-gradient" />
+            <div className="mb-1.5 h-1.5 w-4/5 rounded-full bg-bg-muted" />
+            <div className="h-1.5 w-3/5 rounded-full bg-bg-muted" />
           </div>
-          <div className="mb-2 h-2 w-2/5 rounded-full bg-brand-gradient" />
-          <div className="mb-1.5 h-1.5 w-4/5 rounded-full bg-bg-muted" />
-          <div className="h-1.5 w-3/5 rounded-full bg-bg-muted" />
-        </div>
+        )}
         {p.demo ? (
           <span className="absolute top-3 left-3">
             <StatusBadge status={p.demo.status} />

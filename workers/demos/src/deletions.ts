@@ -7,7 +7,7 @@ const BATCH = 50;
 
 /**
  * Apaga do R2 os arquivos das demos excluídas (projeto excluído, demo apagada ou
- * conta apagada). O banco põe cada demo apagada na fila private.demo_deletions;
+ * conta apagada), com os prints. O banco põe cada demo apagada na fila private.demo_deletions;
  * o cron chama isto a cada 15 min.
  */
 export async function purgeDeletedDemos(env: Env, deps: Deps): Promise<void> {
@@ -19,6 +19,7 @@ export async function purgeDeletedDemos(env: Env, deps: Deps): Promise<void> {
   for (const id of valid) {
     await deletePrefix(env.DEMOS_BUCKET, `demos/${id}/`);
     await deletePrefix(env.DEMOS_BUCKET, `uploads/${id}/`);
+    await deletePrefix(env.DEMOS_BUCKET, `previews/${id}/`);
   }
   await db.rpc("finish_demo_deletions", { demo_ids: valid });
 }

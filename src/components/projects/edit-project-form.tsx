@@ -9,7 +9,10 @@ import { buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
 import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
+import type { PendingImage } from "@/components/social/profile-image-field";
+import { uploadMyCover } from "@/lib/projects/cover-upload";
 import { TAGS_MAX, validateProject, type ProjectErrors, type ProjectInput } from "@/lib/projects/rules";
+import { CoverField } from "./cover-field";
 
 export type EditableProject = {
   id: string;
@@ -19,6 +22,7 @@ export type EditableProject = {
   tags: string[];
   repoUrl: string | null;
   siteUrl: string | null;
+  coverUrl?: string | null;
 };
 
 type Errors = ProjectErrors & { form?: string };
@@ -33,13 +37,17 @@ export function EditProjectForm({
   project,
   tags,
   save,
+  uploadCover = uploadMyCover,
 }: {
   project: EditableProject;
   tags: { slug: string; name: string }[];
-  save: (projectId: string, input: ProjectInput) => Promise<UpdateResult>;
+  save: (projectId: string, input: ProjectInput & { coverUrl?: string }) => Promise<UpdateResult>;
+  uploadCover?: (blob: Blob) => Promise<string>;
 }) {
   const t = useTranslations("Publish");
   const e = useTranslations("EditProject");
+  const c = useTranslations("ProjectCover");
+  const [cover, setCover] = useState<PendingImage>({ kind: "keep" });
   const [title, setTitle] = useState(project.title);
   const [description, setDescription] = useState(project.description);
   const [chosen, setChosen] = useState<string[]>(project.tags);
@@ -59,12 +67,23 @@ export function EditProjectForm({
     if (!check.ok) return setErrors(check.errors);
     setErrors({});
     setBusy(true);
+    // Capa: só sobe ao salvar. Sem mexer, a ação nem recebe o campo.
+    let coverUrl: string | undefined;
+    if (cover.kind === "remove") coverUrl = "";
+    else if (cover.kind === "new") {
+      try {
+        coverUrl = await uploadCover(cover.blob);
+      } catch {
+        setBusy(false);
+        return setErrors({ form: c("uploadFailed") });
+      }
+    }
     try {
-      const result = await save(project.id, input);
+      const result = await save(project.id, coverUrl === undefined ? input : { ...input, coverUrl });
       // Deu certo: a ação redireciona para a página do projeto e não volta aqui.
       setBusy(false);
       if (result.error === "invalid") setErrors(result.errors);
-      else setErrors({ form: result.error === "notFound" ? e("notFound") : e("unknown") });
+      else setErrors({ form: result.error === "notFound" ? e("notFound") : result.error === "cover" ? c("rejected") : e("unknown") });
     } catch (err) {
       if (isRedirect(err)) return;
       setBusy(false);
@@ -102,6 +121,7 @@ export function EditProjectForm({
             {tagError ?? t("tagsHelp")}
           </p>
         </fieldset>
+        <CoverField currentUrl={project.coverUrl ?? null} value={cover} onChange={setCover} />
       </section>
 
       <section className="flex flex-col gap-5 rounded-xl border border-border-default bg-bg-surface p-5 md:p-6">

@@ -26,7 +26,10 @@ type Props = PageProps<"/projetos/[slug]">;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const [project, t] = await Promise.all([getProject(slug), getTranslations("Projects")]);
-  return { title: project ? t("metaProject", { title: project.title }) : t("notFoundTitle") };
+  if (!project) return { title: t("notFoundTitle") };
+  // Link compartilhado mostra a capa (ou o print da demo).
+  const image = project.coverUrl || project.demo?.screenshotUrl;
+  return { title: t("metaProject", { title: project.title }), ...(image && { openGraph: { images: [image] } }) };
 }
 
 export default function ProjectPage({ params, searchParams }: Props) {
