@@ -13,15 +13,19 @@ const db = {
   likesCount: vi.fn(),
   insertComment: vi.fn(),
   deleteComment: vi.fn(),
+  updateProject: vi.fn(),
+  rpc: vi.fn(),
 };
 
 const supabase = {
+  rpc: (fn: string, args: unknown) => db.rpc(fn, args),
   from(table: string) {
     if (table === "projects")
       return {
         insert: (values: unknown) => ({ select: () => ({ single: () => db.insertProject(values) }) }),
         select: () => ({ eq: (_c: string, id: string) => ({ single: () => db.likesCount(id) }) }),
         delete: () => ({ eq: (_c: string, id: string) => db.deleteProject(id) }),
+        update: (values: unknown) => ({ eq: (_c: string, id: string) => ({ select: () => ({ maybeSingle: () => db.updateProject(id, values) }) }) }),
       };
     if (table === "demos") return { select: () => ({ eq: (_c: string, id: string) => ({ maybeSingle: () => db.demo(id) }) }) };
     if (table === "tags") return { select: () => ({ in: (_c: string, slugs: string[]) => db.tags(slugs) }) };
@@ -55,7 +59,7 @@ vi.mock("next/navigation", () => ({
 const checkTone = vi.fn<(text: string) => Promise<{ flagged: boolean }>>(async () => ({ flagged: false }));
 vi.mock("@/lib/moderation/tone", () => ({ checkTone: (text: string) => checkTone(text) }));
 
-const { publishProject, toggleLike, addComment, deleteComment } = await import("./actions");
+const { publishProject, updateProject, deleteProject, toggleLike, addComment, deleteComment } = await import("./actions");
 
 const input = { title: "Kanban colaborativo", description: "Um quadro.", tags: ["react", "nextjs"], repoUrl: "https://github.com/a/b", siteUrl: "", demoId: "d1" };
 
@@ -74,6 +78,8 @@ beforeEach(() => {
   db.likesCount.mockResolvedValue({ data: { likes_count: 1 }, error: null });
   db.insertComment.mockResolvedValue({ error: null });
   db.deleteComment.mockResolvedValue({ error: null });
+  db.updateProject.mockResolvedValue({ data: { slug: "kanban-colaborativo-abc123" }, error: null });
+  db.rpc.mockResolvedValue({ error: null });
 });
 
 describe("publishProject", () => {
@@ -176,5 +182,66 @@ describe("comentários", () => {
   it("apaga o próprio comentário", async () => {
     await expect(deleteComment("c1", "/projetos/x")).resolves.toEqual({});
     expect(db.deleteComment).toHaveBeenCalledWith("c1");
+  });
+});
+
+const edit = { title: input.title, description: input.description, tags: input.tags, repoUrl: input.repoUrl, siteUrl: input.siteUrl };
+
+describe("updateProject", () => {
+  it("dados inválidos voltam sem tocar no banco", async () => {
+    await expect(updateProject("p1", { ...edit, tags: [] })).resolves.toEqual({ error: "invalid", errors: { tags: "min" } });
+    expect(db.updateProject).not.toHaveBeenCalled();
+  });
+
+  it("salva textos e links, troca as tags e volta para a página do projeto", async () => {
+    await expect(updateProject("p1", { ...edit, siteUrl: " https://kanban.dev " })).rejects.toThrow("REDIRECT /projetos/kanban-colaborativo-abc123?editado=1");
+    expect(db.updateProject).toHaveBeenCalledWith("p1", {
+      title: "Kanban colaborativo",
+      description_md: "Um quadro.",
+      repo_url: "https://github.com/a/b",
+      site_url: "https://kanban.dev",
+    });
+    expect(db.rpc).toHaveBeenCalledWith("set_project_tags", { project_id: "p1", tag_slugs: ["react", "nextjs"] });
+  });
+
+  it("projeto de outra pessoa (a RLS não devolve nada) não é editado", async () => {
+    db.updateProject.mockResolvedValue({ data: null, error: null });
+    await expect(updateProject("p1", edit)).resolves.toEqual({ error: "notFound" });
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
+  it("tag recusada pelo banco volta como erro das tags", async () => {
+    db.rpc.mockResolvedValue({ error: { code: "22023" } });
+    await expect(updateProject("p1", edit)).resolves.toEqual({ error: "invalid", errors: { tags: "min" } });
+    db.rpc.mockResolvedValue({ error: { code: "DS003" } });
+    await expect(updateProject("p1", edit)).resolves.toEqual({ error: "invalid", errors: { tags: "max" } });
+  });
+
+  it("sem login vai para /entrar", async () => {
+    getViewer.mockResolvedValue(null);
+    await expect(updateProject("p1", edit)).rejects.toThrow("REDIRECT /entrar?next=%2Fprojetos");
+  });
+});
+
+describe("deleteProject", () => {
+  it("exclui e volta para a lista de projetos", async () => {
+    db.deleteProject.mockResolvedValue({ error: null, count: 1 });
+    await expect(deleteProject("p1")).rejects.toThrow("REDIRECT /projetos?excluido=1");
+    expect(db.deleteProject).toHaveBeenCalledWith("p1");
+  });
+
+  it("nada apagado (projeto de outra pessoa ou já excluído) é erro", async () => {
+    db.deleteProject.mockResolvedValue({ error: null, count: 0 });
+    await expect(deleteProject("p1")).resolves.toEqual({ error: "notFound" });
+  });
+
+  it("erro do banco não redireciona", async () => {
+    db.deleteProject.mockResolvedValue({ error: { code: "500" }, count: null });
+    await expect(deleteProject("p1")).resolves.toEqual({ error: "unknown" });
+  });
+
+  it("sem login vai para /entrar", async () => {
+    getViewer.mockResolvedValue(null);
+    await expect(deleteProject("p1")).rejects.toThrow("REDIRECT /entrar?next=%2Fprojetos");
   });
 });

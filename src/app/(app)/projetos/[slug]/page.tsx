@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, CircleCheck, Globe, Lock, Maximize2, Package, Play } from "lucide-react";
+import { ArrowLeft, CalendarDays, CircleCheck, Globe, Lock, Maximize2, Package, Pencil, Play } from "lucide-react";
 import type { Metadata } from "next";
 import { getFormatter, getTranslations } from "next-intl/server";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { DemoFrame } from "@/components/demo/demo-frame";
 import { StatusBadge } from "@/components/demo/status-badge";
 import { ReportButton } from "@/components/moderation/report-button";
 import { Comments } from "@/components/projects/comments";
+import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { LikeButton } from "@/components/projects/like-button";
 import { Markdown } from "@/components/projects/markdown";
 import { GithubIcon } from "@/components/icons/github";
@@ -18,6 +19,7 @@ import { getViewer } from "@/lib/auth/viewer";
 import { buildCommentTree } from "@/lib/comments/tree";
 import { demoFrameSrc, demosBaseUrl } from "@/lib/demos/url";
 import { getComments, getProject, hasLiked } from "@/lib/projects/queries";
+import { deleteProject } from "../actions";
 
 type Props = PageProps<"/projetos/[slug]">;
 
@@ -48,14 +50,15 @@ async function Project({ params, searchParams }: Pick<Props, "params" | "searchP
   const demo = project.demo;
   const src = demo?.status === "live" ? demoFrameSrc(demo, demosBaseUrl()) : null;
   const openHref = demo ? `${path}?demo=${demo.id}` : null;
+  const isOwner = !!viewer && viewer.id === project.authorId;
   const published = format.dateTime(new Date(project.createdAt), { day: "numeric", month: "short", year: "numeric" });
 
   return (
     <article className="flex flex-col gap-7">
-      {query.publicado === "1" ? (
+      {query.publicado === "1" || query.editado === "1" ? (
         <p role="status" className="flex items-center gap-2 self-center rounded-lg border border-status-success/40 bg-status-success-soft px-4 py-2.5 text-sm font-semibold text-status-success-text">
           <CircleCheck className="size-4" aria-hidden="true" />
-          {t("published")}
+          {query.publicado === "1" ? t("published") : t("edited")}
         </p>
       ) : null}
       <nav aria-label={t("breadcrumb")} className="flex items-center gap-2 text-sm">
@@ -87,8 +90,17 @@ async function Project({ params, searchParams }: Pick<Props, "params" | "searchP
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {viewer?.id !== project.authorId ? <ReportButton target="project" targetId={project.id} signedIn={!!viewer?.username} /> : null}
+        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+          {isOwner ? (
+            <>
+              <Link href={`${path}/editar`} aria-label={t("editProject")} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                <Pencil className="size-4" aria-hidden="true" />
+                {t("edit")}
+              </Link>
+              <DeleteProjectButton projectId={project.id} title={project.title} remove={deleteProject} />
+            </>
+          ) : null}
+          {!isOwner ? <ReportButton target="project" targetId={project.id} signedIn={!!viewer?.username} /> : null}
           <LikeButton projectId={project.id} path={path} liked={liked} count={project.likesCount} signedIn={!!viewer?.username} />
         </div>
       </header>

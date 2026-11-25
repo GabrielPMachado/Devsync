@@ -1,6 +1,7 @@
 import { defaultDeps, type Deps, type Env, type LinkMessage, type ZipMessage } from "./env";
 import { errorResponse, withCors } from "./http";
 import { buildProgress, failStaleBuilds, receiveBuildZip, startBuild } from "./builds";
+import { purgeDeletedDemos } from "./deletions";
 import { embedCheck, recheckLink, scheduleLinkChecks, verifyDemo } from "./links";
 import { processZip } from "./process-zip";
 import { parseDemoHost, routeDemoPath, serveDemo } from "./serve";
@@ -81,8 +82,9 @@ export default {
   fetch: (req, env) => handleFetch(req, env, defaultDeps()),
   queue: (batch, env) => handleQueue(batch, env, defaultDeps()),
   scheduled: (controller, env, ctx) => {
-    // A cada 15 min: builds parados. Às 06:00 UTC: também a checagem diária dos links.
+    // A cada 15 min: builds parados e arquivos de demos excluídas. Às 06:00 UTC: também a checagem diária dos links.
     if (controller.cron === LINK_CHECK_CRON) ctx.waitUntil(scheduleLinkChecks(env, defaultDeps()));
     ctx.waitUntil(failStaleBuilds(env, defaultDeps()));
+    ctx.waitUntil(purgeDeletedDemos(env, defaultDeps()));
   },
 } satisfies ExportedHandler<Env, ZipMessage | LinkMessage>;

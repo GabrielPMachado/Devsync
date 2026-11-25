@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { CircleCheck, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
@@ -12,10 +12,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metaTitle") };
 }
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: PageProps<"/projetos">) {
   const t = await getTranslations("Projects");
   return (
     <main className="mx-auto flex w-full max-w-[1120px] flex-1 flex-col gap-6 px-4 py-6 md:px-6 md:py-10">
+      <Suspense fallback={null}>
+        <Deleted searchParams={searchParams} />
+      </Suspense>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-text-primary">{t("title")}</h1>
@@ -42,5 +45,17 @@ async function List() {
         <ProjectCard key={p.id} project={p} basePath="/projetos" />
       ))}
     </div>
+  );
+}
+
+/** Aviso depois de excluir um projeto (a ação volta para /projetos?excluido=1). */
+async function Deleted({ searchParams }: Pick<PageProps<"/projetos">, "searchParams">) {
+  const [query, t] = await Promise.all([searchParams, getTranslations("Projects")]);
+  if (query.excluido !== "1") return null;
+  return (
+    <p role="status" className="flex items-center gap-2 self-center rounded-lg border border-status-success/40 bg-status-success-soft px-4 py-2.5 text-sm font-semibold text-status-success-text">
+      <CircleCheck className="size-4" aria-hidden="true" />
+      {t("deleted")}
+    </p>
   );
 }

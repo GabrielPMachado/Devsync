@@ -7,7 +7,7 @@ import { openDemoZip, ZipReadError, type ZipRejection } from "./zip";
 /** Tentativas reais antes de desistir (a fila demo-zips tem max_retries 4, ou seja 5 entregas). */
 export const MAX_ZIP_ATTEMPTS = 4;
 
-async function deletePrefix(bucket: R2Bucket, prefix: string): Promise<void> {
+export async function deletePrefix(bucket: R2Bucket, prefix: string): Promise<void> {
   let cursor: string | undefined;
   do {
     const page = await bucket.list({ prefix, cursor });

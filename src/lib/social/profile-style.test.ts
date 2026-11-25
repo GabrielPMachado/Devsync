@@ -4,7 +4,7 @@ import { ACCENT_COLORS, ACCENTS, BANNER_PRESETS, FRAMES, FREE_FRAMES, STATUSES, 
 
 describe("catálogo do perfil", () => {
   it("espelha as checagens do banco", () => {
-    const sql = readFileSync("supabase/migrations/20261125100000_profile_catalog_v2.sql", "utf8");
+    const sql = readFileSync("supabase/migrations/20261125150000_profile_catalog_v2.sql", "utf8");
     const list = (col: string) => sql.match(new RegExp(`profiles_${col}_check check \\(${col} in \\(([^)]+)\\)`))![1].match(/'([a-z_]+)'/g)!.map((x) => x.slice(1, -1));
     expect(list("banner_preset")).toEqual([...BANNER_PRESETS]);
     expect([...list("accent")].sort()).toEqual([...ACCENTS].sort());
