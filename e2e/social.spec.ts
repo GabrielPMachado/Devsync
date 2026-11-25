@@ -104,6 +104,13 @@ test("editar perfil: cargo, status, links novos e aparência ficam salvos", asyn
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page).toHaveURL(new RegExp(`/@${username}\\?salvo=1$`));
 
+  // Voltar pelo botão do perfil (navegação no navegador, sem recarregar) mostra o que foi salvo.
+  await page.getByRole("link", { name: "Editar perfil" }).click();
+  await expect(page).toHaveURL(/\/configuracoes$/);
+  await expect(page.getByLabel("Cargo")).toHaveValue("Dev back-end na Acme");
+  await expect(page.getByRole("radio", { name: "Circuito" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Borda ciano" })).toBeChecked();
+
   await page.goto("/configuracoes", { waitUntil: "networkidle" });
   await expect(page.getByLabel("Cargo")).toHaveValue("Dev back-end na Acme");
   await expect(page.getByLabel("Status")).toHaveValue("open_to_work");

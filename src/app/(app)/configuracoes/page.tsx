@@ -36,8 +36,29 @@ async function Form() {
   if (!profile) redirect("/");
   const tb = await getTranslations("Badges");
   const earned = profile.badges.map((b) => b.badge);
+  const initial = {
+    displayName: profile.displayName ?? "",
+    bio: profile.bio ?? "",
+    headline: profile.headline ?? "",
+    location: profile.location ?? "",
+    status: profile.status ?? "",
+    github: profile.links.github ?? "",
+    linkedin: profile.links.linkedin ?? "",
+    x: profile.links.x ?? "",
+    youtube: profile.links.youtube ?? "",
+    site: profile.links.site ?? "",
+    bannerPreset: profile.bannerPreset ?? "",
+    avatarFrame: profile.avatarFrame ?? "",
+    accent: profile.accent ?? "",
+    tags: profile.tags,
+  };
+  // O editor guarda o rascunho em estado e o Next mantém a página montada entre
+  // navegações: sem a chave, voltar aqui depois de salvar mostrava o rascunho
+  // antigo (ou o vazio). Dados novos do banco = editor novo.
+  const saved = JSON.stringify([initial, profile.avatarUrl, profile.bannerUrl, profile.shownBadges, earned]);
   return (
     <ProfileEditor
+      key={saved}
       username={profile.username}
       userId={viewer.id}
       tags={tags}
@@ -49,22 +70,7 @@ async function Form() {
           <BadgesSection earned={earned} initial={profile.shownBadges} />
         </EditorSection>
       }
-      initial={{
-        displayName: profile.displayName ?? "",
-        bio: profile.bio ?? "",
-        headline: profile.headline ?? "",
-        location: profile.location ?? "",
-        status: profile.status ?? "",
-        github: profile.links.github ?? "",
-        linkedin: profile.links.linkedin ?? "",
-        x: profile.links.x ?? "",
-        youtube: profile.links.youtube ?? "",
-        site: profile.links.site ?? "",
-        bannerPreset: profile.bannerPreset ?? "",
-        avatarFrame: profile.avatarFrame ?? "",
-        accent: profile.accent ?? "",
-        tags: profile.tags,
-      }}
+      initial={initial}
     />
   );
 }
