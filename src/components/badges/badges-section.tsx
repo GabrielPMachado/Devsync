@@ -2,8 +2,8 @@
 
 import { Check, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
-import { BADGE_KEYS, SHOWN_BADGES_MAX, sanitizeShownBadges, type BadgeKey } from "@/lib/social/badges";
+import { useId, useState } from "react";
+import { BADGE_GROUPS, BADGE_KEYS, SHOWN_BADGES_MAX, sanitizeShownBadges, type BadgeKey } from "@/lib/social/badges";
 import { Hint } from "@/components/ui/hint";
 import { BadgeIcon } from "./badge-icon";
 
@@ -25,6 +25,7 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
   const t = useTranslations("Badges");
   const [shown, setShown] = useState<BadgeKey[]>(() => sanitizeShownBadges([...initial], earned));
   const full = shown.length >= SHOWN_BADGES_MAX;
+  const baseId = useId();
   const earnedCount = BADGE_KEYS.filter((b) => earned.includes(b)).length;
 
   function toggle(b: BadgeKey) {
@@ -35,7 +36,7 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
 
   return (
     // Título e ajuda vêm do cartão do editor (EditorSection); a legenda fica para leitores de tela.
-    <fieldset id="insignias" className="flex scroll-mt-24 flex-col gap-3">
+    <fieldset id="insignias" className="flex scroll-mt-24 flex-col gap-5">
       <legend className="sr-only">{t("sectionTitle")}</legend>
       {/* Diz à ação de salvar que a seção veio no formulário (sem ela, as exibidas não mudam). */}
       <input type="hidden" name="shownBadgesSet" value="1" />
@@ -51,8 +52,16 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
           <div className="h-full rounded-full bg-brand-gradient transition-[width] duration-500" style={{ width: `${(earnedCount / BADGE_KEYS.length) * 100}%` }} />
         </div>
       </div>
+      {BADGE_GROUPS.map((g) => (
+        <div key={g.key} role="group" aria-labelledby={`${baseId}-${g.key}`} className="flex flex-col gap-2">
+          <p id={`${baseId}-${g.key}`} className="flex items-center gap-2 text-[11px] font-semibold tracking-wider text-text-subtle uppercase">
+            {t(`group_${g.key}`)}
+            <span className="font-medium tracking-normal normal-case tabular-nums text-text-muted">
+              {t("groupCount", { earned: g.badges.filter((b) => earned.includes(b)).length, total: g.badges.length })}
+            </span>
+          </p>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {BADGE_KEYS.map((b) => {
+        {g.badges.map((b) => {
           const has = earned.includes(b);
           const on = shown.includes(b);
           const label = t(`${b}_name`);
@@ -114,6 +123,8 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
           );
         })}
       </ul>
+        </div>
+      ))}
       {full ? <p className="text-xs text-text-muted" role="status">{t("limit")}</p> : null}
     </fieldset>
   );

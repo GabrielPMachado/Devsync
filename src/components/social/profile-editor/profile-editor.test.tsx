@@ -88,6 +88,28 @@ describe("<ProfileEditor />", () => {
     expect(screen.getByRole("radio", { name: "Borda colchetes" })).toBeEnabled();
   });
 
+  it("mostra quantas opções há de cada coisa e quantas bordas estão liberadas", () => {
+    renderEditor({ unlockedBadges: ["builder", "founder"] });
+    expect(screen.getByRole("group", { name: /Banner/ })).toHaveTextContent("14 opções");
+    expect(screen.getByRole("group", { name: /Cor de destaque/ })).toHaveTextContent("12 opções");
+    const frames = screen.getByRole("group", { name: /Borda da foto/ });
+    expect(frames).toHaveTextContent("11 de 18 liberadas");
+    expect(within(frames).getByText("Livres")).toBeInTheDocument();
+    expect(within(frames).getByText("Por conquista")).toBeInTheDocument();
+    expect(within(frames).getByText("2 de 9")).toBeInTheDocument();
+  });
+
+  it("o cabeçalho de cada escolha diz o que está selecionado", () => {
+    renderEditor();
+    fireEvent.click(screen.getByRole("radio", { name: "Nebulosa" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Turquesa" }));
+    expect(screen.getByRole("group", { name: /Banner/ })).toHaveTextContent("Nebulosa");
+    expect(screen.getByRole("group", { name: /Cor de destaque/ })).toHaveTextContent("Turquesa");
+    const data = new FormData(document.querySelector("form")!);
+    expect(data.get("bannerPreset")).toBe("nebulosa");
+    expect(data.get("accent")).toBe("turquesa");
+  });
+
   it("avisa antes de sair com mudanças não salvas", () => {
     renderEditor();
     const clean = new Event("beforeunload", { cancelable: true });

@@ -1,12 +1,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { BADGE_KEYS, FRAME_UNLOCKS, SHOWN_BADGES_MAX, frameLocked, isBadgeKey, sanitizeShownBadges } from "./badges";
+import { BADGE_GROUPS, BADGE_KEYS, FRAME_UNLOCKS, SHOWN_BADGES_MAX, frameLocked, isBadgeKey, sanitizeShownBadges } from "./badges";
 
 describe("catálogo de insígnias", () => {
   it("espelha o catálogo do banco", () => {
-    const sql = readFileSync("supabase/migrations/20261124900000_badges.sql", "utf8");
+    const sql = readFileSync("supabase/migrations/20261125100000_profile_catalog_v2.sql", "utf8");
     const inSql = sql.match(/select array\[([^\]]+)\]/)![1].match(/'([a-z_]+)'/g)!.map((s) => s.slice(1, -1));
     expect(inSql).toEqual([...BADGE_KEYS]);
+    expect(BADGE_KEYS).toHaveLength(15);
+    expect(BADGE_GROUPS.flatMap((g) => g.badges).sort()).toEqual([...BADGE_KEYS].sort());
+    const unlocks = [...sql.matchAll(/when '([a-z_]+)' then '([a-z_]+)'/g)].map((m) => [m[1], m[2]]);
+    expect(Object.fromEntries(unlocks)).toEqual(FRAME_UNLOCKS);
     for (const [frame, badge] of Object.entries(FRAME_UNLOCKS)) {
       expect(sql).toContain(`when '${frame}' then '${badge}'`);
     }
@@ -32,8 +36,10 @@ describe("catálogo de insígnias", () => {
 });
 
 describe("bordas por conquista", () => {
-  it("as três bordas bloqueadas vêm do catálogo de aparência", () => {
-    expect(FRAME_UNLOCKS).toEqual({ neon: "mentor", colchetes: "builder", dourada: "founder" });
+  it("as nove bordas bloqueadas vêm do catálogo de aparência, cada uma com sua insígnia", () => {
+    expect(Object.keys(FRAME_UNLOCKS)).toHaveLength(9);
+    expect(new Set(Object.values(FRAME_UNLOCKS)).size).toBe(9);
+    expect(FRAME_UNLOCKS).toMatchObject({ neon: "mentor", colchetes: "builder", dourada: "founder" });
   });
 });
 

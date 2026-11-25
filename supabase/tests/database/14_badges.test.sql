@@ -89,7 +89,7 @@ update public.profiles set followers_count = 10 where id = :'bruno';
 select ok('popular' = any (tests.badges(:'bruno')), 'perder seguidores não tira popular');
 
 -- Insígnia repetida não gera notificação de novo.
-select is(tests.badge_notifications(:'bruno'), array['curious', 'popular'], 'uma notificação por insígnia, sem repetir');
+select is(tests.badge_notifications(:'bruno'), array['curious', 'first_answer', 'investigator', 'popular'], 'uma notificação por insígnia, sem repetir');
 
 -- API: leitura pública, escrita proibida ------------------------------------
 select tests.as_anon();

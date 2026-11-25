@@ -5,7 +5,7 @@ import { accentStyle } from "./accent";
 describe("accentStyle", () => {
   it("sem escolha (ou valor estranho), usa o azul", () => {
     expect(accentStyle(null)["--accent"]).toBe(ACCENT_COLORS.azul);
-    expect(accentStyle("laranja")["--accent"]).toBe(ACCENT_COLORS.azul);
+    expect(accentStyle("preto")["--accent"]).toBe(ACCENT_COLORS.azul);
   });
 
   it("cada cor tem um tom de texto legível no fundo escuro", () => {

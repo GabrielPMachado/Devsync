@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -47,9 +47,14 @@ describe("AchievementsBlock", () => {
 });
 
 describe("BadgesSection", () => {
-  it("mostra o progresso das conquistas", () => {
-    wrap(<BadgesSection earned={["founder", "curious"]} initial={[]} />);
-    expect(screen.getByText("2 de 7 conquistadas")).toBeInTheDocument();
+  it("mostra o progresso das conquistas, no total e por grupo", () => {
+    wrap(<BadgesSection earned={["founder", "curious", "first_project"]} initial={[]} />);
+    expect(screen.getByText("3 de 15 conquistadas")).toBeInTheDocument();
+    const group = (name: string) => screen.getByRole("group", { name: new RegExp(name) });
+    expect(group("Projetos")).toHaveTextContent("1 de 4");
+    expect(group("Perguntas e respostas")).toHaveTextContent("1 de 7");
+    expect(group("Comunidade")).toHaveTextContent("1 de 4");
+    expect(within(group("Projetos")).getByRole("button", { name: /Arquiteto/ })).toHaveAttribute("aria-disabled", "true");
   });
 
   it("bloqueadas só mostram como ganhar na dica flutuante, e não são marcáveis", () => {

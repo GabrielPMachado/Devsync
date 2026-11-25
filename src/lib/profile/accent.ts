@@ -11,6 +11,12 @@ const ACCENT_TEXT: Record<Accent, string> = {
   verde: "#4ADE80",
   ambar: "#FBBF24",
   rosa: "#F472B6",
+  indigo: "#A5B4FC",
+  turquesa: "#2DD4BF",
+  lima: "#A3E635",
+  laranja: "#FB923C",
+  vermelho: "#F87171",
+  grafite: "#CBD5E1",
 };
 
 export type AccentStyle = { "--accent": string; "--accent-text": string };
