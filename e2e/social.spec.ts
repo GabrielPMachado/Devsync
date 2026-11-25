@@ -37,14 +37,16 @@ test("seguir alguém, ver o que a pessoa publica no início e receber a notifica
   await expect(bruno.page.getByRole("button", { name: `Deixar de seguir @${ana.username}` })).toHaveText("Seguindo");
   await expect(bruno.page.getByRole("link", { name: /1\s*seguidor/ })).toBeVisible();
 
-  // Ana recebe a notificação em tempo real, sem recarregar.
-  await expect(bell).toHaveAccessibleName("Notificações, 1 não lida");
+  // Ana recebe a notificação em tempo real, sem recarregar. O primeiro seguidor
+  // também dá a insígnia Primeiro fã: são duas notificações.
+  await expect(bell).toHaveAccessibleName("Notificações, 2 não lidas");
   await expect(ana.page.getByRole("link", { name: /Nova notificação/ })).toBeVisible();
   await bell.click();
   await expect(ana.page).toHaveURL(/\/notificacoes$/);
   const item = ana.page.getByRole("listitem").filter({ hasText: "Bruno começou a seguir você" });
   await expect(item).toBeVisible();
   await expect(item.getByRole("button", { name: `Seguir @${bruno.username}` })).toHaveText("Seguir de volta");
+  await expect(ana.page.getByRole("listitem").filter({ hasText: "Você ganhou a insígnia Primeiro fã" })).toBeVisible();
   // Abrir a página marca como lida e zera o sino.
   await expect(bell).toHaveAccessibleName("Notificações");
 

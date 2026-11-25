@@ -1,6 +1,6 @@
 begin;
 \ir ../helpers.psql
-select plan(42);
+select plan(46);
 
 -- Moderação de perfis e do catálogo (20261125400000_admin_profiles.sql).
 
@@ -65,6 +65,20 @@ reset role;
 select tests.login_as(:'adm');
 select lives_ok(format($$ select public.admin_revoke_item(%L, 'frame', 'prisma') $$, :'rui'), 'admin tira a liberação');
 select is((tests.profile(:'rui')).avatar_frame, null, 'rui volta à borda padrão');
+
+-- Banner por conquista liberado à mão; tirar a liberação volta ao padrão.
+select tests.login_as(:'rui');
+select throws_ok($$ update profiles set banner_preset = 'hiperespaco' where id = auth.uid() $$, 'DS005', null, 'banner por conquista bloqueado para rui');
+reset role;
+select tests.login_as(:'adm');
+select lives_ok(format($$ select public.admin_grant_item(%L, 'banner', 'hiperespaco') $$, :'rui'), 'admin libera o banner para rui');
+reset role;
+select tests.login_as(:'rui');
+select lives_ok($$ update profiles set banner_preset = 'hiperespaco' where id = auth.uid() $$, 'rui usa o banner liberado');
+reset role;
+select tests.login_as(:'adm');
+select public.admin_revoke_item(:'rui', 'banner', 'hiperespaco');
+select is((tests.profile(:'rui')).banner_preset, null, 'sem a liberação o banner volta ao padrão');
 
 -- Ligar e desligar itens -----------------------------------------------------------------
 select lives_ok($$ select public.admin_set_catalog_item('banner', 'nebulosa', false) $$, 'admin desliga banner');

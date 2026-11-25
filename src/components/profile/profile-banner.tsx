@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { ANIMATED_BANNER_ART } from "./profile-banner-animated";
 
 /**
  * Banner do perfil (proporção 3:1). Ordem: imagem enviada > banner pronto > gradiente padrão.
@@ -388,6 +389,7 @@ export const BANNER_ART: Record<string, Art> = {
       </g>
     </>
   ),
+  ...ANIMATED_BANNER_ART,
 };
 
 type Props = { bannerUrl?: string | null; preset?: string | null; className?: string };

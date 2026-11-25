@@ -8,7 +8,7 @@ import { validateProfile, type ProfileErrors, type ProfileInput } from "@/lib/so
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * "badges": tentou exibir insígnia não conquistada (DS004); "frame": borda ainda bloqueada (DS005);
+ * "badges": tentou exibir insígnia não conquistada (DS004); "frame": borda, banner ou cor ainda bloqueados (DS005);
  * "unavailable": item desligado pela moderação (DS006).
  */
 export type SaveProfileState = { errors?: ProfileErrors; error?: "unknown" | "badges" | "frame" | "unavailable"; values?: ProfileInput };

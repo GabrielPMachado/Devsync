@@ -82,16 +82,26 @@ language sql stable security definer set search_path = '' as $$
 $$;
 revoke execute on function private.has_item_grant(uuid, text, text) from public, anon, authenticated;
 
--- Pode usar o item? Liberado à mão, ou ligado (e, se for borda por conquista, com a insígnia).
+-- Insígnia que libera o item (borda, banner ou cor), ou null se é livre.
+create function private.required_badge(p_kind text, p_key text) returns text
+language sql stable security definer set search_path = '' as $$
+  select case p_kind
+    when 'frame' then public.frame_required_badge(p_key)
+    when 'banner' then public.banner_required_badge(p_key)
+    when 'accent' then public.accent_required_badge(p_key)
+  end
+$$;
+revoke execute on function private.required_badge(text, text) from public, anon, authenticated;
+
+-- Pode usar o item? Liberado à mão, ou ligado e (se for por conquista) com a insígnia.
 create function private.item_allowed(who uuid, p_kind text, p_key text) returns boolean
 language sql stable security definer set search_path = '' as $$
   select p_key is null
     or private.has_item_grant(who, p_kind, p_key)
     or (public.catalog_item_active(p_kind, p_key)
-        and (p_kind <> 'frame'
-             or public.frame_required_badge(p_key) is null
+        and (private.required_badge(p_kind, p_key) is null
              or exists (select 1 from public.user_badges u
-                        where u.profile_id = who and u.badge = public.frame_required_badge(p_key))))
+                        where u.profile_id = who and u.badge = private.required_badge(p_kind, p_key))))
 $$;
 revoke execute on function private.item_allowed(uuid, text, text) from public, anon, authenticated;
 
@@ -134,39 +144,37 @@ begin
 end $$;
 revoke execute on function private.badges_on_username() from public, anon, authenticated;
 
--- Escolha no editor: recusa item desligado (DS006) e aceita borda liberada à mão.
+-- Escolha no editor (junta com 20261125300000_profile_catalog_v3): item bloqueado (DS005) e
+-- item desligado (DS006) são recusados, menos se a moderação liberou para a pessoa.
 -- Só confere o que mudou: quem já usa um item desligado continua com ele.
 create or replace function private.profiles_check_badges() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare
-  needed text := public.frame_required_badge(new.avatar_frame);
+  owns text[] := array(select u.badge from public.user_badges u where u.profile_id = new.id);
+  item record;
+  needed text;
 begin
   if new.shown_badges is distinct from old.shown_badges then
     if cardinality(new.shown_badges) <> (select count(distinct b) from unnest(new.shown_badges) b)
-       or exists (
-         select 1 from unnest(new.shown_badges) b
-         where not exists (select 1 from public.user_badges u where u.profile_id = new.id and u.badge = b)) then
+       or exists (select 1 from unnest(new.shown_badges) b where not (b = any (owns))) then
       raise exception 'Você só pode exibir insígnias que conquistou, sem repetir' using errcode = 'DS004';
     end if;
   end if;
-  if new.avatar_frame is distinct from old.avatar_frame and new.avatar_frame is not null
-     and not private.has_item_grant(new.id, 'frame', new.avatar_frame) then
-    if needed is not null
-       and not exists (select 1 from public.user_badges u where u.profile_id = new.id and u.badge = needed) then
-      raise exception 'Essa borda ainda está bloqueada' using errcode = 'DS005';
+  for item in
+    select * from (values
+      ('frame', new.avatar_frame, new.avatar_frame is distinct from old.avatar_frame),
+      ('banner', new.banner_preset, new.banner_preset is distinct from old.banner_preset),
+      ('accent', new.accent, new.accent is distinct from old.accent)) as v(kind, key, changed)
+  loop
+    continue when not item.changed or item.key is null or private.has_item_grant(new.id, item.kind, item.key);
+    needed := private.required_badge(item.kind, item.key);
+    if needed is not null and not (needed = any (owns)) then
+      raise exception 'Esse item ainda está bloqueado' using errcode = 'DS005';
     end if;
-    if not public.catalog_item_active('frame', new.avatar_frame) then
-      raise exception 'Essa borda não está disponível' using errcode = 'DS006';
+    if not public.catalog_item_active(item.kind, item.key) then
+      raise exception 'Esse item não está disponível' using errcode = 'DS006';
     end if;
-  end if;
-  if new.banner_preset is distinct from old.banner_preset
-     and not private.item_allowed(new.id, 'banner', new.banner_preset) then
-    raise exception 'Esse banner não está disponível' using errcode = 'DS006';
-  end if;
-  if new.accent is distinct from old.accent
-     and not private.item_allowed(new.id, 'accent', new.accent) then
-    raise exception 'Essa cor não está disponível' using errcode = 'DS006';
-  end if;
+  end loop;
   return new;
 end $$;
 revoke execute on function private.profiles_check_badges() from public, anon, authenticated;
@@ -183,10 +191,12 @@ language plpgsql security definer set search_path = '' as $$
 begin
   update public.profiles p set
     shown_badges = array_remove(p.shown_badges, badge),
-    avatar_frame = case
-      when public.frame_required_badge(p.avatar_frame) = badge
-           and not private.has_item_grant(who, 'frame', p.avatar_frame) then null
-      else p.avatar_frame end
+    avatar_frame = case when private.required_badge('frame', p.avatar_frame) = badge
+                        and not private.has_item_grant(who, 'frame', p.avatar_frame) then null else p.avatar_frame end,
+    banner_preset = case when private.required_badge('banner', p.banner_preset) = badge
+                         and not private.has_item_grant(who, 'banner', p.banner_preset) then null else p.banner_preset end,
+    accent = case when private.required_badge('accent', p.accent) = badge
+                  and not private.has_item_grant(who, 'accent', p.accent) then null else p.accent end
   where p.id = who;
 end $$;
 revoke execute on function private.after_badge_revoked(uuid, text) from public, anon, authenticated;

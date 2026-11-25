@@ -38,13 +38,14 @@ const profile: AdminProfile = {
   history: [],
 };
 
+const NONE = { badge: [], frame: [], banner: [], accent: [] };
 const wrap = (ui: React.ReactNode) => render(<NextIntlClientProvider locale="pt-BR" messages={messages}>{ui}</NextIntlClientProvider>);
 
 beforeEach(() => vi.clearAllMocks());
 
 describe("<ProfileManager />", () => {
   it("dá e tira insígnia, com ou sem aviso", async () => {
-    wrap(<ProfileManager profile={profile} disabledBadges={[]} disabledFrames={[]} />);
+    wrap(<ProfileManager profile={profile} disabled={NONE} />);
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Tirar: Mentor" })));
     expect(actions.setBadge).toHaveBeenCalledWith(profile.id, "mentor", false, true);
     fireEvent.click(screen.getByLabelText("Avisar a pessoa ao dar"));
@@ -54,26 +55,28 @@ describe("<ProfileManager />", () => {
   });
 
   it("libera e tira borda à mão", async () => {
-    wrap(<ProfileManager profile={profile} disabledBadges={[]} disabledFrames={[]} />);
+    wrap(<ProfileManager profile={profile} disabled={NONE} />);
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Tirar: Dourada" })));
     expect(actions.setItemGrant).toHaveBeenCalledWith(profile.id, "frame", "dourada", false);
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Liberar: Prisma" })));
     expect(actions.setItemGrant).toHaveBeenCalledWith(profile.id, "frame", "prisma", true);
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: `Liberar: ${messages.ProfileStyle.banner_hiperespaco}` })));
+    expect(actions.setItemGrant).toHaveBeenCalledWith(profile.id, "banner", "hiperespaco", true);
   });
 
   it("o aviso desmarcado continua desmarcado depois de dar uma insígnia", async () => {
-    const { rerender } = wrap(<ProfileManager profile={profile} disabledBadges={[]} disabledFrames={[]} />);
+    const { rerender } = wrap(<ProfileManager profile={profile} disabled={NONE} />);
     fireEvent.click(screen.getByLabelText("Avisar a pessoa ao dar"));
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Dar: Sábio" })));
     const updated = { ...profile, badges: [...profile.badges, { badge: "sage", awardedAt: "2026-11-25T10:00:00Z" }] };
-    rerender(<NextIntlClientProvider locale="pt-BR" messages={messages}><ProfileManager profile={updated} disabledBadges={[]} disabledFrames={[]} /></NextIntlClientProvider>);
+    rerender(<NextIntlClientProvider locale="pt-BR" messages={messages}><ProfileManager profile={updated} disabled={NONE} /></NextIntlClientProvider>);
     expect(screen.getByLabelText("Avisar a pessoa ao dar")).not.toBeChecked();
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Dar: Curioso" })));
     expect(actions.setBadge).toHaveBeenLastCalledWith(profile.id, "curious", true, false);
   });
 
   it("salva só os campos que mudaram", async () => {
-    wrap(<ProfileManager profile={profile} disabledBadges={[]} disabledFrames={[]} />);
+    wrap(<ProfileManager profile={profile} disabled={NONE} />);
     const save = screen.getByRole("button", { name: "Salvar dados" });
     expect(save).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Lia Souza" } });
@@ -83,7 +86,7 @@ describe("<ProfileManager />", () => {
 
   it("mostra o erro do banco", async () => {
     actions.updateProfileAsAdmin.mockResolvedValueOnce({ error: "usernameTaken" } as never);
-    wrap(<ProfileManager profile={profile} disabledBadges={[]} disabledFrames={[]} />);
+    wrap(<ProfileManager profile={profile} disabled={NONE} />);
     fireEvent.change(screen.getByLabelText("@usuário"), { target: { value: "rui" } });
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Salvar dados" })));
     expect(screen.getByRole("alert")).toHaveTextContent("Esse @ já está em uso.");

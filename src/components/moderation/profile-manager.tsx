@@ -9,18 +9,18 @@ import { buttonClasses } from "@/components/ui/button";
 import { setBadge, setItemGrant, updateProfileAsAdmin, type ProfileAdminResult, type ProfileChanges } from "@/lib/moderation/profile-actions";
 import type { AdminProfile } from "@/lib/moderation/profile-queries";
 import { BADGE_KEYS, type BadgeKey } from "@/lib/social/badges";
-import { FRAMES, STATUSES } from "@/lib/social/profile-style";
+import { ACCENT_UNLOCKS, ACCENTS, BANNER_PRESETS, BANNER_UNLOCKS, FRAMES, STATUSES } from "@/lib/social/profile-style";
 import { INPUT, ItemPreview } from "./catalog-panel";
 
-type Props = { profile: AdminProfile; disabledBadges: string[]; disabledFrames: string[] };
+type Props = { profile: AdminProfile; disabled: Record<"badge" | LockableKind, string[]> };
 
 /** Página do perfil no /admin: dados, insígnias e bordas liberadas à mão. */
-export function ProfileManager({ profile, disabledBadges, disabledFrames }: Props) {
+export function ProfileManager({ profile, disabled }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <DataSection profile={profile} />
-      <BadgesSection profile={profile} disabled={disabledBadges} />
-      <FramesSection profile={profile} disabled={disabledFrames} />
+      <BadgesSection profile={profile} disabled={disabled.badge} />
+      <GrantsSection profile={profile} disabled={disabled} />
     </div>
   );
 }
@@ -203,50 +203,67 @@ function BadgesSection({ profile, disabled }: { profile: AdminProfile; disabled:
   );
 }
 
-function FramesSection({ profile, disabled }: { profile: AdminProfile; disabled: string[] }) {
+type LockableKind = "frame" | "banner" | "accent";
+
+/** Itens que pedem insígnia (ou estão desligados), por tipo: são os que faz sentido liberar à mão. */
+function lockable(kind: LockableKind, disabled: readonly string[]): { key: string; badge?: BadgeKey }[] {
+  const all =
+    kind === "frame"
+      ? FRAMES.map((f) => ({ key: f.key as string, badge: f.requiresBadge }))
+      : kind === "banner"
+        ? BANNER_PRESETS.map((key) => ({ key: key as string, badge: BANNER_UNLOCKS[key] }))
+        : ACCENTS.map((key) => ({ key: key as string, badge: ACCENT_UNLOCKS[key] }));
+  return all.filter((i) => i.badge || disabled.includes(i.key));
+}
+
+function GrantsSection({ profile, disabled }: { profile: AdminProfile; disabled: Record<LockableKind, string[]> }) {
   const t = useTranslations("AdminProfiles");
-  const style = useTranslations("ProfileStyle");
-  const b = useTranslations("Badges");
+  const all = useTranslations() as unknown as (key: string) => string;
   const { run, error, pending } = useRun();
   const earned = new Set(profile.badges.map((x) => x.badge));
-  const granted = new Set(profile.grants.filter((g) => g.kind === "frame").map((g) => g.key));
+  const current: Record<LockableKind, string | null> = { frame: profile.avatarFrame, banner: profile.bannerPreset, accent: profile.accent };
 
   return (
     <Card title={t("framesTitle")} hint={t("framesHint")}>
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {FRAMES.map((f) => {
-          const isGranted = granted.has(f.key);
-          const name = style(`frame_${f.key}`);
-          const source = isGranted
-            ? t("granted")
-            : f.requiresBadge
-              ? `${t("byBadge")} ${b(`${f.requiresBadge}_name`)}${earned.has(f.requiresBadge) ? " ✓" : ""}`
-              : t("free");
-          return (
-            <li key={f.key} className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${isGranted ? "border-brand-accent/50" : "border-border-default"}`}>
-              <ItemPreview kind="frame" itemKey={f.key} />
-              <span className="flex flex-1 flex-col">
-                <span className="text-sm font-semibold text-text-primary">{name}</span>
-                <span className="text-xs text-text-muted">
-                  {source}
-                  {disabled.includes(f.key) ? ` · ${t("off")}` : null}
-                  {profile.avatarFrame === f.key ? ` · ${t("inUse")}` : null}
-                </span>
-              </span>
-              <button
-                type="button"
-                disabled={pending}
-                aria-label={`${isGranted ? t("revoke") : t("grant")}: ${name}`}
-                onClick={() => run(() => setItemGrant(profile.id, "frame", f.key, !isGranted))}
-                className={buttonClasses({ variant: isGranted ? "ghost" : "secondary", size: "sm" })}
-              >
-                {isGranted ? <Check className="mr-1.5 size-4" aria-hidden="true" /> : <Unlock className="mr-1.5 size-4" aria-hidden="true" />}
-                {isGranted ? t("revoke") : t("grant")}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {(["frame", "banner", "accent"] as const).map((kind) => (
+        <div key={kind} className="flex flex-col gap-2">
+          <h3 className="text-xs font-semibold tracking-wider text-text-subtle uppercase">{t(`kinds.${kind}`)}</h3>
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {lockable(kind, disabled[kind]).map((item) => {
+              const isGranted = profile.grants.some((g) => g.kind === kind && g.key === item.key);
+              const name = all(`ProfileStyle.${kind}_${item.key}`);
+              const source = isGranted
+                ? t("granted")
+                : item.badge
+                  ? `${t("byBadge")} ${all(`Badges.${item.badge}_name`)}${earned.has(item.badge) ? " ✓" : ""}`
+                  : t("free");
+              return (
+                <li key={item.key} className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${isGranted ? "border-brand-accent/50" : "border-border-default"}`}>
+                  <ItemPreview kind={kind} itemKey={item.key} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-sm font-semibold text-text-primary">{name}</span>
+                    <span className="text-xs text-text-muted">
+                      {source}
+                      {disabled[kind].includes(item.key) ? ` · ${t("off")}` : null}
+                      {current[kind] === item.key ? ` · ${t("inUse")}` : null}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    aria-label={`${isGranted ? t("revoke") : t("grant")}: ${name}`}
+                    onClick={() => run(() => setItemGrant(profile.id, kind, item.key, !isGranted))}
+                    className={buttonClasses({ variant: isGranted ? "ghost" : "secondary", size: "sm" })}
+                  >
+                    {isGranted ? <Check className="mr-1.5 size-4" aria-hidden="true" /> : <Unlock className="mr-1.5 size-4" aria-hidden="true" />}
+                    {isGranted ? t("revoke") : t("grant")}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
       <Alert error={error} />
     </Card>
   );

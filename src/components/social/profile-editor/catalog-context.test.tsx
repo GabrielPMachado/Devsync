@@ -8,10 +8,10 @@ import { FramePicker } from "./frame-picker";
 
 const hidden = { banner: ["nebulosa"], accent: ["rosa"], frame: ["violeta"], badge: [] };
 
-function wrap(ui: React.ReactNode, grantedFrames: string[] = []) {
+function wrap(ui: React.ReactNode, frames: string[] = []) {
   return render(
     <NextIntlClientProvider locale="pt-BR" messages={messages}>
-      <CatalogProvider hidden={hidden} grantedFrames={grantedFrames}>
+      <CatalogProvider hidden={hidden} granted={{ banner: [], accent: [], frame: frames }}>
         {ui}
       </CatalogProvider>
     </NextIntlClientProvider>,

@@ -50,7 +50,7 @@ export function Hint({ content, children, className = "" }: Props) {
     if (!open || !root.current) return;
     const r = root.current.getBoundingClientRect();
     const mid = r.left + r.width / 2;
-    const align = mid - WIDTH / 2 < MARGIN ? "start" : mid + WIDTH / 2 > window.innerWidth - MARGIN ? "end" : "center";
+    const align = mid - WIDTH / 2 < MARGIN ? "start" : mid + WIDTH / 2 > document.documentElement.clientWidth - MARGIN ? "end" : "center";
     setPlace({ align, below: r.top < 160 });
   }, [open]);
 
@@ -82,6 +82,8 @@ export function Hint({ content, children, className = "" }: Props) {
     },
     onBlur: () => setFocus(false),
     onKeyDown: (ev) => {
+      // Teclado depois de um toque: o clique do Espaço/setas no rádio não deve fixar a dica.
+      setPointer("mouse");
       if (ev.key === "Escape") {
         setHover(false);
         setFocus(false);
@@ -101,12 +103,32 @@ export function Hint({ content, children, className = "" }: Props) {
         role="tooltip"
         data-open={open}
         style={{ width: WIDTH }}
-        className={`pointer-events-none absolute z-30 ${x} ${y} rounded-lg border border-border-strong bg-bg-elevated p-3 text-left text-xs leading-relaxed text-text-secondary shadow-xl shadow-black/40 transition duration-150 ${
-          open ? "visible translate-y-0 opacity-100" : `invisible opacity-0 ${place.below ? "-translate-y-1" : "translate-y-1"}`
-        }`}
+        // Fechada, sai do layout (display: none): escondida mas posicionada, empurraria a página para
+        // os lados no celular. Continua descrevendo o gatilho para leitores de tela.
+        className={`pointer-events-none absolute z-30 ${x} ${y} rounded-lg border border-border-strong bg-bg-elevated p-3 text-left text-xs leading-relaxed text-text-secondary shadow-xl shadow-black/40 transition-[opacity,translate] duration-150 starting:opacity-0 ${
+          place.below ? "starting:-translate-y-1" : "starting:translate-y-1"
+        } ${open ? "block" : "hidden"}`}
       >
         {content}
       </span>
     </span>
   );
+}
+
+/**
+ * Para gatilhos que são um rótulo com um campo escondido dentro (rádios): o mouse e o toque
+ * vão no rótulo; a descrição, o foco e o Esc vão no campo. Tocar no rótulo gera dois cliques
+ * (o do rótulo e o repassado ao campo); só o do campo conta, para a dica não abrir e fechar de uma vez.
+ */
+export function splitHint(hint: HintTriggerProps) {
+  const { "aria-describedby": describedBy, onFocus, onBlur, onKeyDown, onClick, ...pointer } = hint;
+  return {
+    label: {
+      ...pointer,
+      onClick: (ev: React.MouseEvent) => {
+        if (ev.target instanceof HTMLInputElement) onClick(ev);
+      },
+    },
+    input: { "aria-describedby": describedBy, onFocus, onBlur, onKeyDown },
+  };
 }

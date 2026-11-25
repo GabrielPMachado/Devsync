@@ -58,7 +58,7 @@ async function Manage({ params }: Pick<PageProps<"/admin/perfis/[id]">, "params"
           ) : null}
         </div>
       </header>
-      <ProfileManager profile={profile} disabledBadges={off("badge")} disabledFrames={off("frame")} />
+      <ProfileManager profile={profile} disabled={{ badge: off("badge"), frame: off("frame"), banner: off("banner"), accent: off("accent") }} />
       <History entries={profile.history} />
     </div>
   );

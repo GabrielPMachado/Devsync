@@ -23,7 +23,7 @@ select throws_ok($$ update profiles set avatar_frame = 'prisma' where id = auth.
 reset role;
 
 -- Catálogo de insígnias --------------------------------------------------------
-select is(cardinality(public.badge_keys()), 15, '15 insígnias no catálogo');
+select is(cardinality(public.badge_keys()), 30, '30 insígnias no catálogo (a v3 dobrou)');
 select is(public.frame_required_badge('orbita'), 'first_project', 'órbita vem com o primeiro projeto');
 
 -- Projetos: arquiteto (15) e querido (25 curtidas) ----------------------------

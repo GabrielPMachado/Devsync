@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
+@import "../styles/profile-motion.css";
 
 /* Gradiente da marca (estilo "Gradiente/Marca" do Figma). Use em destaques pontuais. */
 @utility bg-brand-gradient {

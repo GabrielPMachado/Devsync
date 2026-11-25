@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BADGE_KEYS } from "@/lib/social/badges";
 import { applyCatalogLabels, catalogItems, hiddenItems, messageKey, type CatalogRow } from "./catalog";
 
 const rows: CatalogRow[] = [
@@ -54,6 +55,6 @@ describe("catalogItems", () => {
     expect(aurora).toEqual({ kind: "banner", key: "aurora", active: false, label: "Aurora clássica" });
     const azul = items.find((i) => i.kind === "accent" && i.key === "azul");
     expect(azul).toEqual({ kind: "accent", key: "azul", active: true, label: null });
-    expect(items.filter((i) => i.kind === "badge").length).toBe(15);
+    expect(items.filter((i) => i.kind === "badge").length).toBe(BADGE_KEYS.length);
   });
 });

@@ -1,24 +1,37 @@
 /**
  * Insígnias conquistadas e as bordas de avatar que elas liberam.
- * Espelha o banco (supabase/migrations/20261124900000_badges.sql e 20261125150000_profile_catalog_v2.sql): public.badge_keys()
- * e public.frame_required_badge(). O banco é quem garante; aqui é só para a tela.
+ * Espelha o banco (supabase/migrations/20261124900000_badges.sql e 20261125300000_profile_catalog_v3.sql): public.badge_keys()
+ * e public.frame_required_badge() / banner_required_badge() / accent_required_badge(). O banco é quem garante; aqui é só para a tela.
  * Nomes e "como ganhar" ficam em messages/*.json, no grupo "Badges".
  */
 
-import { FRAMES } from "./profile-style";
+import { ACCENT_UNLOCKS, BANNER_UNLOCKS, FRAMES } from "./profile-style";
 
 export const BADGE_KEYS = [
   "founder",
   "first_project", "builder", "architect", "loved",
   "curious", "investigator", "first_answer", "helper", "first_accepted", "mentor", "sage",
   "commenter", "popular", "influencer",
+  "demo_live", "prolific", "star",
+  "well_voted", "reference", "researcher", "tireless", "legend", "reviewer",
+  "first_follower", "connected", "supporter", "fan", "debater", "icon",
 ] as const;
+
+/** Insígnias da segunda leva: têm ícone animado. */
+export const ANIMATED_BADGES: readonly string[] = [
+  "demo_live", "prolific", "star",
+  "well_voted", "reference", "researcher", "tireless", "legend", "reviewer",
+  "first_follower", "connected", "supporter", "fan", "debater", "icon",
+];
 
 /** Grupos para a tela (a ordem de BADGE_KEYS já segue estes grupos). */
 export const BADGE_GROUPS: readonly { key: "community" | "projects" | "answers"; badges: readonly BadgeKey[] }[] = [
-  { key: "projects", badges: ["first_project", "builder", "architect", "loved"] },
-  { key: "answers", badges: ["curious", "investigator", "first_answer", "helper", "first_accepted", "mentor", "sage"] },
-  { key: "community", badges: ["founder", "commenter", "popular", "influencer"] },
+  { key: "projects", badges: ["first_project", "builder", "architect", "prolific", "demo_live", "loved", "star"] },
+  {
+    key: "answers",
+    badges: ["curious", "investigator", "researcher", "first_answer", "helper", "tireless", "well_voted", "reference", "reviewer", "first_accepted", "mentor", "sage", "legend"],
+  },
+  { key: "community", badges: ["founder", "first_follower", "popular", "influencer", "icon", "connected", "supporter", "fan", "commenter", "debater"] },
 ];
 export type BadgeKey = (typeof BADGE_KEYS)[number];
 
@@ -49,6 +62,16 @@ export function sanitizeShownBadges(selected: string[], earned: readonly string[
 /** Insígnia que libera a borda, ou null se a borda é livre. */
 export function frameRequiredBadge(frame: string | null | undefined): BadgeKey | null {
   return (frame && FRAME_UNLOCKS[frame]) || null;
+}
+
+/** Insígnia que libera o banner pronto, ou null se é livre. */
+export function bannerRequiredBadge(banner: string | null | undefined): BadgeKey | null {
+  return (banner && (BANNER_UNLOCKS as Record<string, BadgeKey>)[banner]) || null;
+}
+
+/** Insígnia que libera a cor de destaque, ou null se é livre. */
+export function accentRequiredBadge(accent: string | null | undefined): BadgeKey | null {
+  return (accent && (ACCENT_UNLOCKS as Record<string, BadgeKey>)[accent]) || null;
 }
 
 export function frameLocked(frame: string | null | undefined, earned: readonly string[]): boolean {

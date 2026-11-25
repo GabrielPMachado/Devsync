@@ -4,9 +4,10 @@ import { Check, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { BadgeIcon } from "@/components/badges/badge-icon";
+import { lowerFirst, UnlockInfo } from "@/components/badges/unlock-info";
 import { AvatarFrame } from "@/components/profile/avatar-frame";
 import { Avatar } from "@/components/ui/avatar";
-import { Hint } from "@/components/ui/hint";
+import { Hint, splitHint } from "@/components/ui/hint";
 import { FRAMES, type FrameDef, type FrameKey } from "@/lib/social/profile-style";
 import { useCatalog } from "./catalog-context";
 import { PickerHeader } from "./picker-header";
@@ -26,7 +27,8 @@ const GRID = "grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-2.5";
 
 /**
  * Escolha da borda da foto, em dois grupos: livres e por conquista.
- * As bloqueadas têm cadeado; como liberar aparece numa dica ao passar o mouse ou tocar.
+ * Ao passar o mouse ou tocar, cada uma mostra numa dica o requisito: as livres dizem que são
+ * de todos, as liberadas mostram o que foi cumprido (cadeado aberto), as bloqueadas o que falta.
  */
 export function FramePicker({
   name,
@@ -38,13 +40,13 @@ export function FramePicker({
   const t = useTranslations("Settings");
   const style = useTranslations("ProfileStyle");
   const badges = useTranslations("Badges");
-  const { hidden, grantedFrames } = useCatalog();
+  // Desligadas pela moderação somem; liberadas à mão contam como conquistadas.
+  const { hidden, granted } = useCatalog();
   const has = (f: FrameDef) =>
-    !f.requiresBadge || (unlockedBadges ?? []).includes(f.requiresBadge) || grantedFrames.includes(f.key);
-  // Desligadas pela moderação somem; liberadas à mão aparecem junto com as livres.
+    !f.requiresBadge || (unlockedBadges ?? []).includes(f.requiresBadge) || granted.frame.includes(f.key);
   const frames = FRAMES.filter((f) => !hidden.frame.includes(f.key));
-  const free = frames.filter((f) => !f.requiresBadge || grantedFrames.includes(f.key));
-  const earned = frames.filter((f) => f.requiresBadge && !grantedFrames.includes(f.key));
+  const free = frames.filter((f) => !f.requiresBadge);
+  const earned = frames.filter((f) => f.requiresBadge);
   const unlocked = frames.filter(has).length;
   const current = FRAMES.find((f) => f.key === value);
 
@@ -60,6 +62,9 @@ export function FramePicker({
   );
   const label = (key: FrameKey) =>
     t("frameOption", { name: style(`frame_${key}`).toLowerCase() });
+  const freeHint = (title: string) => (
+    <UnlockInfo title={title} unlocked status={t("availableToAll")} />
+  );
 
   return (
     <fieldset className="flex flex-col">
@@ -76,6 +81,7 @@ export function FramePicker({
             checked={value === ""}
             label={t("frameNone")}
             short={t("frameNone")}
+            hint={freeHint(t("frameNone"))}
             onSelect={() => onChange("")}
           >
             <Avatar name={name} src={avatarUrl} size="md" />
@@ -86,6 +92,7 @@ export function FramePicker({
               checked={value === f.key}
               label={label(f.key)}
               short={style(`frame_${f.key}`)}
+              hint={freeHint(label(f.key))}
               onSelect={() => onChange(f.key)}
             >
               {art(f.key)}
@@ -101,6 +108,7 @@ export function FramePicker({
           })}
         >
           {earned.map((f) => {
+            const badge = f.requiresBadge!;
             if (has(f)) {
               return (
                 <Option
@@ -108,27 +116,44 @@ export function FramePicker({
                   checked={value === f.key}
                   label={label(f.key)}
                   short={style(`frame_${f.key}`)}
+                  hint={
+                    <UnlockInfo
+                      art={<BadgeIcon badge={badge} size="md" />}
+                      title={label(f.key)}
+                      unlocked
+                      status={t("available")}
+                    >
+                      <span>
+                        {t("frameUnlocked", {
+                          badge: t(`badge_${badge}`),
+                          how: lowerFirst(badges(`${badge}_how`)),
+                        })}
+                        .
+                      </span>
+                    </UnlockInfo>
+                  }
                   onSelect={() => onChange(f.key)}
                 >
                   {art(f.key)}
                 </Option>
               );
             }
-            const badge = f.requiresBadge!;
             return (
               <Hint
                 key={f.key}
                 className="flex"
                 content={
-                  <span className="flex items-start gap-2.5">
-                    <BadgeIcon badge={badge} size="md" />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="font-semibold text-text-primary">
-                        {t("frameLocked", { badge: t(`badge_${badge}`) })}
-                      </span>
-                      <span>{badges(`${badge}_how`)}.</span>
+                  <UnlockInfo
+                    art={<BadgeIcon badge={badge} size="md" />}
+                    title={label(f.key)}
+                    unlocked={false}
+                    status={badges("lockedShort")}
+                  >
+                    <span>
+                      {t("frameLocked", { badge: t(`badge_${badge}`) })}
                     </span>
-                  </span>
+                    <span>{badges(`${badge}_how`)}.</span>
+                  </UnlockInfo>
                 }
               >
                 {(hint) => (
@@ -190,46 +215,57 @@ function Option({
   checked,
   label,
   short,
+  hint,
   onSelect,
   children,
 }: {
   checked: boolean;
   label: string;
   short: string;
+  /** Conteúdo da dica (requisito e cadeado). */
+  hint: ReactNode;
   onSelect: () => void;
   children: ReactNode;
 }) {
   return (
-    <label
-      title={label}
-      className={`${TILE} cursor-pointer ${
-        checked
-          ? "border-brand-accent bg-brand-accent-soft"
-          : "border-border-default hover:border-border-strong hover:bg-bg-elevated"
-      } has-focus-visible:outline-2 has-focus-visible:outline-border-focus`}
-    >
-      <input
-        type="radio"
-        name="avatarFrameChoice"
-        className="sr-only top-1/2 left-1/2"
-        checked={checked}
-        onChange={onSelect}
-        aria-label={label}
-      />
-      {children}
-      {checked ? (
-        <span
-          aria-hidden="true"
-          className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-brand-accent text-bg-base"
-        >
-          <Check className="size-3.5" strokeWidth={3} />
-        </span>
-      ) : null}
-      <span
-        className={`text-[11px] leading-tight ${checked ? "font-medium text-text-primary" : "text-text-muted"}`}
-      >
-        {short}
-      </span>
-    </label>
+    <Hint className="flex" content={hint}>
+      {(trigger) => {
+        const parts = splitHint(trigger);
+        return (
+          <label
+            {...parts.label}
+            className={`${TILE} cursor-pointer ${
+              checked
+                ? "border-brand-accent bg-brand-accent-soft"
+                : "border-border-default hover:border-border-strong hover:bg-bg-elevated"
+            } has-focus-visible:outline-2 has-focus-visible:outline-border-focus`}
+          >
+            <input
+              type="radio"
+              name="avatarFrameChoice"
+              className="sr-only top-1/2 left-1/2"
+              checked={checked}
+              onChange={onSelect}
+              aria-label={label}
+              {...parts.input}
+            />
+            {children}
+            {checked ? (
+              <span
+                aria-hidden="true"
+                className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-brand-accent text-bg-base"
+              >
+                <Check className="size-3.5" strokeWidth={3} />
+              </span>
+            ) : null}
+            <span
+              className={`text-[11px] leading-tight ${checked ? "font-medium text-text-primary" : "text-text-muted"}`}
+            >
+              {short}
+            </span>
+          </label>
+        );
+      }}
+    </Hint>
   );
 }

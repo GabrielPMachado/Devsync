@@ -42,7 +42,11 @@ async function Form() {
   const earned = profile.badges.map((b) => b.badge);
   // Itens desligados pela moderação somem do editor, menos os que a pessoa já usa ou ganhou à mão.
   const hidden = hiddenItems(catalogRows, { banner: profile.bannerPreset, accent: profile.accent, frame: profile.avatarFrame, grants, earnedBadges: earned });
-  const grantedFrames = grants.filter((g) => g.kind === "frame").map((g) => g.key);
+  const granted = {
+    banner: grants.filter((g) => g.kind === "banner").map((g) => g.key),
+    accent: grants.filter((g) => g.kind === "accent").map((g) => g.key),
+    frame: grants.filter((g) => g.kind === "frame").map((g) => g.key),
+  };
   const initial = {
     displayName: profile.displayName ?? "",
     bio: profile.bio ?? "",
@@ -62,9 +66,9 @@ async function Form() {
   // O editor guarda o rascunho em estado e o Next mantém a página montada entre
   // navegações: sem a chave, voltar aqui depois de salvar mostrava o rascunho
   // antigo (ou o vazio). Dados novos do banco = editor novo.
-  const saved = JSON.stringify([initial, profile.avatarUrl, profile.bannerUrl, profile.shownBadges, earned, hidden, grantedFrames]);
+  const saved = JSON.stringify([initial, profile.avatarUrl, profile.bannerUrl, profile.shownBadges, earned, hidden, granted]);
   return (
-    <CatalogProvider hidden={hidden} grantedFrames={grantedFrames}>
+    <CatalogProvider hidden={hidden} granted={granted}>
     <ProfileEditor
       key={saved}
       username={profile.username}

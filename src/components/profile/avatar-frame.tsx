@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ANIMATED_FRAME_ART } from "./avatar-frame-animated";
 
 /**
  * Borda do avatar grande do perfil (nos avatares pequenos do feed não aparece).
@@ -80,6 +81,7 @@ export const FRAME_ART: Record<string, FrameArt> = {
   aurora: { ring: "isolate bg-transparent", extra: AURORA },
   prisma: { ring: "bg-[conic-gradient(from_90deg,#2563EB,#22D3EE,#8B5CF6,#EC4899,#2563EB)] shadow-[0_0_14px_1px_rgb(139_92_246/0.4)]" },
   dourada: { ring: "bg-[conic-gradient(from_200deg,#FDE68A,#F59E0B,#B45309,#FBBF24,#FDE68A)] shadow-[0_0_14px_1px_rgb(245_158_11/0.35)]" },
+  ...ANIMATED_FRAME_ART,
 };
 
 export function AvatarFrame({ frame, children, className = "" }: { frame?: string | null; children: ReactNode; className?: string }) {

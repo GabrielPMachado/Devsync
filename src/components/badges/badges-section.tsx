@@ -7,6 +7,7 @@ import { BADGE_GROUPS, BADGE_KEYS, SHOWN_BADGES_MAX, sanitizeShownBadges, type B
 import { useCatalog } from "@/components/social/profile-editor/catalog-context";
 import { Hint } from "@/components/ui/hint";
 import { BadgeIcon } from "./badge-icon";
+import { lowerFirst, UnlockInfo } from "./unlock-info";
 
 type Props = {
   /** Insígnias que a pessoa já conquistou. */
@@ -20,7 +21,8 @@ type Props = {
 
 /**
  * Seção "Insígnias" do editar perfil: todas as insígnias, as conquistadas coloridas,
- * as outras apagadas (como ganhar aparece numa dica ao passar o mouse ou tocar). Marca até 3 para exibir ao lado do nome.
+ * as outras apagadas. Ao passar o mouse ou tocar, uma dica mostra o requisito: cumprido
+ * (cadeado aberto) ou o que falta (cadeado fechado). Marca até 3 para exibir ao lado do nome.
  */
 export function BadgesSection({ earned, initial, name = "shown_badges", onChange }: Props) {
   const t = useTranslations("Badges");
@@ -76,15 +78,9 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
                 <Hint
                   className="flex w-full"
                   content={
-                    <span className="flex items-start gap-2.5">
-                      <BadgeIcon badge={b} size="md" />
-                      <span className="flex flex-col gap-0.5">
-                        <span className="font-semibold text-text-primary">
-                          {label} · {t("locked").toLowerCase()}
-                        </span>
-                        <span>{t("howTo", { how: t(`${b}_how`) })}.</span>
-                      </span>
-                    </span>
+                    <UnlockInfo art={<BadgeIcon badge={b} size="md" />} title={label} unlocked={false} status={t("lockedShort")}>
+                      <span>{t("howTo", { how: t(`${b}_how`) })}.</span>
+                    </UnlockInfo>
                   }
                 >
                   {(hint) => (
@@ -103,27 +99,44 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
               </li>
             );
           }
+          const blocked = !on && full;
           return (
             <li key={b} className="flex">
-              <button
-                type="button"
-                aria-pressed={on}
-                disabled={!on && full}
-                onClick={() => toggle(b)}
-                title={!on && full ? t("limit") : undefined}
-                className={`relative flex w-full flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                  on ? "border-brand-accent bg-brand-accent-soft" : "border-border-default bg-bg-surface hover:border-border-strong hover:bg-bg-elevated"
-                }`}
+              <Hint
+                className="flex w-full"
+                content={
+                  <UnlockInfo art={<BadgeIcon badge={b} size="md" />} title={label} unlocked status={t("earned")}>
+                    <span>{t("done", { how: lowerFirst(t(`${b}_how`)) })}.</span>
+                  </UnlockInfo>
+                }
               >
-                <BadgeIcon badge={b} size="lg" />
-                <span className="text-xs font-medium text-text-primary">{label}</span>
-                <span
-                  className={`absolute top-2 right-2 flex size-4.5 items-center justify-center rounded-full border ${on ? "border-brand-accent bg-brand-accent text-bg-base" : "border-border-default"}`}
-                  aria-hidden="true"
-                >
-                  {on ? <Check className="size-3" /> : null}
-                </span>
-              </button>
+                {(hint) => (
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    // aria-disabled (e não disabled) para a dica ainda abrir ao passar o mouse ou tocar.
+                    aria-disabled={blocked || undefined}
+                    title={blocked ? t("limit") : undefined}
+                    {...hint}
+                    onClick={(ev) => {
+                      hint.onClick(ev);
+                      if (!blocked) toggle(b);
+                    }}
+                    className={`relative flex w-full flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors aria-disabled:cursor-not-allowed aria-disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-border-focus ${
+                      on ? "border-brand-accent bg-brand-accent-soft" : "border-border-default bg-bg-surface hover:border-border-strong hover:bg-bg-elevated"
+                    }`}
+                  >
+                    <BadgeIcon badge={b} size="lg" />
+                    <span className="text-xs font-medium text-text-primary">{label}</span>
+                    <span
+                      className={`absolute top-2 right-2 flex size-4.5 items-center justify-center rounded-full border ${on ? "border-brand-accent bg-brand-accent text-bg-base" : "border-border-default"}`}
+                      aria-hidden="true"
+                    >
+                      {on ? <Check className="size-3" /> : null}
+                    </span>
+                  </button>
+                )}
+              </Hint>
             </li>
           );
         })}
