@@ -49,11 +49,11 @@ describe("AchievementsBlock", () => {
 describe("BadgesSection", () => {
   it("mostra o progresso das conquistas, no total e por grupo", () => {
     wrap(<BadgesSection earned={["founder", "curious", "first_project"]} initial={[]} />);
-    expect(screen.getByText("3 de 15 conquistadas")).toBeInTheDocument();
+    expect(screen.getByText("3 de 30 conquistadas")).toBeInTheDocument();
     const group = (name: string) => screen.getByRole("group", { name: new RegExp(name) });
-    expect(group("Projetos")).toHaveTextContent("1 de 4");
-    expect(group("Perguntas e respostas")).toHaveTextContent("1 de 7");
-    expect(group("Comunidade")).toHaveTextContent("1 de 4");
+    expect(group("Projetos")).toHaveTextContent("1 de 7");
+    expect(group("Perguntas e respostas")).toHaveTextContent("1 de 13");
+    expect(group("Comunidade")).toHaveTextContent("1 de 10");
     expect(within(group("Projetos")).getByRole("button", { name: /Arquiteto/ })).toHaveAttribute("aria-disabled", "true");
   });
 
@@ -103,5 +103,26 @@ describe("BadgesSection", () => {
     // A bloqueada continua com o cadeado fechado.
     const lockedTip = screen.getByText(/Como ganhar: Publicar 15 projetos/).closest('[role="tooltip"]')!;
     expect(lockedTip.querySelector('[data-lock="closed"]')).not.toBeNull();
+  });
+});
+
+describe("insígnias animadas", () => {
+  it("as 15 novas têm um movimento cada, todos diferentes; as antigas ficam paradas", async () => {
+    const { BADGE_STYLE } = await import("./badge-icon");
+    const { ANIMATED_BADGES, BADGE_KEYS } = await import("@/lib/social/badges");
+    const effects = ANIMATED_BADGES.map((b) => BADGE_STYLE[b as keyof typeof BADGE_STYLE].motion?.effect);
+    expect(effects.every(Boolean)).toBe(true);
+    expect(new Set(effects).size).toBe(15);
+    for (const b of BADGE_KEYS.filter((k) => !ANIMATED_BADGES.includes(k))) expect(BADGE_STYLE[b].motion, b).toBeUndefined();
+    const css = (await import("node:fs")).readFileSync("src/styles/profile-motion.css", "utf8");
+    for (const e of effects) expect(css, e).toContain(`.pm-${e} {`);
+  });
+
+  it("conquistada se mexe; bloqueada (apagada) fica parada", async () => {
+    const { BadgeIcon } = await import("./badge-icon");
+    const { container, rerender } = render(<BadgeIcon badge="legend" />);
+    expect(container.querySelector("svg")).toHaveClass("pm", "pm-float");
+    rerender(<BadgeIcon badge="legend" muted />);
+    expect(container.querySelector("svg")).not.toHaveClass("pm");
   });
 });

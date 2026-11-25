@@ -1,4 +1,4 @@
-import { BANNER_PRESETS } from "@/lib/social/profile-style";
+import { BANNER_PRESETS, BANNER_UNLOCKS } from "@/lib/social/profile-style";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { BANNER_ART, ProfileBanner } from "./profile-banner";
@@ -26,11 +26,19 @@ describe("ProfileBanner", () => {
     }
   });
 
-  it("tem desenho para os 14 presets, e cada um é decorativo", () => {
+  it("tem desenho para os 28 presets, e cada um é decorativo", () => {
     expect(Object.keys(BANNER_ART).sort()).toEqual([...BANNER_PRESETS].sort());
     for (const key of Object.keys(BANNER_ART)) {
       const { container, unmount } = render(<ProfileBanner preset={key} />);
       expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
+      unmount();
+    }
+  });
+
+  it("só os banners novos (por conquista) se mexem", () => {
+    for (const key of BANNER_PRESETS) {
+      const { container, unmount } = render(<ProfileBanner preset={key} />);
+      expect(container.querySelector(".pm") !== null, key).toBe(key in BANNER_UNLOCKS);
       unmount();
     }
   });

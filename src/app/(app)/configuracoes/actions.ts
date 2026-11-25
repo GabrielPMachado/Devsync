@@ -7,7 +7,7 @@ import { BADGE_KEYS, SHOWN_BADGES_MAX } from "@/lib/social/badges";
 import { validateProfile, type ProfileErrors, type ProfileInput } from "@/lib/social/profile-rules";
 import { createClient } from "@/lib/supabase/server";
 
-/** "badges": tentou exibir insígnia não conquistada (DS004); "frame": borda ainda bloqueada (DS005). */
+/** "badges": tentou exibir insígnia não conquistada (DS004); "frame": borda, banner ou cor ainda bloqueados (DS005). */
 export type SaveProfileState = { errors?: ProfileErrors; error?: "unknown" | "badges" | "frame"; values?: ProfileInput };
 
 /** Salva o perfil (sobre, links, aparência, imagens, tecnologias) e volta para ele. */

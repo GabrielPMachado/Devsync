@@ -82,7 +82,8 @@ describe("<ProfileEditor />", () => {
     const neon = screen.getByRole("button", { name: /Borda néon/ });
     expect(neon).toHaveAccessibleDescription(/Ganhe a insígnia Mentor para liberar.*10 respostas aceitas/);
     // O requisito não fica exposto na tela: só na dica, que abre ao passar o mouse ou tocar.
-    expect(screen.getByText("Ganhe a insígnia Mentor para liberar").closest('[role="tooltip"]')).toHaveAttribute("data-open", "false");
+    const frames = screen.getByRole("group", { name: /Borda da foto/ });
+    expect(within(frames).getByText("Ganhe a insígnia Mentor para liberar").closest('[role="tooltip"]')).toHaveAttribute("data-open", "false");
     fireEvent.click(neon);
     expect(new FormData(document.querySelector("form")!).get("avatarFrame")).not.toBe("neon");
     expect(screen.getByRole("radio", { name: "Borda colchetes" })).toBeEnabled();
@@ -120,13 +121,41 @@ describe("<ProfileEditor />", () => {
 
   it("mostra quantas opções há de cada coisa e quantas bordas estão liberadas", () => {
     renderEditor({ unlockedBadges: ["builder", "founder"] });
-    expect(screen.getByRole("group", { name: /Banner/ })).toHaveTextContent("14 opções");
-    expect(screen.getByRole("group", { name: /Cor de destaque/ })).toHaveTextContent("12 opções");
+    // builder libera o banner "Chuva digital" e a cor "Floresta"; founder, a cor "Retrô".
+    const banners = screen.getByRole("group", { name: /Banner/ });
+    expect(banners).toHaveTextContent("15 de 28 liberados");
+    expect(within(banners).getByText("1 de 14")).toBeInTheDocument();
+    const accents = screen.getByRole("group", { name: /Cor de destaque/ });
+    expect(accents).toHaveTextContent("14 de 24 liberadas");
+    expect(within(accents).getByText("2 de 12")).toBeInTheDocument();
     const frames = screen.getByRole("group", { name: /Borda da foto/ });
-    expect(frames).toHaveTextContent("11 de 18 liberadas");
+    expect(frames).toHaveTextContent("11 de 36 liberadas");
     expect(within(frames).getByText("Livres")).toBeInTheDocument();
     expect(within(frames).getByText("Por conquista")).toBeInTheDocument();
-    expect(within(frames).getByText("2 de 9")).toBeInTheDocument();
+    expect(within(frames).getByText("2 de 27")).toBeInTheDocument();
+  });
+
+  it("banner e cor por conquista: bloqueados não são escolhíveis; liberados viram opção", () => {
+    renderEditor({ unlockedBadges: ["builder"] });
+    expect(screen.getByRole("radio", { name: "Chuva digital" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Hiperespaço" })).toBeNull();
+    const locked = screen.getByRole("button", { name: "Hiperespaço (bloqueado)" });
+    expect(locked).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("radio", { name: "Floresta" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrô (bloqueado)" })).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(screen.getByRole("radio", { name: "Chuva digital" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Floresta" }));
+    const data = new FormData(document.querySelector("form")!);
+    expect(data.get("bannerPreset")).toBe("chuva_digital");
+    expect(data.get("accent")).toBe("floresta");
+  });
+
+  it("banner e cor mostram na dica o requisito: livre, liberado ou bloqueado", () => {
+    renderEditor({ unlockedBadges: ["builder"] });
+    expect(screen.getByRole("radio", { name: "Aurora" })).toHaveAccessibleDescription(/Disponível para todos/);
+    expect(screen.getByRole("radio", { name: "Chuva digital" })).toHaveAccessibleDescription(/Liberado.*Pela insígnia Construtor.*Requisito cumprido: publicar 5 projetos/);
+    expect(screen.getByRole("radio", { name: "Floresta" })).toHaveAccessibleDescription(/Liberada.*Pela insígnia Construtor/);
+    expect(screen.getByRole("button", { name: "Hiperespaço (bloqueado)" })).toHaveAccessibleDescription(/Bloqueado.*Ganhe a insígnia Ícone para liberar.*1\.000 seguidores/);
   });
 
   it("o cabeçalho de cada escolha diz o que está selecionado", () => {

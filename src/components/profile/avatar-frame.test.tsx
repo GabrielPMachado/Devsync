@@ -17,7 +17,7 @@ describe("AvatarFrame", () => {
     expect(container.querySelector("[data-frame]")).toBeNull();
   });
 
-  it("tem desenho para as 18 bordas do catálogo", () => {
+  it("tem desenho para as 36 bordas do catálogo", () => {
     expect(Object.keys(FRAME_ART).sort()).toEqual(FRAMES.map((f) => f.key).sort());
   });
 
@@ -27,6 +27,15 @@ describe("AvatarFrame", () => {
       const frame = container.querySelector(`[data-frame="${key}"]`);
       expect(frame).not.toBeNull();
       expect(frame).toContainElement(screen.getByTestId("foto"));
+      unmount();
+    }
+  });
+
+  it("as 18 bordas novas são animadas e tudo o que desenham é decorativo", () => {
+    for (const f of FRAMES.slice(18)) {
+      const { container, unmount } = render(<AvatarFrame frame={f.key}>{photo}</AvatarFrame>);
+      expect(container.querySelector(".pm"), f.key).not.toBeNull();
+      for (const el of container.querySelectorAll("[data-frame] > :not([data-testid])")) expect(el, f.key).toHaveAttribute("aria-hidden", "true");
       unmount();
     }
   });
