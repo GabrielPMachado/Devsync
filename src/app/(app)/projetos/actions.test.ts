@@ -60,7 +60,13 @@ const checkTone = vi.fn<(text: string) => Promise<{ flagged: boolean }>>(async (
 vi.mock("@/lib/moderation/tone", () => ({ checkTone: (text: string) => checkTone(text) }));
 
 const cleanOrphanCovers = vi.fn(async () => {});
-vi.mock("@/lib/projects/covers", () => ({ cleanOrphanCovers: (...a: unknown[]) => cleanOrphanCovers(...(a as [])) }));
+vi.mock("@/lib/projects/covers", async (orig) => ({
+  ...(await orig<typeof import("@/lib/projects/covers")>()),
+  cleanOrphanCovers: (...a: unknown[]) => cleanOrphanCovers(...(a as [])),
+}));
+
+process.env.NEXT_PUBLIC_SUPABASE_URL = "https://x.supabase.co";
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon";
 
 const { publishProject, updateProject, deleteProject, toggleLike, addComment, deleteComment } = await import("./actions");
 
@@ -132,9 +138,16 @@ describe("publishProject", () => {
     expect(db.insertProject).toHaveBeenCalledWith(expect.objectContaining({ cover_url: coverUrl }));
   });
 
-  it("capa recusada pelo banco volta como erro da capa", async () => {
-    db.insertProject.mockResolvedValue({ data: null, error: { code: "22023" } });
-    await expect(publishProject({ ...input, coverUrl: "https://evil.example/x.png" })).resolves.toEqual({ error: "cover" });
+  it("capa de outro servidor ou de outra pessoa nem chega ao banco", async () => {
+    for (const coverUrl of ["https://evil.example/storage/v1/object/public/project-covers/u1/cover-1.webp", "https://x.supabase.co/storage/v1/object/public/project-covers/u2/cover-1.webp"]) {
+      await expect(publishProject({ ...input, coverUrl })).resolves.toEqual({ error: "cover" });
+    }
+    expect(db.insertProject).not.toHaveBeenCalled();
+  });
+
+  it("capa recusada pelo gatilho do banco volta como erro da capa", async () => {
+    db.insertProject.mockResolvedValue({ data: null, error: { code: "22023", message: "a capa precisa estar na sua pasta do Storage" } });
+    await expect(publishProject({ ...input, coverUrl: "https://x.supabase.co/storage/v1/object/public/project-covers/u1/cover-1.webp" })).resolves.toEqual({ error: "cover" });
   });
 
   it("sem login vai para /entrar", async () => {
@@ -228,9 +241,9 @@ describe("updateProject", () => {
     expect(db.updateProject).toHaveBeenLastCalledWith("p1", expect.objectContaining({ cover_url: null }));
   });
 
-  it("capa recusada pelo banco volta como erro da capa", async () => {
-    db.updateProject.mockResolvedValue({ data: null, error: { code: "22023" } });
+  it("capa de outro servidor nem chega ao banco", async () => {
     await expect(updateProject("p1", { ...edit, coverUrl: "https://evil.example/x.png" })).resolves.toEqual({ error: "cover" });
+    expect(db.updateProject).not.toHaveBeenCalled();
   });
 
   it("projeto de outra pessoa (a RLS não devolve nada) não é editado", async () => {

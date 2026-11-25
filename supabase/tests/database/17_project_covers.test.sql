@@ -1,6 +1,6 @@
 begin;
 \ir ../helpers.psql
-select plan(9);
+select plan(10);
 
 -- Capa do projeto: só imagem da pasta do próprio autor no bucket project-covers.
 select tests.create_user('ana@x.dev', 'ana_cv') as ana \gset
@@ -28,6 +28,13 @@ select throws_ok(format($$ update projects set cover_url = 'https://evil.example
   '22023', null, 'trocar para capa externa é recusado');
 select lives_ok(format($$ update projects set cover_url = null where id = %L $$, :'p2'), 'remove a capa');
 reset role;
+
+-- Capa antiga inválida (de antes da regra) é limpa pela migração.
+alter table projects disable trigger projects_cover_guard;
+update projects set cover_url = 'https://evil.example/old.png' where id = :'p2';
+alter table projects enable trigger projects_cover_guard;
+select private.clear_invalid_covers();
+select is((select cover_url from projects where id = :'p2'), null, 'capa inválida antiga é apagada');
 
 select case when to_regclass('storage.buckets') is null then 1 else 0 end as sem_storage \gset
 \if :sem_storage

@@ -18,6 +18,16 @@ end $$;
 create trigger projects_cover_guard before insert or update of cover_url on public.projects
   for each row execute function private.guard_project_cover();
 
+-- A coluna já aceitava qualquer texto: capas de antes desta regra que não são da pasta
+-- do autor são apagadas (o site também confere o endereço do Supabase ao mostrar).
+create function private.clear_invalid_covers() returns void
+language sql security definer set search_path = '' as $$
+  update public.projects set cover_url = null
+  where cover_url is not null and not private.is_own_image_url(cover_url, 'project-covers', author_id)
+$$;
+revoke execute on function private.clear_invalid_covers() from public, anon, authenticated;
+select private.clear_invalid_covers();
+
 -- Bucket público de capas (4 MB, como os banners). O dono envia, lê, troca e apaga
 -- só dentro da própria pasta. O Postgres de teste sem Supabase não tem o schema storage.
 do $$
@@ -62,14 +72,16 @@ end $$;
 -- Print automático da demo ------------------------------------------------------------
 -- Projeto sem capa ganha um print da demo, tirado pelo serviço de demos (Cloudflare
 -- Browser Rendering, cota grátis diária). demos.screenshot_url já existia; aqui entram
--- a versão do print e as tentativas (desiste depois de 3 falhas na mesma versão).
+-- a versão do print e as tentativas: depois de uma falha espera 1 h; depois de 3, um dia
+-- (assim um token errado ou a Cloudflare fora do ar não marcam nada como perdido de vez).
 -- Usuários não gravam nada disso: as colunas não estão nos grants de demos.
 alter table public.demos
   add column screenshot_version integer,
   add column screenshot_tries smallint not null default 0,
-  add column screenshot_try_version integer;
+  add column screenshot_try_version integer,
+  add column screenshot_tried_at timestamptz;
 
--- Fila: demos no ar, de projetos sem capa, sem print da versão atual.
+-- Fila: demos no ar, de projetos visíveis sem capa, sem print da versão atual.
 create function public.pending_demo_previews(max_rows integer default 3)
 returns table (id uuid, kind public.demo_kind, url text, version integer)
 language sql stable security definer set search_path = '' as $$
@@ -77,9 +89,11 @@ language sql stable security definer set search_path = '' as $$
   from public.demos d
   where d.status = 'live'
     and d.screenshot_version is distinct from d.version
-    and (d.screenshot_try_version is distinct from d.version or d.screenshot_tries < 3)
-    and exists (select 1 from public.projects p where p.demo_id = d.id and p.cover_url is null)
-  order by d.updated_at
+    and (d.screenshot_tried_at is null
+         or d.screenshot_try_version is distinct from d.version
+         or d.screenshot_tried_at < now() - case when d.screenshot_tries >= 3 then interval '1 day' else interval '1 hour' end)
+    and exists (select 1 from public.projects p where p.demo_id = d.id and p.cover_url is null and p.hidden_at is null)
+  order by d.screenshot_tried_at nulls first, d.updated_at
   limit least(greatest(max_rows, 1), 20)
 $$;
 
@@ -93,12 +107,13 @@ begin
   end if;
   if preview_url is not null then
     update public.demos
-       set screenshot_url = preview_url, screenshot_version = demo_version, screenshot_tries = 0, screenshot_try_version = demo_version
+       set screenshot_url = preview_url, screenshot_version = demo_version, screenshot_tries = 0,
+           screenshot_try_version = demo_version, screenshot_tried_at = now()
      where id = demo_id and version = demo_version;
   else
     update public.demos
        set screenshot_tries = case when screenshot_try_version = demo_version then screenshot_tries + 1 else 1 end,
-           screenshot_try_version = demo_version
+           screenshot_try_version = demo_version, screenshot_tried_at = now()
      where id = demo_id and version = demo_version;
   end if;
 end $$;
@@ -115,4 +130,20 @@ begin
     insert into private.demo_deletions (demo_id) values (old.id) on conflict do nothing;
   end if;
   return null;
+end $$;
+
+-- Link trocado: o print antigo deixa de valer (o novo sai quando a demo validar de novo).
+create or replace function public.demos_reset_on_url_change() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.url is distinct from old.url then
+    new.status := case when old.status = 'blocked' then 'blocked'::public.demo_status else 'pending' end;
+    new.embeddable := null;
+    new.checked_at := null;
+    new.screenshot_url := null;
+    new.screenshot_version := null;
+    new.screenshot_tries := 0;
+    new.screenshot_tried_at := null;
+  end if;
+  return new;
 end $$;

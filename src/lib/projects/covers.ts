@@ -1,8 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const COVER_BUCKET = "project-covers";
-/** Capa recém-enviada e ainda sem projeto (publicação em andamento) não é apagada. */
-const GRACE_MS = 10 * 60_000;
+/** Capa recente e ainda sem projeto (publicação em andamento ou tentando de novo) não é apagada. */
+const GRACE_MS = 24 * 60 * 60_000;
+const FILE = /^cover-\d{1,20}\.webp(\?v=\d{1,20})?$/;
+
+/**
+ * A capa só aparece se estiver na pasta do autor, no Supabase do próprio site.
+ * O banco já confere a pasta; o endereço do servidor só o site sabe.
+ */
+export function trustedCoverUrl(url: string | null | undefined, authorId: string, supabaseUrl: string | undefined): string | null {
+  if (!url || !supabaseUrl) return null;
+  const prefix = `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/${COVER_BUCKET}/${authorId}/`;
+  return url.startsWith(prefix) && FILE.test(url.slice(prefix.length)) ? url : null;
+}
 
 /** Nome do arquivo no fim da URL do Storage ("" = nenhum). */
 export function coverFileName(url: string | null | undefined): string {
@@ -27,7 +38,7 @@ export async function uploadCover(supabase: SupabaseClient, userId: string, blob
  */
 export async function cleanOrphanCovers(supabase: SupabaseClient, userId: string, now = Date.now()): Promise<void> {
   const [{ data: files }, { data: projects }] = await Promise.all([
-    supabase.storage.from(COVER_BUCKET).list(userId),
+    supabase.storage.from(COVER_BUCKET).list(userId, { limit: 1000 }),
     supabase.from("projects").select("cover_url").eq("author_id", userId),
   ]);
   const used = new Set(((projects ?? []) as { cover_url: string | null }[]).map((p) => coverFileName(p.cover_url)));

@@ -5,6 +5,7 @@ import type { CommentAuthor, CommentRow } from "@/lib/comments/tree";
 import type { DemoKind, DemoStatus } from "@/lib/demos/url";
 import { getSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { trustedCoverUrl } from "./covers";
 import { githubLogin } from "./github";
 
 export type ProjectDemo = {
@@ -74,7 +75,7 @@ export function toPage(r: ProjectRow): ProjectPageData {
     demo: r.demo
       ? { id: r.demo.id, kind: r.demo.kind, status: r.demo.status, url: r.demo.url, version: r.demo.version, screenshotUrl: r.demo.screenshot_url }
       : null,
-    coverUrl: r.cover_url,
+    coverUrl: trustedCoverUrl(r.cover_url, r.author_id, getSupabaseEnv()?.url),
     tags: r.project_tags.map((t) => t.tags?.slug).filter((s): s is string => !!s),
   };
 }

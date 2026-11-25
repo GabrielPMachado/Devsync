@@ -82,23 +82,25 @@ describe("capturePreviews", () => {
     ]);
   });
 
-  it("falha conta uma tentativa; limite da Cloudflare (429) para sem contar", async () => {
+  it("falha da página conta uma tentativa; limite, token ou Cloudflare fora do ar param sem contar", async () => {
     queue = [
       { id: LINK, kind: "web_link", url: "https://ana.dev", version: 1 },
       { id: ZIP, kind: "web_upload", url: null, version: 1 },
     ];
-    shot = () => new Response("erro", { status: 500 });
+    shot = () => new Response("página não carregou", { status: 422 });
     await capturePreviews(shotEnv, deps);
     expect(rpcs()).toEqual([
       { demo_id: LINK, demo_version: 1, preview_url: null },
       { demo_id: ZIP, demo_version: 1, preview_url: null },
     ]);
 
-    f.calls.length = 0;
-    shot = () => new Response("calma", { status: 429 });
-    await capturePreviews(shotEnv, deps);
-    expect(shots()).toHaveLength(1);
-    expect(rpcs()).toEqual([]);
+    for (const status of [429, 401, 403, 500, 503]) {
+      f.calls.length = 0;
+      shot = () => new Response("x", { status });
+      await capturePreviews(shotEnv, deps);
+      expect(shots()).toHaveLength(1);
+      expect(rpcs()).toEqual([]);
+    }
   });
 
   it("resposta que não é imagem é falha", async () => {
@@ -165,6 +167,15 @@ describe("GET /previews/<id>/<versão>.jpg", () => {
       expect(res.headers.get("cache-control")).toContain("immutable");
       await res.arrayBuffer();
     }
+  });
+
+  it("pedido condicional com o mesmo ETag responde 304", async () => {
+    await env.DEMOS_BUCKET.put(`previews/${LINK}/1.jpg`, new Uint8Array([1, 2]), { httpMetadata: { contentType: "image/jpeg" } });
+    const first = await get(`/previews/${LINK}/1.jpg`);
+    await first.arrayBuffer();
+    const etag = first.headers.get("etag")!;
+    const res = await handleFetch(new Request(`https://demos.test/previews/${LINK}/1.jpg`, { headers: { "if-none-match": etag } }), env, deps);
+    expect(res.status).toBe(304);
   });
 
   it("print que não existe ou caminho estranho é 404", async () => {

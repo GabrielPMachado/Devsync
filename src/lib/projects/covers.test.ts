@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { cleanOrphanCovers, coverFileName, uploadCover } from "./covers";
+import { cleanOrphanCovers, coverFileName, trustedCoverUrl, uploadCover } from "./covers";
 
 const NOW = Date.parse("2026-11-25T12:00:00Z");
 const ago = (min: number) => new Date(NOW - min * 60_000).toISOString();
@@ -29,6 +29,20 @@ describe("coverFileName", () => {
   });
 });
 
+describe("trustedCoverUrl", () => {
+  const SB = "https://abc.supabase.co";
+  const good = `${SB}/storage/v1/object/public/project-covers/u1/cover-5.webp?v=5`;
+  it("só aceita a pasta do autor no Supabase do próprio site", () => {
+    expect(trustedCoverUrl(good, "u1", SB)).toBe(good);
+    expect(trustedCoverUrl(good, "u2", SB)).toBeNull();
+    expect(trustedCoverUrl(good.replace(SB, "https://evil.tld"), "u1", SB)).toBeNull();
+    expect(trustedCoverUrl(`${SB}/storage/v1/object/public/banners/u1/cover-5.webp`, "u1", SB)).toBeNull();
+    expect(trustedCoverUrl(`${SB}/storage/v1/object/public/project-covers/u1/../x/cover.webp`, "u1", SB)).toBeNull();
+    expect(trustedCoverUrl(null, "u1", SB)).toBeNull();
+    expect(trustedCoverUrl(good, "u1", undefined)).toBeNull();
+  });
+});
+
 describe("uploadCover", () => {
   it("envia para a pasta da pessoa com nome novo e devolve a URL com ?v=", async () => {
     const { supabase, upload } = fakeSupabase([], []);
@@ -41,12 +55,12 @@ describe("uploadCover", () => {
 });
 
 describe("cleanOrphanCovers", () => {
-  it("apaga só capas que nenhum projeto usa e que já têm mais de 10 minutos", async () => {
+  it("apaga só capas que nenhum projeto usa e que já têm mais de um dia", async () => {
     const { supabase, remove } = fakeSupabase(
       [
-        { name: "cover-1.webp", created_at: ago(60) }, // em uso
-        { name: "cover-2.webp", created_at: ago(60) }, // capa trocada: sobra
-        { name: "cover-3.webp", created_at: ago(2) }, // recém-enviada (publicação em andamento)
+        { name: "cover-1.webp", created_at: ago(3000) }, // em uso
+        { name: "cover-2.webp", created_at: ago(1500) }, // capa trocada: sobra
+        { name: "cover-3.webp", created_at: ago(60) }, // recente (publicação em andamento ou tentando de novo)
       ],
       ["https://x.supabase.co/storage/v1/object/public/project-covers/u1/cover-1.webp?v=1", null],
     );
@@ -55,7 +69,7 @@ describe("cleanOrphanCovers", () => {
   });
 
   it("nada para apagar não chama o Storage", async () => {
-    const { supabase, remove } = fakeSupabase([{ name: "cover-1.webp", created_at: ago(60) }], ["https://x/u1/cover-1.webp?v=1"]);
+    const { supabase, remove } = fakeSupabase([{ name: "cover-1.webp", created_at: ago(3000) }], ["https://x/u1/cover-1.webp?v=1"]);
     await cleanOrphanCovers(supabase as never, "u1", NOW);
     expect(remove).not.toHaveBeenCalled();
   });

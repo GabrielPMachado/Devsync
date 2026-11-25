@@ -16,7 +16,8 @@ interface PreviewRow {
   version: number;
 }
 
-class RateLimited extends Error {}
+/** Problema do lado da Cloudflare ou da configuração (limite, token, fora do ar): para sem contar falha. */
+class ServiceProblem extends Error {}
 
 /** Endereço da demo enviada com o passe do print (`?shot=<expira>.<assinatura>`). */
 export async function demoShotUrl(env: Env, demoId: string, now: number): Promise<string> {
@@ -27,19 +28,26 @@ export async function demoShotUrl(env: Env, demoId: string, now: number): Promis
 }
 
 async function screenshot(env: Env, deps: Deps, url: string): Promise<ArrayBuffer> {
-  const res = await deps.fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering/screenshot`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${env.BROWSER_RENDERING_TOKEN}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      url,
-      viewport: { width: 1280, height: 720 },
-      gotoOptions: { waitUntil: "networkidle2", timeout: 20_000 },
-      screenshotOptions: { type: "jpeg", quality: 70 },
-    }),
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering/screenshot`;
+  const body = JSON.stringify({
+    url,
+    viewport: { width: 1280, height: 720 },
+    gotoOptions: { waitUntil: "networkidle2", timeout: 20_000 },
+    screenshotOptions: { type: "jpeg", quality: 70 },
   });
-  if (res.status === 429) {
+  let res: Response;
+  try {
+    res = await deps.fetch(endpoint, {
+      method: "POST",
+      headers: { authorization: `Bearer ${env.BROWSER_RENDERING_TOKEN}`, "content-type": "application/json" },
+      body,
+    });
+  } catch (err) {
+    throw new ServiceProblem(String(err));
+  }
+  if (res.status === 429 || res.status === 401 || res.status === 403 || res.status >= 500) {
     await res.body?.cancel();
-    throw new RateLimited();
+    throw new ServiceProblem(`Browser Rendering respondeu ${res.status}`);
   }
   if (!res.ok || !(res.headers.get("content-type") ?? "").startsWith("image/")) {
     await res.body?.cancel();
@@ -65,23 +73,28 @@ export async function capturePreviews(env: Env, deps: Deps): Promise<void> {
     else continue;
 
     let previewUrl: string | null = null;
+    const key = `previews/${row.id}/${row.version}.jpg`;
     try {
       const image = await screenshot(env, deps, target);
-      const key = `previews/${row.id}/${row.version}.jpg`;
       await env.DEMOS_BUCKET.put(key, image, {
         httpMetadata: { contentType: "image/jpeg", cacheControl: "public, max-age=31536000, immutable" },
       });
-      // Prints de versões antigas saem.
-      const old = await env.DEMOS_BUCKET.list({ prefix: `previews/${row.id}/` });
-      const stale = old.objects.map((o) => o.key).filter((k) => k !== key);
-      if (stale.length) await env.DEMOS_BUCKET.delete(stale);
       previewUrl = `https://${env.DEMOS_HOST}/${key}`;
     } catch (err) {
-      // Limite da Cloudflare: para por aqui e tenta no próximo ciclo, sem contar falha.
-      if (err instanceof RateLimited) return;
+      // Limite, token errado ou Cloudflare fora do ar: para e tenta no próximo ciclo, sem contar falha.
+      if (err instanceof ServiceProblem) {
+        console.error("Print automático parado neste ciclo", err.message);
+        return;
+      }
       console.error(`Print da demo ${row.id} falhou`, err);
     }
     await db.rpc("record_demo_preview", { demo_id: row.id, demo_version: row.version, preview_url: previewUrl });
+    // Só depois de gravado: prints de versões antigas saem do R2.
+    if (previewUrl) {
+      const old = await env.DEMOS_BUCKET.list({ prefix: `previews/${row.id}/` });
+      const stale = old.objects.map((o) => o.key).filter((k) => k !== key);
+      if (stale.length) await env.DEMOS_BUCKET.delete(stale);
+    }
   }
 }
 
@@ -91,7 +104,8 @@ export async function servePreview(req: Request, env: Env): Promise<Response | n
   if (!pathname.startsWith("/previews/")) return null;
   const m = PREVIEW_PATH.exec(pathname);
   if (!m || (req.method !== "GET" && req.method !== "HEAD")) return new Response("Not found", { status: 404 });
-  const object = await env.DEMOS_BUCKET.get(`previews/${m[1]}/${m[2]}.jpg`);
+  // O endereço muda a cada versão: o navegador guarda por um ano e só pergunta de novo se perder o cache.
+  const object = await env.DEMOS_BUCKET.get(`previews/${m[1]}/${m[2]}.jpg`, { onlyIf: req.headers });
   if (!object) return new Response("Not found", { status: 404 });
   const headers = new Headers({
     "content-type": "image/jpeg",
@@ -100,6 +114,8 @@ export async function servePreview(req: Request, env: Env): Promise<Response | n
     "cross-origin-resource-policy": "cross-origin",
     etag: object.httpEtag,
   });
+  // Pedido condicional com a mesma versão: 304 sem corpo.
+  if (!("body" in object)) return new Response(null, { status: 304, headers });
   if (req.method === "HEAD") {
     await object.body.cancel();
     return new Response(null, { headers });

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth/viewer";
 import { checkTone } from "@/lib/moderation/tone";
-import { cleanOrphanCovers } from "@/lib/projects/covers";
+import { getSupabaseEnv } from "@/lib/env";
+import { cleanOrphanCovers, trustedCoverUrl } from "@/lib/projects/covers";
 import { COMMENT_MAX, validateProject, type ProjectErrors, type ProjectInput } from "@/lib/projects/rules";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,13 +25,18 @@ export type PublishResult = { error: "invalid"; errors: ProjectErrors } | { erro
 
 /** Capa: ausente = sem capa (publicar) ou não mexe (editar); "" = remove; URL = a capa enviada. */
 type CoverInput = { coverUrl?: string };
-const COVER_REJECTED = "22023";
+
+/** Capa de outro servidor, bucket ou pessoa: recusada antes do banco. */
+const badCover = (url: string | undefined, userId: string) => !!url && !trustedCoverUrl(url, userId, getSupabaseEnv()?.url);
+/** O gatilho da capa recusou (mesmo código de outras recusas: confere a mensagem). */
+const coverRejected = (error: { code?: string; message?: string } | null) => error?.code === "22023" && /capa/i.test(error.message ?? "");
 
 /** Cria o projeto depois que a demo validou e abre a página dele. */
 export async function publishProject(input: ProjectInput & CoverInput & { demoId: string }): Promise<PublishResult> {
   const viewer = await requireViewer("/projetos/novo");
   const check = validateProject(input);
   if (!check.ok) return { error: "invalid", errors: check.errors };
+  if (badCover(input.coverUrl, viewer.id)) return { error: "cover" };
   const v = check.value;
 
   const supabase = await createClient();
@@ -53,7 +59,7 @@ export async function publishProject(input: ProjectInput & CoverInput & { demoId
     })
     .select("id, slug")
     .single();
-  if (error?.code === COVER_REJECTED && input.coverUrl) return { error: "cover" };
+  if (coverRejected(error)) return { error: "cover" };
   if (error || !project) return { error: "unknown" };
 
   const { error: tagError } = await supabase.from("project_tags").insert(tags.map((t: { id: string }) => ({ project_id: project.id, tag_id: t.id })));
@@ -74,6 +80,7 @@ export async function updateProject(projectId: string, input: ProjectInput & Cov
   const viewer = await requireViewer("/projetos");
   const check = validateProject(input);
   if (!check.ok) return { error: "invalid", errors: check.errors };
+  if (badCover(input.coverUrl, viewer.id)) return { error: "cover" };
   const v = check.value;
 
   const supabase = await createClient();
@@ -90,7 +97,7 @@ export async function updateProject(projectId: string, input: ProjectInput & Cov
     .eq("id", projectId)
     .select("slug")
     .maybeSingle();
-  if (error?.code === COVER_REJECTED && input.coverUrl) return { error: "cover" };
+  if (coverRejected(error)) return { error: "cover" };
   if (error) return { error: "unknown" };
   if (!project) return { error: "notFound" };
 
