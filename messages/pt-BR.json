@@ -762,13 +762,15 @@
     "achievementsCount": "{count, plural, one {1 insígnia} other {# insígnias}}",
     "earnedOn": "Conquistada em {date}",
     "sectionTitle": "Insígnias",
-    "sectionHint": "Marque até 3 para aparecer ao lado do seu nome. As apagadas você ainda não conquistou.",
+    "sectionHint": "Toque nas que você conquistou para exibir até 3 ao lado do seu nome. Passe o mouse (ou toque) numa bloqueada para ver como ganhar.",
     "locked": "Ainda não conquistada",
     "howTo": "Como ganhar: {how}",
     "limit": "Você já marcou 3. Desmarque uma para trocar.",
     "frameLocked": "Bloqueada. Para liberar, conquiste a insígnia {badge}: {how}",
     "notEarned": "Você só pode exibir insígnias que conquistou.",
-    "frameNotUnlocked": "Essa borda ainda está bloqueada para você."
+    "frameNotUnlocked": "Essa borda ainda está bloqueada para você.",
+    "progress": "{earned} de {total} conquistadas",
+    "shownCount": "{count} de {max} no perfil"
   },
   "ProfileStyle": {
     "status_open_to_work": "Aberto a oportunidades",
