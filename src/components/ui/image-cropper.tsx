@@ -9,6 +9,7 @@ import { renderCrop } from "@/lib/images/render-crop";
 
 type Props = { image: HTMLImageElement; kind: CropKind; onCancel(): void; onConfirm(blob: Blob): void };
 
+const TITLE_KEY = { avatar: "titleAvatar", banner: "titleBanner", cover: "titleCover" } as const;
 const STEP = 10;
 const STEP_FAST = 50;
 const ZOOM_STEP = 1.1;
@@ -126,7 +127,7 @@ export function ImageCropper({ image, kind, onCancel, onConfirm }: Props) {
     left: frame.width / 2 - view.x * scale,
     top: frame.height / 2 - view.y * scale,
   };
-  const title = kind === "avatar" ? t("titleAvatar") : t("titleBanner");
+  const title = t(TITLE_KEY[kind]);
 
   return (
     <dialog

@@ -11,6 +11,8 @@ import { TextField } from "@/components/ui/text-field";
 import { GithubIcon } from "@/components/icons/github";
 import { GithubError, type GithubRepo } from "@/lib/projects/github";
 import type { SiteSource } from "@/lib/projects/github-demo";
+import type { PendingImage } from "@/components/social/profile-image-field";
+import { CoverField } from "./cover-field";
 import { GithubImport, type GithubServices, type ImportExtra } from "./github-import";
 import type { PublishResult } from "@/app/(app)/projetos/actions";
 import { BUILD_STAGES, DemoServiceError, waitForBuild, waitForDemo, type BuildRow, type DemoRow, type DemoServiceOptions, type EmbedResult } from "@/lib/demos/client";
@@ -33,7 +35,9 @@ export type PublishServices = {
   verifyDemo: (o: DemoServiceOptions, demoId: string) => Promise<EmbedResult>;
   readDemo: (demoId: string) => Promise<DemoRow | null>;
   createLinkDemo: (url: string) => Promise<string>;
-  publish: (input: ProjectInput & { demoId: string }) => Promise<PublishResult>;
+  publish: (input: ProjectInput & { demoId: string; coverUrl?: string }) => Promise<PublishResult>;
+  /** Envia a capa recortada e devolve a URL pública (opcional: sem isso o campo de capa não aparece). */
+  uploadCover?: (blob: Blob) => Promise<string>;
   /** Build automático no GitHub Actions (opcional: sem isso, repo que precisa de build só recebe o aviso). */
   startBuild?: (o: DemoServiceOptions, repo: string, ref: string) => Promise<{ demoId: string; buildId: string }>;
   readBuild?: (buildId: string) => Promise<BuildRow | null>;
@@ -68,6 +72,7 @@ function formatSize(bytes: number) {
 export function PublishForm({ tags, services }: { tags: { slug: string; name: string }[]; services: PublishServices }) {
   const t = useTranslations("Publish");
   const reasons = useTranslations("DemoReasons");
+  const c = useTranslations("ProjectCover");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [chosen, setChosen] = useState<string[]>([]);
@@ -76,6 +81,9 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
   const [link, setLink] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [siteUrl, setSiteUrl] = useState("");
+  const [cover, setCover] = useState<PendingImage>({ kind: "keep" });
+  // Capa já enviada nesta tentativa: tentar de novo não sobe a mesma imagem outra vez.
+  const sentCover = useRef<{ blob: Blob; url: string } | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [errors, setErrors] = useState<Errors>({});
   // Demo já criada numa tentativa anterior: tentar de novo reaproveita, sem gastar outro envio do dia.
@@ -125,11 +133,24 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
 
   async function finish(input: ProjectInput, demoId: string) {
     setPhase("publishing");
-    const result = await services.publish({ ...input, demoId });
+    let coverUrl: string | undefined;
+    if (cover.kind === "new" && services.uploadCover) {
+      if (sentCover.current?.blob === cover.blob) coverUrl = sentCover.current.url;
+      else {
+        try {
+          coverUrl = await services.uploadCover(cover.blob);
+          sentCover.current = { blob: cover.blob, url: coverUrl };
+        } catch {
+          setPhase("idle");
+          return setErrors({ form: c("uploadFailed") });
+        }
+      }
+    }
+    const result = await services.publish(coverUrl ? { ...input, demoId, coverUrl } : { ...input, demoId });
     // Deu certo: a ação redireciona para a página do projeto e não volta aqui.
     setPhase("idle");
     if (result.error === "invalid") setErrors(result.errors);
-    else setErrors({ form: result.error === "demo" ? t("demoNotReady") : t("unknown") });
+    else setErrors({ form: result.error === "demo" ? t("demoNotReady") : result.error === "cover" ? c("rejected") : t("unknown") });
   }
 
   async function onSubmit(e: FormEvent) {
@@ -296,6 +317,7 @@ export function PublishForm({ tags, services }: { tags: { slug: string; name: st
             {tagError ?? t("tagsHelp")}
           </p>
         </fieldset>
+        {services.uploadCover ? <CoverField currentUrl={null} value={cover} onChange={setCover} /> : null}
       </Step>
 
       <Step n={2} title={t("demoStep")} help={t("demoStepHelp")}>

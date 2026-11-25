@@ -9,7 +9,6 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { TagToggle } from "@/components/ui/tag-chip";
 import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
-import type { CropKind } from "@/lib/images/crop-math";
 import { preparePendingImages } from "@/lib/social/profile-images";
 import { BIO_MAX, HEADLINE_MAX, LOCATION_MAX, NAME_MAX, validateProfile, type ProfileInput } from "@/lib/social/profile-rules";
 import { STATUSES } from "@/lib/social/profile-style";
@@ -50,13 +49,13 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
   const [v, setV] = useState<ProfileInput>(() => ({ ...initial, ...(state.values ?? {}) }));
   const [dirty, setDirty] = useState(false);
   // Foto e banner só sobem ao salvar; até lá ficam pendentes (e aparecem na prévia).
-  const [images, setImages] = useState<Record<CropKind, PendingImage>>({ avatar: { kind: "keep" }, banner: { kind: "keep" } });
+  const [images, setImages] = useState<Record<"avatar" | "banner", PendingImage>>({ avatar: { kind: "keep" }, banner: { kind: "keep" } });
   // A transição cobre o envio das imagens inteiro: o botão trava do clique até a ação.
   const [uploading, startUpload] = useTransition();
   const [uploadFailed, setUploadFailed] = useState(false);
   const shownAvatar = previewSrc(avatarUrl, images.avatar);
   const shownBanner = previewSrc(bannerUrl, images.banner);
-  const setImage = (kind: CropKind, p: PendingImage) => {
+  const setImage = (kind: "avatar" | "banner", p: PendingImage) => {
     setImages((old) => ({ ...old, [kind]: p }));
     setUploadFailed(false);
     setDirty(true);

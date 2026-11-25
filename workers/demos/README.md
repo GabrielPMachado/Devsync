@@ -81,6 +81,10 @@ Limites: 64 MB o zip (o site manda sem compressão), 500 arquivos, 60 MB descomp
 
 O cron (`0 6 * * *`, 03:00 em São Paulo) enfileira os links `live` e `unavailable` na fila `demo-links`. Link que passa de `live` para `unavailable` gera a notificação `demo_unavailable` para o autor do projeto (gatilho no banco).
 
+## Print automático (cards sem capa)
+
+Projeto sem capa própria ganha um print da demo no card. A cada 15 min o cron pega até 3 demos da fila `pending_demo_previews` (demos `live` de projetos sem capa, sem print da versão atual) e pede um print 1280×720 à API REST do [Cloudflare Browser Rendering](https://developers.cloudflare.com/browser-rendering/) (o plano grátis do Workers tem cota diária de navegador). O JPEG vai para `previews/<id>/<versão>.jpg` no R2 e é servido em `GET /previews/<id>/<versão>.jpg` (cache longo, fora do limite por IP). O resultado é gravado com `record_demo_preview`: 3 falhas na mesma versão e ele desiste; 429 da Cloudflare só adia para o próximo ciclo. Demo enviada abre fora de iframe só com o passe assinado `?shot=` (5 min, assinatura própria, diferente da do upload). Sem `BROWSER_RENDERING_TOKEN`, nada disso roda e o card mostra o desenho padrão.
+
 ## Variáveis
 
 | Nome | Tipo | Exemplo |
@@ -96,6 +100,8 @@ O cron (`0 6 * * *`, 03:00 em São Paulo) enfileira os links `live` e `unavailab
 | `BUILDER_REPO` | segredo/var (opcional) | `GabrielPMachado/devsync-builds` |
 | `BUILDER_REPO_ID` | segredo/var (opcional, recomendado) | id numérico do `BUILDER_REPO` (`https://api.github.com/repos/<repo>` → `id`) |
 | `BUILDER_GITHUB_TOKEN` | segredo (opcional) | token fine-grained, só o `BUILDER_REPO`, Actions: write |
+| `BROWSER_RENDERING_TOKEN` | segredo (opcional) | token da Cloudflare só com "Browser Rendering: Edit" (liga o print automático) |
+| `CLOUDFLARE_ACCOUNT_ID` | segredo (com o anterior) | ID da conta; o workflow manda junto quando há o token |
 
 Bindings: R2 `DEMOS_BUCKET` (`devsync-demos`), filas `demo-zips` e `demo-links`.
 

@@ -7,6 +7,7 @@ import { repackStored } from "@/lib/demos/repack";
 import { demosBaseUrl } from "@/lib/demos/url";
 import { listRepos, repoDetails } from "@/lib/projects/github";
 import { buildDemoZip, findSiteSource } from "@/lib/projects/github-demo";
+import { uploadMyCover } from "@/lib/projects/cover-upload";
 import { createClient } from "@/lib/supabase/client";
 import { PublishForm, type PublishServices } from "./publish-form";
 
@@ -47,6 +48,7 @@ export function ConnectedPublishForm({ tags, githubUser }: { tags: { slug: strin
           }
         : {}),
       publish: publishProject,
+      uploadCover: uploadMyCover,
       github: { user: githubUser, listRepos: (u) => listRepos(u), repoDetails: (r) => repoDetails(r),
         findSiteSource: (r) => findSiteSource(r),
         buildDemoZip: (r, s) => buildDemoZip(r, s),

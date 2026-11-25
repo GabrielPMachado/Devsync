@@ -21,6 +21,10 @@ export interface Env {
   BUILDER_REPO_ID?: string;
   /** Token do GitHub (fine-grained, só o BUILDER_REPO, Actions: write) para disparar o workflow. */
   BUILDER_GITHUB_TOKEN?: string;
+  /** Print automático das demos (Cloudflare Browser Rendering, API REST). Sem os dois, fica desligado. */
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  /** Token da Cloudflare só com a permissão "Browser Rendering: Edit". */
+  BROWSER_RENDERING_TOKEN?: string;
   DEMOS_BUCKET: R2Bucket;
   ZIP_QUEUE: Queue<ZipMessage>;
   LINK_QUEUE: Queue<LinkMessage>;

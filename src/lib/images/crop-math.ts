@@ -11,6 +11,7 @@ export type CropView = { zoom: number; x: number; y: number };
 export const CROP_OUTPUT = {
   avatar: { width: 512, height: 512 },
   banner: { width: 1500, height: 500 },
+  cover: { width: 1280, height: 720 },
 } as const;
 export type CropKind = keyof typeof CROP_OUTPUT;
 

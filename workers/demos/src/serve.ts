@@ -1,5 +1,6 @@
 import { allowedOrigins, type Deps, type Env } from "./env";
 import { isHtml, extensionOf } from "./content-types";
+import { verifyShot } from "./signing";
 import { anonRest } from "./supabase";
 
 interface DemoRow {
@@ -121,6 +122,13 @@ export async function routeDemoPath(req: Request, env: Env, deps: Deps): Promise
   });
 }
 
+/** `?shot=<expira>.<assinatura>` válido para esta demo (feito por previews.ts). */
+async function validShot(req: Request, env: Env, demoId: string, deps: Deps): Promise<boolean> {
+  const raw = new URL(req.url).searchParams.get("shot");
+  const m = raw ? /^(\d{1,16})\.([0-9a-f]{64})$/.exec(raw) : null;
+  return m ? verifyShot(env.UPLOAD_SIGNING_SECRET, demoId, Number(m[1]), m[2]!, deps.now()) : false;
+}
+
 /** `pathname`: caminho dentro da demo (modo pastas); sem ele, o da URL (modo subdomínio). */
 export async function serveDemo(req: Request, env: Env, demoId: string, deps: Deps, pathname?: string): Promise<Response> {
   if (req.method !== "GET" && req.method !== "HEAD") {
@@ -131,7 +139,9 @@ export async function serveDemo(req: Request, env: Env, demoId: string, deps: De
   if (req.headers.has("service-worker")) return new Response("Forbidden", { status: 403 });
 
   const dest = req.headers.get("sec-fetch-dest");
-  if (dest === "document") return redirectToSite(env, demoId);
+  // Passe assinado do print automático: o navegador da Cloudflare abre a demo direto.
+  const shot = await validShot(req, env, demoId, deps);
+  if (dest === "document" && !shot) return redirectToSite(env, demoId);
 
   const path = safePath(pathname ?? new URL(req.url).pathname);
   if (!path) return notFound(env);
@@ -150,7 +160,7 @@ export async function serveDemo(req: Request, env: Env, demoId: string, deps: De
   if (!object) return notFound(env);
 
   // HTML só é servido para iframe: fora dele, vira a página da Devsync.
-  if (isHtml(resolved) && dest !== "iframe" && dest !== "frame") {
+  if (isHtml(resolved) && dest !== "iframe" && dest !== "frame" && !shot) {
     await object.body.cancel();
     return redirectToSite(env, demoId);
   }
@@ -160,7 +170,7 @@ export async function serveDemo(req: Request, env: Env, demoId: string, deps: De
   if (!isHtml(resolved)) headers.set("content-security-policy", `${headers.get("content-security-policy")}; sandbox`);
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
-  headers.set("cache-control", isHtml(resolved) ? "no-cache" : "public, max-age=60");
+  headers.set("cache-control", shot ? "no-store" : isHtml(resolved) ? "no-cache" : "public, max-age=60");
   if (req.method === "HEAD") {
     await object.body.cancel();
     return new Response(null, { status: 200, headers });

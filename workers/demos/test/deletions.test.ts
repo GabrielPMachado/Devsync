@@ -21,6 +21,7 @@ describe("purgeDeletedDemos", () => {
     await env.DEMOS_BUCKET.put(`demos/${gone}/1/index.html`, "a");
     await env.DEMOS_BUCKET.put(`demos/${gone}/2/assets/app.js`, "b");
     await env.DEMOS_BUCKET.put(`uploads/${gone}/3.zip`, "c");
+    await env.DEMOS_BUCKET.put(`previews/${gone}/2.jpg`, "p");
     await env.DEMOS_BUCKET.put(`demos/${kept}/1/index.html`, "d");
     pending = [gone];
 
@@ -28,6 +29,7 @@ describe("purgeDeletedDemos", () => {
 
     expect((await env.DEMOS_BUCKET.list({ prefix: `demos/${gone}/` })).objects).toEqual([]);
     expect((await env.DEMOS_BUCKET.list({ prefix: `uploads/${gone}/` })).objects).toEqual([]);
+    expect((await env.DEMOS_BUCKET.list({ prefix: `previews/${gone}/` })).objects).toEqual([]);
     expect(await env.DEMOS_BUCKET.head(`demos/${kept}/1/index.html`)).not.toBeNull();
 
     const rpc = supabase.calls.map((c) => [new URL(c.url).pathname, c.body && JSON.parse(c.body)]);

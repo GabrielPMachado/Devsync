@@ -296,6 +296,7 @@
     "publish": "Publicar projeto",
     "empty": "Ainda não tem projetos por aqui. Que tal publicar o primeiro?",
     "viewDemo": "Ver demo",
+    "coverOf": "Capa de {title}",
     "viewDemoOf": "Ver demo de {title}",
     "likes": "{count, plural, one {# curtida} other {# curtidas}}",
     "commentsCount": "{count, plural, one {# comentário} other {# comentários}}",
@@ -486,9 +487,18 @@
     "noFollowers": "Ninguém segue este perfil ainda.",
     "noFollowing": "Este perfil ainda não segue ninguém."
   },
+  "ProjectCover": {
+    "label": "Capa (opcional)",
+    "alt": "Capa do projeto",
+    "empty": "Sem capa, o card mostra um print da demo.",
+    "help": "Uma imagem 16:9 que aparece no card e quando o link do projeto é compartilhado. PNG, JPEG ou WebP.",
+    "uploadFailed": "Não foi possível enviar a capa. Tente de novo ou publique sem ela.",
+    "rejected": "A capa não foi aceita. Escolha a imagem de novo."
+  },
   "ImageCrop": {
     "titleAvatar": "Recortar foto",
     "titleBanner": "Recortar banner",
+    "titleCover": "Recortar capa do projeto",
     "hint": "Arraste para posicionar. Setas movem, + e − aproximam.",
     "area": "Área de recorte",
     "zoom": "Zoom",
@@ -502,6 +512,9 @@
     "changeBanner": "Trocar banner",
     "removeAvatar": "Remover foto",
     "removeBanner": "Remover banner",
+    "changeCover": "Escolher capa",
+    "removeCover": "Remover capa",
+    "pendingCover": "A capa é enviada quando você salvar o projeto.",
     "invalid": "Não foi possível abrir essa imagem. Use PNG, JPEG ou WebP.",
     "tooBig": "Imagem grande demais (máximo 15 MB).",
     "pending": "Aparece no perfil depois de salvar.",

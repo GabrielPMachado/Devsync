@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CropKind } from "@/lib/images/crop-math";
 
-export const IMAGE_BUCKET = { avatar: "avatars", banner: "banners" } as const;
+export const IMAGE_BUCKET = { avatar: "avatars", banner: "banners", cover: "project-covers" } as const;
 
 /** Imagem do perfil ainda não salva: manter a atual, remover, ou trocar por uma recortada. */
 export type PendingImage = { kind: "keep" } | { kind: "remove" } | { kind: "new"; blob: Blob; previewUrl: string };
@@ -32,10 +32,10 @@ export async function uploadProfileImage(supabase: SupabaseClient, userId: strin
 export async function preparePendingImages(
   supabase: SupabaseClient,
   userId: string,
-  pending: Record<CropKind, PendingImage>,
+  pending: Record<"avatar" | "banner", PendingImage>,
   now = Date.now(),
 ): Promise<{ avatarUrl?: string; bannerUrl?: string }> {
-  const field = async (kind: CropKind): Promise<string | undefined> => {
+  const field = async (kind: "avatar" | "banner"): Promise<string | undefined> => {
     const p = pending[kind];
     if (p.kind === "keep") return undefined;
     if (p.kind === "remove") return "";

@@ -41,4 +41,19 @@ describe("ProjectCard", () => {
     expect(screen.getByText("Indisponível")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Ver demo/ })).toBeNull();
   });
+
+  it("capa própria aparece no topo do card", () => {
+    show({ ...base, coverUrl: "https://x.supabase.co/capa.webp", demo: { ...base.demo!, screenshotUrl: "https://demos/p.jpg" } });
+    expect(screen.getByRole("img", { name: "Capa de Kanban colaborativo" })).toHaveAttribute("src", "https://x.supabase.co/capa.webp");
+  });
+
+  it("sem capa, mostra o print da demo", () => {
+    show({ ...base, coverUrl: null, demo: { ...base.demo!, screenshotUrl: "https://demos/p.jpg" } });
+    expect(screen.getByRole("img", { name: "Capa de Kanban colaborativo" })).toHaveAttribute("src", "https://demos/p.jpg");
+  });
+
+  it("sem capa e sem print, fica o desenho padrão", () => {
+    show({ ...base, coverUrl: null });
+    expect(screen.queryByRole("img", { name: "Capa de Kanban colaborativo" })).toBeNull();
+  });
 });
