@@ -82,10 +82,41 @@ describe("<ProfileEditor />", () => {
     const neon = screen.getByRole("button", { name: /Borda néon/ });
     expect(neon).toHaveAccessibleDescription(/Ganhe a insígnia Mentor para liberar.*10 respostas aceitas/);
     // O requisito não fica exposto na tela: só na dica, que abre ao passar o mouse ou tocar.
-    expect(screen.getByText("Ganhe a insígnia Mentor para liberar").closest('[role="tooltip"]')).toHaveAttribute("data-open", "false");
+    const frames = screen.getByRole("group", { name: /Borda da foto/ });
+    expect(within(frames).getByText("Ganhe a insígnia Mentor para liberar").closest('[role="tooltip"]')).toHaveAttribute("data-open", "false");
     fireEvent.click(neon);
     expect(new FormData(document.querySelector("form")!).get("avatarFrame")).not.toBe("neon");
     expect(screen.getByRole("radio", { name: "Borda colchetes" })).toBeEnabled();
+  });
+
+  it("bordas liberadas por conquista mostram na dica a insígnia e o requisito cumprido", () => {
+    renderEditor({ unlockedBadges: ["mentor"] });
+    const neon = screen.getByRole("radio", { name: "Borda néon" });
+    expect(neon).toHaveAccessibleDescription(/Liberada.*Pela insígnia Mentor.*Requisito cumprido: ter 10 respostas aceitas/);
+    const tip = document.getElementById(neon.getAttribute("aria-describedby")!)!;
+    expect(tip.querySelector('[data-lock="open"]')).not.toBeNull();
+    expect(tip).toHaveAttribute("data-open", "false");
+    fireEvent.pointerEnter(neon.closest("label")!, { pointerType: "mouse" });
+    expect(tip).toHaveAttribute("data-open", "true");
+  });
+
+  it("bordas livres, banners e cores dizem que estão disponíveis para todos", () => {
+    renderEditor();
+    for (const name of ["Borda gradiente", "Sem borda", "Circuito", "Ciano"]) {
+      const radio = screen.getByRole("radio", { name });
+      expect(radio, name).toHaveAccessibleDescription(/Disponível para todos/);
+    }
+  });
+
+  it("no toque, a dica de uma opção abre uma vez por toque (mesmo com o clique repassado ao rádio)", () => {
+    renderEditor();
+    const radio = screen.getByRole("radio", { name: "Circuito" });
+    const label = radio.closest("label")!;
+    const tip = document.getElementById(radio.getAttribute("aria-describedby")!)!;
+    fireEvent.pointerDown(label, { pointerType: "touch" });
+    // Tocar no rótulo gera dois cliques: um no rótulo e outro repassado ao rádio.
+    fireEvent.click(label);
+    expect(tip).toHaveAttribute("data-open", "true");
   });
 
   it("mostra quantas opções há de cada coisa e quantas bordas estão liberadas", () => {
@@ -117,6 +148,14 @@ describe("<ProfileEditor />", () => {
     const data = new FormData(document.querySelector("form")!);
     expect(data.get("bannerPreset")).toBe("chuva_digital");
     expect(data.get("accent")).toBe("floresta");
+  });
+
+  it("banner e cor mostram na dica o requisito: livre, liberado ou bloqueado", () => {
+    renderEditor({ unlockedBadges: ["builder"] });
+    expect(screen.getByRole("radio", { name: "Aurora" })).toHaveAccessibleDescription(/Disponível para todos/);
+    expect(screen.getByRole("radio", { name: "Chuva digital" })).toHaveAccessibleDescription(/Liberado.*Pela insígnia Construtor.*Requisito cumprido: publicar 5 projetos/);
+    expect(screen.getByRole("radio", { name: "Floresta" })).toHaveAccessibleDescription(/Liberada.*Pela insígnia Construtor/);
+    expect(screen.getByRole("button", { name: "Hiperespaço (bloqueado)" })).toHaveAccessibleDescription(/Bloqueado.*Ganhe a insígnia Ícone para liberar.*1\.000 seguidores/);
   });
 
   it("o cabeçalho de cada escolha diz o que está selecionado", () => {

@@ -597,7 +597,11 @@
     "badge_debater": "Debatedor",
     "badge_icon": "Ícone",
     "countUnlockedMasc": "{unlocked} de {total} liberados",
-    "lockedOption": "{name} (bloqueado)"
+    "lockedOption": "{name} (bloqueado)",
+    "available": "Liberada",
+    "availableToAll": "Disponível para todos",
+    "frameUnlocked": "Pela insígnia {badge}. Requisito cumprido: {how}",
+    "availableMasc": "Liberado"
   },
   "Notifications": {
     "title": "Notificações",
@@ -810,7 +814,7 @@
     "achievementsCount": "{count, plural, one {1 insígnia} other {# insígnias}}",
     "earnedOn": "Conquistada em {date}",
     "sectionTitle": "Insígnias",
-    "sectionHint": "Toque nas que você conquistou para exibir até 3 ao lado do seu nome. Passe o mouse (ou toque) numa bloqueada para ver como ganhar.",
+    "sectionHint": "Toque nas que você conquistou para exibir até 3 ao lado do seu nome. Passe o mouse (ou toque) numa insígnia para ver o requisito: o que você já cumpriu ou o que falta.",
     "locked": "Ainda não conquistada",
     "howTo": "Como ganhar: {how}",
     "limit": "Você já marcou 3. Desmarque uma para trocar.",
@@ -868,7 +872,11 @@
     "debater_name": "Debatedor",
     "debater_how": "Fazer 100 comentários",
     "icon_name": "Ícone",
-    "icon_how": "Chegar a 1.000 seguidores"
+    "icon_how": "Chegar a 1.000 seguidores",
+    "earned": "Conquistada",
+    "lockedShort": "Bloqueada",
+    "done": "Requisito cumprido: {how}",
+    "lockedShortMasc": "Bloqueado"
   },
   "ProfileStyle": {
     "status_open_to_work": "Aberto a oportunidades",
