@@ -5,7 +5,6 @@ export const BIO_MAX = 500;
 export const SITE_MAX = 200;
 export const HEADLINE_MAX = 80;
 export const LOCATION_MAX = 60;
-export const PROFILE_TAGS_MAX = 10;
 
 /** Strings vazias = "nenhum". avatarUrl/bannerUrl: ausente = não mexer, "" = remover. */
 export type ProfileInput = {
@@ -43,7 +42,6 @@ export type ProfileErrors = {
   accent?: Invalid;
   avatarUrl?: Invalid;
   bannerUrl?: Invalid;
-  tags?: "max";
 };
 
 /** Tira o @, o domínio colado e a barra final; devolve o usuário se casar com o formato. */
@@ -118,6 +116,5 @@ export function validateProfile(input: ProfileInput): { ok: true; value: Profile
   if (value.site && (value.site.length > SITE_MAX || !isHttps(value.site))) errors.site = "https";
   if (value.avatarUrl && !isStorageUrl(value.avatarUrl)) errors.avatarUrl = "invalid";
   if (value.bannerUrl && !isStorageUrl(value.bannerUrl)) errors.bannerUrl = "invalid";
-  if (value.tags.length > PROFILE_TAGS_MAX) errors.tags = "max";
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value };
 }

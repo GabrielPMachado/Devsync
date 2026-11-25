@@ -46,10 +46,10 @@ describe("validateProfile", () => {
     }
   });
 
-  it("até 10 tecnologias, sem repetir (nenhuma também vale)", () => {
+  it("quantos assuntos quiser, sem repetir (nenhum também vale)", () => {
     expect(validateProfile({ ...base, tags: ["react", "React", " css "] })).toMatchObject({ ok: true, value: { tags: ["react", "css"] } });
     expect(validateProfile({ ...base, tags: [] })).toMatchObject({ ok: true });
-    expect(validateProfile({ ...base, tags: Array.from({ length: 11 }, (_, i) => `t${i}`) })).toMatchObject({ ok: false, errors: { tags: "max" } });
+    expect(validateProfile({ ...base, tags: Array.from({ length: 100 }, (_, i) => `t${i}`) })).toMatchObject({ ok: true });
   });
 
   it("cargo até 80 e localização até 60, sem espaços sobrando", () => {

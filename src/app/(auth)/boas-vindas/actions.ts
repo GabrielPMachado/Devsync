@@ -18,7 +18,6 @@ export type OnboardingState = {
   };
 };
 
-const MAX_TAGS = 30;
 const AVATAR_TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };
 
 async function requireViewer() {
@@ -44,7 +43,7 @@ export async function completeOnboarding(_prev: OnboardingState, formData: FormD
   if (!check.ok) errors.username = check.reason;
   const displayName = (formData.get("displayName")?.toString() ?? "").trim().slice(0, 80);
   if (!displayName) errors.displayName = "required";
-  const slugs = [...new Set(formData.getAll("tags").map((t) => t.toString().trim().toLowerCase()).filter(Boolean))].slice(0, MAX_TAGS);
+  const slugs = [...new Set(formData.getAll("tags").map((t) => t.toString().trim().toLowerCase()).filter(Boolean))];
   if (slugs.length < MIN_TAGS) errors.tags = "min";
   const avatar = formData.get("avatar");
   const file = avatar instanceof File && avatar.size > 0 ? avatar : null;

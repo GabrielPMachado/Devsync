@@ -62,7 +62,8 @@ test("trocar a foto: recorta, só vale depois de salvar, e remover volta às ini
   await page.getByRole("button", { name: "Remover foto" }).click();
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page).toHaveURL(new RegExp(`/@${username}\\?salvo=1$`));
-  await expect(page.locator('img[src*="/avatars/"]')).toHaveCount(0);
+  // Só o que aparece na tela: o Next guarda escondida a tela de edição que acabou de sair.
+  await expect(page.locator('img[src*="/avatars/"]:visible')).toHaveCount(0);
 });
 
 test("banner enviado sai em 1500×500", async ({ browser }) => {

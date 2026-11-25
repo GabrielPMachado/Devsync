@@ -11,7 +11,7 @@ import { TagGroups } from "@/components/ui/tag-groups";
 import { TextField } from "@/components/ui/text-field";
 import type { CropKind } from "@/lib/images/crop-math";
 import { preparePendingImages } from "@/lib/social/profile-images";
-import { BIO_MAX, HEADLINE_MAX, LOCATION_MAX, NAME_MAX, PROFILE_TAGS_MAX, validateProfile, type ProfileInput } from "@/lib/social/profile-rules";
+import { BIO_MAX, HEADLINE_MAX, LOCATION_MAX, NAME_MAX, validateProfile, type ProfileInput } from "@/lib/social/profile-rules";
 import { STATUSES } from "@/lib/social/profile-style";
 import { createClient } from "@/lib/supabase/client";
 import { AccentPicker, BannerPicker } from "./appearance-pickers";
@@ -208,7 +208,7 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
           </div>
         </EditorSection>
 
-        <EditorSection id="tecnologias" title={t("sectionTechnologies")} help={t("technologiesHelp", { max: PROFILE_TAGS_MAX })}>
+        <EditorSection id="tecnologias" title={t("sectionTechnologies")} help={t("technologiesHelp")}>
           <div className="max-h-72 overflow-y-auto pr-1">
             <TagGroups
               tags={ordered}
@@ -226,7 +226,7 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
           {v.tags.map((slug) => (
             <input key={slug} type="hidden" name="tags" value={slug} />
           ))}
-          <p className={`text-xs ${e.tags || v.tags.length > PROFILE_TAGS_MAX ? "text-status-danger-text" : "text-text-muted"}`} aria-live="polite">
+          <p className={"text-xs text-text-muted"} aria-live="polite">
             {t("technologiesCount", { count: v.tags.length })}
           </p>
         </EditorSection>
@@ -262,7 +262,7 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
             >
               {t("cancel")}
             </Link>
-            <Button type="submit" disabled={busy || v.tags.length > PROFILE_TAGS_MAX}>
+            <Button type="submit" disabled={busy}>
               {busy ? t("saving") : t("save")}
             </Button>
           </div>
