@@ -32,7 +32,7 @@ export function BannerPicker({ value, onChange, disabled }: { value: string; onC
           const on = value === o.key;
           return (
             <label key={o.key || "padrao"} className={`group relative flex cursor-pointer flex-col gap-1.5 ${FOCUS} rounded-lg`}>
-              <input type="radio" name="bannerPresetChoice" className="sr-only" checked={on} onChange={() => onChange(o.key)} aria-label={o.label} />
+              <input type="radio" name="bannerPresetChoice" className="sr-only top-1/2 left-1/2" checked={on} onChange={() => onChange(o.key)} aria-label={o.label} />
               <ProfileBanner
                 preset={o.key || null}
                 className={`aspect-[3/1] w-full rounded-lg border transition ${on ? "border-brand-accent ring-2 ring-brand-accent/60" : "border-border-default group-hover:border-border-strong"}`}
@@ -61,7 +61,7 @@ export function AccentPicker({ value, onChange }: { value: string; onChange: (v:
           const on = current === a;
           return (
             <label key={a} title={style(`accent_${a}`)} className={`relative flex cursor-pointer justify-center rounded-full ${FOCUS}`}>
-              <input type="radio" name="accentChoice" className="sr-only" checked={on} onChange={() => onChange(a)} aria-label={style(`accent_${a}`)} />
+              <input type="radio" name="accentChoice" className="sr-only top-1/2 left-1/2" checked={on} onChange={() => onChange(a)} aria-label={style(`accent_${a}`)} />
               <span
                 aria-hidden="true"
                 className={`flex size-10 items-center justify-center rounded-full transition ${on ? "ring-2 ring-text-primary ring-offset-2 ring-offset-bg-surface" : "hover:scale-105"}`}

@@ -207,7 +207,7 @@ function Option({
       <input
         type="radio"
         name="avatarFrameChoice"
-        className="sr-only"
+        className="sr-only top-1/2 left-1/2"
         checked={checked}
         onChange={onSelect}
         aria-label={label}
