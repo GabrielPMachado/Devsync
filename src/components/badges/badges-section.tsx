@@ -4,6 +4,7 @@ import { Check, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { BADGE_KEYS, SHOWN_BADGES_MAX, sanitizeShownBadges, type BadgeKey } from "@/lib/social/badges";
+import { Hint } from "@/components/ui/hint";
 import { BadgeIcon } from "./badge-icon";
 
 type Props = {
@@ -18,12 +19,13 @@ type Props = {
 
 /**
  * Seção "Insígnias" do editar perfil: todas as insígnias, as conquistadas coloridas,
- * as outras apagadas com "como ganhar". Marca até 3 para exibir ao lado do nome.
+ * as outras apagadas (como ganhar aparece numa dica ao passar o mouse ou tocar). Marca até 3 para exibir ao lado do nome.
  */
 export function BadgesSection({ earned, initial, name = "shown_badges", onChange }: Props) {
   const t = useTranslations("Badges");
   const [shown, setShown] = useState<BadgeKey[]>(() => sanitizeShownBadges([...initial], earned));
   const full = shown.length >= SHOWN_BADGES_MAX;
+  const earnedCount = BADGE_KEYS.filter((b) => earned.includes(b)).length;
 
   function toggle(b: BadgeKey) {
     const next = shown.includes(b) ? shown.filter((x) => x !== b) : full ? shown : [...shown, b];
@@ -40,47 +42,72 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
       {shown.map((b) => (
         <input key={b} type="hidden" name={name} value={b} />
       ))}
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-text-secondary">{t("progress", { earned: earnedCount, total: BADGE_KEYS.length })}</span>
+          <span className="text-text-muted">{t("shownCount", { count: shown.length, max: SHOWN_BADGES_MAX })}</span>
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-bg-base" aria-hidden="true">
+          <div className="h-full rounded-full bg-brand-gradient transition-[width] duration-500" style={{ width: `${(earnedCount / BADGE_KEYS.length) * 100}%` }} />
+        </div>
+      </div>
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {BADGE_KEYS.map((b) => {
           const has = earned.includes(b);
           const on = shown.includes(b);
           const label = t(`${b}_name`);
           if (!has) {
             return (
-              <li key={b} className="flex items-center gap-3 rounded-lg border border-dashed border-border-default p-3">
-                <BadgeIcon badge={b} size="md" muted />
-                <span className="flex min-w-0 flex-col">
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-text-muted">
-                    {label}
-                    <Lock className="size-3.5" aria-label={t("locked")} />
-                  </span>
-                  <span className="text-xs text-text-subtle">{t("howTo", { how: t(`${b}_how`) })}</span>
-                </span>
+              <li key={b} className="flex">
+                <Hint
+                  className="flex w-full"
+                  content={
+                    <span className="flex items-start gap-2.5">
+                      <BadgeIcon badge={b} size="md" />
+                      <span className="flex flex-col gap-0.5">
+                        <span className="font-semibold text-text-primary">
+                          {label} · {t("locked").toLowerCase()}
+                        </span>
+                        <span>{t("howTo", { how: t(`${b}_how`) })}.</span>
+                      </span>
+                    </span>
+                  }
+                >
+                  {(hint) => (
+                    <button
+                      type="button"
+                      aria-disabled="true"
+                      {...hint}
+                      className="relative flex w-full cursor-help flex-col items-center gap-2 rounded-xl border border-dashed border-border-default p-3 text-center transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-border-focus"
+                    >
+                      <BadgeIcon badge={b} size="lg" muted />
+                      <span className="text-xs font-medium text-text-muted">{label}</span>
+                      <Lock className="absolute top-2 right-2 size-3.5 text-text-subtle" aria-label={t("locked")} />
+                    </button>
+                  )}
+                </Hint>
               </li>
             );
           }
           return (
-            <li key={b}>
+            <li key={b} className="flex">
               <button
                 type="button"
                 aria-pressed={on}
                 disabled={!on && full}
                 onClick={() => toggle(b)}
                 title={!on && full ? t("limit") : undefined}
-                className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                  on ? "border-brand-accent bg-bg-elevated" : "border-border-default bg-bg-surface hover:bg-bg-elevated"
+                className={`relative flex w-full flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                  on ? "border-brand-accent bg-brand-accent-soft" : "border-border-default bg-bg-surface hover:border-border-strong hover:bg-bg-elevated"
                 }`}
               >
-                <BadgeIcon badge={b} size="md" />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-sm font-medium text-text-primary">{label}</span>
-                  <span className="text-xs text-text-muted">{t(`${b}_how`)}</span>
-                </span>
+                <BadgeIcon badge={b} size="lg" />
+                <span className="text-xs font-medium text-text-primary">{label}</span>
                 <span
-                  className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${on ? "border-brand-accent bg-brand-accent text-bg-base" : "border-border-default"}`}
+                  className={`absolute top-2 right-2 flex size-4.5 items-center justify-center rounded-full border ${on ? "border-brand-accent bg-brand-accent text-bg-base" : "border-border-default"}`}
                   aria-hidden="true"
                 >
-                  {on ? <Check className="size-3.5" /> : null}
+                  {on ? <Check className="size-3" /> : null}
                 </span>
               </button>
             </li>
