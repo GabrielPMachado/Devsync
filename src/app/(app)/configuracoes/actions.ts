@@ -7,8 +7,11 @@ import { BADGE_KEYS, SHOWN_BADGES_MAX } from "@/lib/social/badges";
 import { validateProfile, type ProfileErrors, type ProfileInput } from "@/lib/social/profile-rules";
 import { createClient } from "@/lib/supabase/server";
 
-/** "badges": tentou exibir insígnia não conquistada (DS004); "frame": borda ainda bloqueada (DS005). */
-export type SaveProfileState = { errors?: ProfileErrors; error?: "unknown" | "badges" | "frame"; values?: ProfileInput };
+/**
+ * "badges": tentou exibir insígnia não conquistada (DS004); "frame": borda ainda bloqueada (DS005);
+ * "unavailable": item desligado pela moderação (DS006).
+ */
+export type SaveProfileState = { errors?: ProfileErrors; error?: "unknown" | "badges" | "frame" | "unavailable"; values?: ProfileInput };
 
 /** Salva o perfil (sobre, links, aparência, imagens, tecnologias) e volta para ele. */
 export async function saveProfile(_prev: SaveProfileState, formData: FormData): Promise<SaveProfileState> {
@@ -70,6 +73,7 @@ export async function saveProfile(_prev: SaveProfileState, formData: FormData): 
   const { data: updated, error } = await supabase.from("profiles").update(row).eq("id", viewer.id).select("id");
   if (error?.code === "DS004") return { error: "badges", values };
   if (error?.code === "DS005") return { error: "frame", values };
+  if (error?.code === "DS006") return { error: "unavailable", values };
   if (error || !updated?.length) return { error: "unknown", values };
 
   // Depois do perfil salvo, limpa a pasta (sem órfãos): removeu = apaga tudo;

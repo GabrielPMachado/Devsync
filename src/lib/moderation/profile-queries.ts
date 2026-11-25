@@ -74,3 +74,11 @@ export async function getAdminProfile(id: string): Promise<AdminProfile | null> 
     history: (p.history ?? []).map((h) => ({ id: h.id, action: h.action, details: h.details ?? {}, createdAt: h.created_at, adminUsername: h.admin_username })),
   };
 }
+
+/** Itens liberados à mão para a pessoa (leitura pública: a borda aparece no perfil de qualquer jeito). */
+export async function getItemGrants(profileId: string): Promise<{ kind: string; key: string }[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("profile_item_grants").select("kind, key").eq("profile_id", profileId);
+  if (error) return [];
+  return data ?? [];
+}

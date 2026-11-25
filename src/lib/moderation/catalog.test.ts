@@ -19,10 +19,11 @@ describe("messageKey", () => {
 
 describe("applyCatalogLabels", () => {
   it("troca só os nomes renomeados, sem mexer no original", () => {
-    const messages = { ProfileStyle: { banner_aurora: "Aurora", frame_neon: "Neon" }, Badges: { mentor_name: "Mentor" }, Other: { a: "b" } };
+    const messages = { ProfileStyle: { banner_aurora: "Aurora", frame_neon: "Neon" }, Badges: { mentor_name: "Mentor" }, Settings: { badge_mentor: "Mentor", x: "y" }, Other: { a: "b" } };
     const out = applyCatalogLabels(messages, rows);
     expect(out.ProfileStyle).toEqual({ banner_aurora: "Aurora clássica", frame_neon: "Neon" });
     expect(out.Badges).toEqual({ mentor_name: "Guia" });
+    expect(out.Settings).toEqual({ badge_mentor: "Guia", x: "y" });
     expect(out.Other).toBe(messages.Other);
     expect(messages.ProfileStyle.banner_aurora).toBe("Aurora");
   });

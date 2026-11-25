@@ -45,6 +45,11 @@ export function applyCatalogLabels<M extends Messages>(messages: M, rows: readon
   for (const r of renamed) {
     const [group, key] = messageKey(r.kind, r.key);
     out[group] = { ...(out[group] as Messages | undefined), [key]: r.label };
+    // A dica de borda bloqueada usa uma cópia do nome da insígnia em Settings.
+    const settings = out.Settings as Messages | undefined;
+    if (r.kind === "badge" && typeof settings?.[`badge_${r.key}`] === "string") {
+      out.Settings = { ...settings, [`badge_${r.key}`]: r.label };
+    }
   }
   return out as M;
 }

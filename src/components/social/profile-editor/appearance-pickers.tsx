@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ACCENT_COLORS, ACCENTS, BANNER_PRESETS, isAccent } from "@/lib/social/profile-style";
 import { ProfileBanner } from "@/components/profile/profile-banner";
+import { useCatalog } from "./catalog-context";
 import { PickerHeader } from "./picker-header";
 
 const FOCUS = "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-border-focus";
@@ -21,12 +22,14 @@ function Picked() {
 export function BannerPicker({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   const t = useTranslations("Settings");
   const style = useTranslations("ProfileStyle");
-  const options = [{ key: "", label: t("bannerDefault") }, ...BANNER_PRESETS.map((p) => ({ key: p, label: style(`banner_${p}`) }))];
+  const { hidden } = useCatalog();
+  const presets = BANNER_PRESETS.filter((p) => !hidden.banner.includes(p));
+  const options = [{ key: "", label: t("bannerDefault") }, ...presets.map((p) => ({ key: p, label: style(`banner_${p}`) }))];
   const current = options.find((o) => o.key === value) ?? options[0];
   return (
     <fieldset className="flex flex-col" disabled={disabled}>
       <legend className="sr-only">{t("banner")}</legend>
-      <PickerHeader title={t("banner")} selected={current.label} count={t("countOptions", { count: BANNER_PRESETS.length })} />
+      <PickerHeader title={t("banner")} selected={current.label} count={t("countOptions", { count: presets.length })} />
       <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2.5">
         {options.map((o) => {
           const on = value === o.key;
@@ -52,12 +55,14 @@ export function AccentPicker({ value, onChange }: { value: string; onChange: (v:
   const t = useTranslations("Settings");
   const style = useTranslations("ProfileStyle");
   const current = isAccent(value) ? value : "azul";
+  const { hidden } = useCatalog();
+  const accents = ACCENTS.filter((a) => !hidden.accent.includes(a));
   return (
     <fieldset className="flex flex-col">
       <legend className="sr-only">{t("accent")}</legend>
-      <PickerHeader title={t("accent")} selected={style(`accent_${current}`)} count={t("countOptions", { count: ACCENTS.length })} />
+      <PickerHeader title={t("accent")} selected={style(`accent_${current}`)} count={t("countOptions", { count: accents.length })} />
       <div className="grid grid-cols-6 gap-2.5 sm:grid-cols-12">
-        {ACCENTS.map((a) => {
+        {accents.map((a) => {
           const on = current === a;
           return (
             <label key={a} title={style(`accent_${a}`)} className={`relative flex cursor-pointer justify-center rounded-full ${FOCUS}`}>

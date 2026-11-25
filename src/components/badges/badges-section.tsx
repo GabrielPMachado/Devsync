@@ -4,6 +4,7 @@ import { Check, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 import { BADGE_GROUPS, BADGE_KEYS, SHOWN_BADGES_MAX, sanitizeShownBadges, type BadgeKey } from "@/lib/social/badges";
+import { useCatalog } from "@/components/social/profile-editor/catalog-context";
 import { Hint } from "@/components/ui/hint";
 import { BadgeIcon } from "./badge-icon";
 
@@ -26,7 +27,11 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
   const [shown, setShown] = useState<BadgeKey[]>(() => sanitizeShownBadges([...initial], earned));
   const full = shown.length >= SHOWN_BADGES_MAX;
   const baseId = useId();
-  const earnedCount = BADGE_KEYS.filter((b) => earned.includes(b)).length;
+  // Insígnias desligadas pela moderação somem para quem não tem (não dá mais para ganhar).
+  const { hidden } = useCatalog();
+  const keys = BADGE_KEYS.filter((b) => !hidden.badge.includes(b));
+  const groups = BADGE_GROUPS.map((g) => ({ ...g, badges: g.badges.filter((b) => keys.includes(b)) })).filter((g) => g.badges.length > 0);
+  const earnedCount = keys.filter((b) => earned.includes(b)).length;
 
   function toggle(b: BadgeKey) {
     const next = shown.includes(b) ? shown.filter((x) => x !== b) : full ? shown : [...shown, b];
@@ -45,14 +50,14 @@ export function BadgesSection({ earned, initial, name = "shown_badges", onChange
       ))}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-medium text-text-secondary">{t("progress", { earned: earnedCount, total: BADGE_KEYS.length })}</span>
+          <span className="font-medium text-text-secondary">{t("progress", { earned: earnedCount, total: keys.length })}</span>
           <span className="text-text-muted">{t("shownCount", { count: shown.length, max: SHOWN_BADGES_MAX })}</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-bg-base" aria-hidden="true">
-          <div className="h-full rounded-full bg-brand-gradient transition-[width] duration-500" style={{ width: `${(earnedCount / BADGE_KEYS.length) * 100}%` }} />
+          <div className="h-full rounded-full bg-brand-gradient transition-[width] duration-500" style={{ width: `${keys.length ? (earnedCount / keys.length) * 100 : 0}%` }} />
         </div>
       </div>
-      {BADGE_GROUPS.map((g) => (
+      {groups.map((g) => (
         <div key={g.key} role="group" aria-labelledby={`${baseId}-${g.key}`} className="flex flex-col gap-2">
           <p id={`${baseId}-${g.key}`} className="flex items-center gap-2 text-[11px] font-semibold tracking-wider text-text-subtle uppercase">
             {t(`group_${g.key}`)}

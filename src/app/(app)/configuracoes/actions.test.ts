@@ -182,4 +182,9 @@ describe("saveProfile", () => {
     db.update.mockResolvedValueOnce({ data: null, error: { code: "DS005" } });
     expect(await saveProfile({}, form({ ...ok, avatarFrame: "neon" }))).toMatchObject({ error: "frame" });
   });
+
+  it("item desligado pela moderação: avisa que não está disponível", async () => {
+    db.update.mockResolvedValueOnce({ data: null, error: { code: "DS006" } });
+    expect(await saveProfile({}, form({ ...ok, bannerPreset: "aurora" }))).toMatchObject({ error: "unavailable" });
+  });
 });
