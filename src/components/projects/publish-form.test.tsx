@@ -2,7 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../messages/pt-BR.json";
+import { ZipTooLargeError } from "@/lib/demos/repack";
 import { PublishForm, type PublishServices } from "./publish-form";
+
+const TOO_LARGE = "O .zip passa de 64 MB.";
 
 const tags = [
   { slug: "react", name: "React" },
@@ -48,14 +51,14 @@ function chooseZip(file: File) {
 const zip = (size = 10) => new File([new Uint8Array(size)], "site.zip", { type: "application/zip" });
 
 describe("PublishForm", () => {
-  it("zip acima de 25 MB nem é enviado", async () => {
+  it("zip acima de 64 MB nem é enviado", async () => {
     renderForm();
     fillAbout();
     const big = zip(1);
-    Object.defineProperty(big, "size", { value: 25 * 1024 * 1024 + 1 });
+    Object.defineProperty(big, "size", { value: 64 * 1024 * 1024 + 1 });
     chooseZip(big);
     fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
-    expect(await screen.findByText("O .zip passa de 25 MB.")).toBeInTheDocument();
+    expect(await screen.findByText("O .zip passa de 64 MB.")).toBeInTheDocument();
     expect(services.createUpload).not.toHaveBeenCalled();
   });
 
@@ -79,6 +82,29 @@ describe("PublishForm", () => {
     expect(services.putZip).toHaveBeenCalledWith("http://demos.localhost:8787/uploads/d1/1?sig=x", file);
     expect(services.completeUpload).toHaveBeenCalledWith(expect.objectContaining({ token: "tok" }), "d1");
     expect(services.publish).toHaveBeenCalledWith({ title: "Kanban colaborativo", description: "Um quadro.", tags: ["react"], repoUrl: "", siteUrl: "", demoId: "d1" });
+  });
+
+  it("envia o zip preparado (sem compressão) e não cria a demo se ficar grande demais", async () => {
+    const prepared = new File(["preparado"], "preparado.zip", { type: "application/zip" });
+    services.prepareZip = vi.fn(async () => prepared);
+    renderForm();
+    fillAbout();
+    chooseZip(zip());
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    await waitFor(() => expect(services.publish).toHaveBeenCalled());
+    expect(services.putZip).toHaveBeenCalledWith("http://demos.localhost:8787/uploads/d1/1?sig=x", prepared);
+  });
+
+  it("zip que passa do limite depois de preparado não gasta um envio", async () => {
+    services.prepareZip = vi.fn(async () => {
+      throw new ZipTooLargeError();
+    });
+    renderForm();
+    fillAbout();
+    chooseZip(zip());
+    fireEvent.click(screen.getByRole("button", { name: "Publicar projeto" }));
+    expect(await screen.findByText(TOO_LARGE)).toBeInTheDocument();
+    expect(services.createUpload).not.toHaveBeenCalled();
   });
 
   it("sem tag não envia nada", async () => {

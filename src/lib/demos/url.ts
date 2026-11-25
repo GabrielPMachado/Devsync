@@ -1,8 +1,8 @@
 export type DemoKind = "web_link" | "web_upload" | "sandbox" | "mobile";
 export type DemoStatus = "pending" | "live" | "blocked" | "unavailable";
 
-/** Maior .zip aceito pelo serviço de demos. */
-export const ZIP_MAX_BYTES = 25 * 1024 * 1024;
+/** Maior .zip aceito pelo serviço de demos (já sem compressão: 60 MB de arquivos + cabeçalhos). */
+export const ZIP_MAX_BYTES = 64 * 1024 * 1024;
 
 /**
  * Endereço do serviço de demos (workers/demos). A API fica nele e cada demo

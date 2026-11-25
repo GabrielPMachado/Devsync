@@ -36,7 +36,7 @@ Todas as rotas recebem `Authorization: Bearer <access token do Supabase>`. O Wor
 | Rota | Resposta |
 |---|---|
 | `POST /uploads` | `201 { demoId, uploadUrl }`. `429` no limite diário, `403` sem e-mail confirmado ou conta suspensa |
-| `PUT <uploadUrl>` | Corpo: o zip, com `Content-Length`. Vale 10 minutos. `413` acima de 25 MB, `409` se já enviado |
+| `PUT <uploadUrl>` | Corpo: o zip, com `Content-Length`. Vale 10 minutos. `413` acima de 64 MB, `409` se já enviado |
 | `POST /uploads/:demoId/complete` | `202`. Enfileira a validação; o resultado vai para `demos.status` |
 | `POST /embed-check` `{ url }` | `{ embeddable, reason? }` (pré-checagem do formulário) |
 | `POST /demos/:demoId/verify` | `{ embeddable, reason? }` e grava `live`/`unavailable` na demo `web_link` |
@@ -55,7 +55,7 @@ CORS liberado só para as origens de `FRAME_ANCESTORS` (padrão: `SITE_URL`).
 - Válido: arquivos em `demos/<demo_id>/<versão>/`, `status = 'live'`, `storage_prefix` preenchido.
 - Recusado: `status = 'unavailable'` e `rejection_reason` com um destes códigos: `too_large`, `not_a_zip`, `unsupported_zip`, `encrypted`, `too_many_files`, `unsafe_path`, `symlink`, `extension_not_allowed`, `duplicate_path`, `no_index`, `too_big_uncompressed`, `corrupt`.
 
-Limites: 25 MB compactado, 500 arquivos, 60 MB descompactado (cabe na memória do isolate), `index.html` na raiz ou numa única pasta. `__MACOSX/`, `.DS_Store` e `Thumbs.db` são ignorados. Extensões aceitas: veja `src/content-types.ts`.
+Limites: 64 MB o zip (o site manda sem compressão), 500 arquivos, 60 MB descompactado (cabe na memória do isolate), `index.html` na raiz ou numa única pasta. `__MACOSX/`, `.DS_Store` e `Thumbs.db` são ignorados. Extensões aceitas: veja `src/content-types.ts`.
 
 ### Motivos da checagem de embed
 
@@ -74,7 +74,7 @@ Limites: 25 MB compactado, 500 arquivos, 60 MB descompactado (cabe na memória d
 
 - O iframe da spec tem `allow-popups`: uma demo pode abrir uma janela nova e escrever HTML nela com a origem da demo, sem passar pelo redirecionamento. Fica como está porque muitas demos abrem links; reavaliar se aparecer abuso (tirar `allow-popups` ou usar `allow-popups-to-escape-sandbox` sem `allow-same-origin`).
 - Limite de chamadas: em produção, 30 chamadas da API por minuto por IP (binding `API_LIMITER`), com `429` e `Retry-After: 60`. Fora de produção (dev e testes) não há limite. O limite de 5 envios por dia continua valendo na criação.
-- Plano grátis (10 ms de CPU): o site reempacota o zip sem compressão (`src/lib/demos/repack.ts`) e o build usa `zip -0`. Entrada guardada sem compressão vira só um recorte do zip, sem conferir CRC (bytes errados só estragariam a própria demo). Entrada comprimida continua aceita e conferida, mas um zip comprimido grande pode estourar a CPU do plano grátis.
+- Plano grátis (10 ms de CPU): o site reempacota o zip sem compressão (`src/lib/demos/repack.ts`) e o build usa `zip -0`. Entrada guardada sem compressão vira só um recorte do zip, sem conferir CRC (bytes errados só estragariam a própria demo). Entrada comprimida continua aceita e conferida, mas um zip comprimido grande pode estourar a CPU do plano grátis. Cada arquivo é um `put` no R2: chamadas a serviços da Cloudflare contam no limite de 1.000 por invocação (não no de 50 externas), e o teto é 500 arquivos.
 - Zips enviados e não concluídos ficam em `uploads/`: configurar uma regra de ciclo de vida no R2 (apagar após 1 dia).
 
 ## Checagem diária

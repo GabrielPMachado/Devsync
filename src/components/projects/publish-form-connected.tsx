@@ -18,8 +18,9 @@ export function ConnectedPublishForm({ tags, githubUser }: { tags: { slug: strin
       base: demosBaseUrl(),
       token: async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
       createUpload,
+      putZip,
       // Sem compressão: o serviço de demos (plano grátis) só recorta os arquivos.
-      putZip: async (url, file) => putZip(url, await repackStored(file)),
+      prepareZip: repackStored,
       completeUpload,
       embedCheck,
       verifyDemo,

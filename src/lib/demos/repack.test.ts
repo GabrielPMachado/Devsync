@@ -1,6 +1,6 @@
 import { unzipSync, zipSync, strToU8, strFromU8 } from "fflate";
 import { describe, expect, it } from "vitest";
-import { repackStored } from "./repack";
+import { repackStored, ZipTooLargeError } from "./repack";
 
 /** Métodos de compressão de cada entrada, lidos do diretório central. */
 function methods(zip: Uint8Array): number[] {
@@ -32,5 +32,18 @@ describe("repackStored", () => {
   it("zip que já está sem compressão não muda", async () => {
     const stored = new Blob([zipSync({ "index.html": strToU8("x") }, { level: 0 }) as BlobPart]);
     expect(await repackStored(stored)).toBe(stored);
+  });
+
+  it("recusa antes de abrir um zip grande demais descompactado (bomba de zip)", async () => {
+    // 61 MB de zeros comprimem para poucos KB.
+    const bomb = zipSync({ "index.html": new Uint8Array(61 * 1024 * 1024) }, { level: 9 });
+    expect(bomb.length).toBeLessThan(1024 * 1024);
+    await expect(repackStored(new Blob([bomb as BlobPart]))).rejects.toBeInstanceOf(ZipTooLargeError);
+  });
+
+  it("recusa zip com arquivos demais", async () => {
+    const many: Record<string, Uint8Array> = {};
+    for (let i = 0; i < 1001; i++) many[`f${i}.js`] = strToU8("x");
+    await expect(repackStored(new Blob([zipSync(many, { level: 9 }) as BlobPart]))).rejects.toBeInstanceOf(ZipTooLargeError);
   });
 });

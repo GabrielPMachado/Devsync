@@ -105,7 +105,7 @@
     "soon": "Projetos, perguntas e respostas vão aparecer aqui."
   },
   "DemoReasons": {
-    "too_large": "O .zip passa de 25 MB.",
+    "too_large": "O .zip passa de 64 MB.",
     "not_a_zip": "Esse arquivo não é um .zip.",
     "unsupported_zip": "Esse .zip usa um formato que não aceitamos. Gere de novo com o compactador padrão do sistema.",
     "encrypted": "O .zip tem senha. Envie sem senha.",
@@ -188,7 +188,7 @@
     "linkOptionHelp": "O site precisa permitir ser exibido dentro de outro site.",
     "zipLabel": "Arquivo .zip da demo",
     "zipDrop": "Arraste o .zip aqui ou <link>escolha um arquivo</link>",
-    "zipLimits": "Até 25 MB · até 500 arquivos · index.html na raiz",
+    "zipLimits": "Até 60 MB de arquivos · até 500 arquivos · index.html na raiz",
     "zipRequired": "Escolha o .zip do site.",
     "zipChosen": "{size} · pronto para enviar",
     "zipChange": "Trocar arquivo",
@@ -283,7 +283,7 @@
     "error_no_output": "O build terminou, mas não achamos um index.html em dist, build, out ou public.",
     "error_next_server": "Esse projeto Next.js precisa de servidor. Para virar demo, adicione output: 'export' no next.config e publique de novo.",
     "error_too_many_files": "O site compilado passa de 500 arquivos.",
-    "error_too_big": "O site compilado passa do limite de tamanho (60 MB, ou 25 MB compactado).",
+    "error_too_big": "O site compilado passa do limite de tamanho (60 MB).",
     "error_upload_failed": "O site foi compilado, mas o envio para a Devsync falhou. Tente de novo.",
     "error_dispatch_failed": "Não deu para iniciar o build agora. Tente de novo em instantes.",
     "error_internal": "Algo deu errado no build. Tente de novo.",
