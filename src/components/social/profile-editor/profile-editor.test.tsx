@@ -74,12 +74,17 @@ describe("<ProfileEditor />", () => {
 
   it("bordas por conquista: bloqueadas sem a insígnia (e sem lista), liberadas com ela", () => {
     const { unmount } = renderEditor();
-    expect(screen.getByRole("radio", { name: "Borda néon" })).toBeDisabled();
+    expect(screen.queryByRole("radio", { name: /Borda néon/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Borda néon/ })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("radio", { name: "Borda gradiente" })).toBeEnabled();
     unmount();
     renderEditor({ unlockedBadges: ["builder"] });
-    expect(screen.getByRole("radio", { name: /Borda néon/ })).toBeDisabled();
-    expect(screen.getByText("Ganhe a insígnia Mentor para liberar")).toBeInTheDocument();
+    const neon = screen.getByRole("button", { name: /Borda néon/ });
+    expect(neon).toHaveAccessibleDescription(/Ganhe a insígnia Mentor para liberar.*10 respostas aceitas/);
+    // O requisito não fica exposto na tela: só na dica, que abre ao passar o mouse ou tocar.
+    expect(screen.getByText("Ganhe a insígnia Mentor para liberar").closest('[role="tooltip"]')).toHaveAttribute("data-open", "false");
+    fireEvent.click(neon);
+    expect(new FormData(document.querySelector("form")!).get("avatarFrame")).not.toBe("neon");
     expect(screen.getByRole("radio", { name: "Borda colchetes" })).toBeEnabled();
   });
 

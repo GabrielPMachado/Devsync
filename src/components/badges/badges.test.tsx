@@ -47,11 +47,28 @@ describe("AchievementsBlock", () => {
 });
 
 describe("BadgesSection", () => {
-  it("bloqueadas mostram como ganhar; conquistadas são marcáveis até 3", () => {
+  it("mostra o progresso das conquistas", () => {
+    wrap(<BadgesSection earned={["founder", "curious"]} initial={[]} />);
+    expect(screen.getByText("2 de 7 conquistadas")).toBeInTheDocument();
+  });
+
+  it("bloqueadas só mostram como ganhar na dica flutuante, e não são marcáveis", () => {
+    const { container } = wrap(<BadgesSection earned={["founder"]} initial={[]} />);
+    const locked = screen.getByRole("button", { name: /Construtor/ });
+    expect(locked).toHaveAttribute("aria-disabled", "true");
+    expect(locked).toHaveAccessibleDescription(/Como ganhar: Publicar 5 projetos/);
+    // O requisito só existe dentro da dica (fechada até passar o mouse ou tocar).
+    const how = screen.getByText(/Publicar 5 projetos/);
+    expect(how.closest('[role="tooltip"]')).toHaveAttribute("data-open", "false");
+    fireEvent.pointerEnter(locked, { pointerType: "mouse" });
+    expect(how.closest('[role="tooltip"]')).toHaveAttribute("data-open", "true");
+    fireEvent.click(locked);
+    expect(container.querySelectorAll('input[name="shown_badges"]')).toHaveLength(0);
+  });
+
+  it("conquistadas são marcáveis até 3", () => {
     const onChange = vi.fn();
     const { container } = wrap(<BadgesSection earned={["founder", "curious", "mentor", "popular"]} initial={["founder", "builder"]} onChange={onChange} />);
-    expect(screen.getByText("Como ganhar: Publicar 5 projetos")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Construtor/ })).toBeNull();
 
     const hidden = () => [...container.querySelectorAll<HTMLInputElement>('input[name="shown_badges"]')].map((i) => i.value);
     expect(hidden()).toEqual(["founder"]);
