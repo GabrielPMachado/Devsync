@@ -101,7 +101,7 @@ Bindings: R2 `DEMOS_BUCKET` (`devsync-demos`), filas `demo-zips` e `demo-links`.
 
 ## Publicar
 
-Nada foi publicado na conta Cloudflare ainda. A configuração de produção está pronta em `wrangler.jsonc` (`env.production`) e a publicação é feita pelo workflow **Publicar serviço de demos** (`.github/workflows/deploy-demos.yml`), rodado à mão no GitHub. O passo a passo completo, com o que comprar, está em [`docs/lancamento.md`](../../docs/lancamento.md).
+A configuração de produção está em `wrangler.jsonc` (`env.production`) e a publicação é feita pelo workflow **Publicar serviço de demos** (`.github/workflows/deploy-demos.yml`). Ele roda sozinho quando entra na `main` uma mudança em `workers/demos` e também dá para rodar à mão no GitHub (na primeira vez, marque "Criar bucket R2 e filas"). O passo a passo completo, com o que comprar, está em [`docs/lancamento.md`](../../docs/lancamento.md).
 
 Resumo do que precisa existir antes (plano grátis, ambiente `production`):
 

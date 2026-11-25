@@ -1,6 +1,7 @@
 name: Publicar serviço de demos
 
-# Roda só quando alguém clica em "Run workflow" (Actions > Publicar serviço de demos).
+# Roda sozinho quando entra na main uma mudança em workers/demos (ou neste arquivo),
+# e também à mão em "Run workflow" (Actions > Publicar serviço de demos).
 # Precisa, em Settings > Secrets and variables > Actions:
 #   Variável WORKERS_SUBDOMAIN          subdomínio workers.dev da conta (plano grátis, demos em pastas),
 #                                       ex.: devsync → devsync-demos.devsync.workers.dev
@@ -17,6 +18,11 @@ name: Publicar serviço de demos
 # Passo a passo completo: docs/lancamento.md
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "workers/demos/**"
+      - ".github/workflows/deploy-demos.yml"
   workflow_dispatch:
     inputs:
       criar_recursos:
