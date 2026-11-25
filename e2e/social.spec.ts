@@ -93,6 +93,8 @@ test("editar perfil: cargo, status, links novos e aparência ficam salvos", asyn
     await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
   }
   const preview = page.getByRole("region", { name: "Prévia do perfil" });
+  // Os assuntos escolhidos no cadastro já vêm marcados como tecnologias.
+  for (const tag of ["react", "typescript", "css"]) await expect(page.getByRole("checkbox", { name: tag, exact: true })).toBeChecked();
 
   await page.getByLabel("Cargo").fill("Dev back-end na Acme");
   await page.getByLabel("Status").selectOption("open_to_work");

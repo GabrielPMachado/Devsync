@@ -46,10 +46,12 @@ describe("validateProfile", () => {
     }
   });
 
-  it("até 10 tecnologias, sem repetir (nenhuma também vale)", () => {
+  it("até 50 assuntos, sem repetir (nenhum também vale)", () => {
     expect(validateProfile({ ...base, tags: ["react", "React", " css "] })).toMatchObject({ ok: true, value: { tags: ["react", "css"] } });
     expect(validateProfile({ ...base, tags: [] })).toMatchObject({ ok: true });
-    expect(validateProfile({ ...base, tags: Array.from({ length: 11 }, (_, i) => `t${i}`) })).toMatchObject({ ok: false, errors: { tags: "max" } });
+    // Os assuntos vêm do cadastro (até 30) e das páginas de tag: o limite é folgado.
+    expect(validateProfile({ ...base, tags: Array.from({ length: 30 }, (_, i) => `t${i}`) })).toMatchObject({ ok: true });
+    expect(validateProfile({ ...base, tags: Array.from({ length: 51 }, (_, i) => `t${i}`) })).toMatchObject({ ok: false, errors: { tags: "max" } });
   });
 
   it("cargo até 80 e localização até 60, sem espaços sobrando", () => {

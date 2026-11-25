@@ -5,7 +5,8 @@ export const BIO_MAX = 500;
 export const SITE_MAX = 200;
 export const HEADLINE_MAX = 80;
 export const LOCATION_MAX = 60;
-export const PROFILE_TAGS_MAX = 10;
+// Tecnologias do perfil = assuntos acompanhados (sincronizados no banco).
+export const PROFILE_TAGS_MAX = 50;
 
 /** Strings vazias = "nenhum". avatarUrl/bannerUrl: ausente = não mexer, "" = remover. */
 export type ProfileInput = {

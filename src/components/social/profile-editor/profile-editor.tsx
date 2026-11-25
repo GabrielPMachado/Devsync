@@ -208,7 +208,7 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
           </div>
         </EditorSection>
 
-        <EditorSection id="tecnologias" title={t("sectionTechnologies")} help={t("technologiesHelp", { max: PROFILE_TAGS_MAX })}>
+        <EditorSection id="tecnologias" title={t("sectionTechnologies")} help={t("technologiesHelp")}>
           <div className="max-h-72 overflow-y-auto pr-1">
             <TagGroups
               tags={ordered}

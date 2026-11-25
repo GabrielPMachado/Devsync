@@ -506,7 +506,7 @@
     "site": "Site",
     "siteError": "Use um endereço que comece com https://.",
     "technologies": "Tecnologias",
-    "technologiesHelp": "As linguagens e ferramentas que você usa (até {max}).",
+    "technologiesHelp": "As linguagens e ferramentas que você usa. São os mesmos assuntos que você acompanha e que montam o seu feed.",
     "technologiesCount": "{count, plural, =0 {nenhuma escolhida} one {# escolhida} other {# escolhidas}}",
     "error": "Não deu para salvar agora. Tente de novo.",
     "cancel": "Cancelar",
