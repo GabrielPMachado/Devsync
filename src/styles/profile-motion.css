@@ -1,0 +1,243 @@
+/*
+ * Animações do catálogo do perfil (banners, bordas, cores e insígnias animadas).
+ *
+ * Regra de ouro: TODA animação vive dentro de "prefers-reduced-motion: no-preference".
+ * Quem pede menos movimento no sistema vê o item parado, já no seu estado bonito
+ * (as keyframes nem existem para essa pessoa). Só transform, opacity, filter e cor:
+ * nada que mexa no layout.
+ *
+ * Uso: classe "pm" + uma "pm-<efeito>". Duração e atraso por variável: --d e --dl.
+ */
+
+/* Cor animada: o perfil usa --accent: var(--accent-anim) e a animação mexe só nela. */
+@property --accent-anim {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #2563eb;
+}
+
+/* Origem da transformação em elementos de SVG. */
+.pm-fb {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.pm-fb-l {
+  transform-box: fill-box;
+  transform-origin: left center;
+}
+.pm-fb-b {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pm {
+    animation-duration: var(--d, 4s);
+    animation-delay: var(--dl, 0s);
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+  }
+
+  /* Genéricos ------------------------------------------------------------- */
+  .pm-spin { animation-name: pm-spin; }
+  .pm-spin-rev { animation-name: pm-spin; animation-direction: reverse; }
+  .pm-swing { animation-name: pm-swing; animation-timing-function: ease-in-out; animation-direction: alternate; }
+  .pm-hue { animation-name: pm-hue; }
+  .pm-twinkle { animation-name: pm-twinkle; animation-timing-function: ease-in-out; }
+  .pm-blink { animation-name: pm-blink; animation-timing-function: steps(1, end); }
+
+  /* Banners --------------------------------------------------------------- */
+  .pm-type { animation-name: pm-type; animation-timing-function: steps(14, end); }
+  .pm-fall { animation-name: pm-fall; }
+  .pm-dash { animation-name: pm-dash; }
+  .pm-draw { animation-name: pm-draw; animation-timing-function: ease-in-out; }
+  .pm-shoot { animation-name: pm-shoot; animation-timing-function: ease-in; }
+  .pm-drift { animation-name: pm-drift; animation-timing-function: ease-in-out; animation-direction: alternate; }
+  .pm-eq { animation-name: pm-eq; animation-timing-function: ease-in-out; animation-direction: alternate; }
+  .pm-rise { animation-name: pm-rise; }
+  .pm-scan { animation-name: pm-scan; animation-timing-function: ease-in-out; }
+  .pm-wave { animation-name: pm-wave; }
+  .pm-warp { animation-name: pm-warp; animation-timing-function: ease-in; }
+  .pm-ping { animation-name: pm-ping; animation-timing-function: ease-out; }
+  .pm-glint { animation-name: pm-glint; animation-timing-function: ease-in-out; animation-direction: alternate; }
+
+  /* Bordas ---------------------------------------------------------------- */
+  .pm-breathe { animation-name: pm-breathe; animation-timing-function: ease-in-out; }
+  .pm-heartbeat { animation-name: pm-heartbeat; animation-timing-function: ease-in-out; }
+  .pm-ripple { animation-name: pm-ripple; animation-timing-function: ease-out; }
+  .pm-shimmer { animation-name: pm-shimmer; animation-timing-function: ease-in-out; }
+  .pm-flicker { animation-name: pm-flicker; animation-timing-function: ease-in-out; }
+  .pm-glitch { animation-name: pm-glitch; animation-timing-function: steps(1, end); }
+
+  /* Insígnias ------------------------------------------------------------- */
+  .pm-live { animation-name: pm-live; animation-timing-function: ease-in-out; }
+  .pm-bob { animation-name: pm-bob; animation-timing-function: ease-in-out; }
+  .pm-flip { animation-name: pm-flip; animation-timing-function: ease-in-out; }
+  .pm-wiggle { animation-name: pm-wiggle; animation-timing-function: ease-in-out; }
+  .pm-glow { animation-name: pm-glow; animation-timing-function: ease-in-out; }
+  .pm-orbit { animation-name: pm-orbit; }
+  .pm-zap { animation-name: pm-zap; animation-timing-function: steps(1, end); }
+  .pm-float { animation-name: pm-float; animation-timing-function: ease-in-out; }
+  .pm-sway { animation-name: pm-sway; animation-timing-function: ease-in-out; }
+  .pm-pop { animation-name: pm-pop; animation-timing-function: ease-out; }
+  .pm-nod { animation-name: pm-nod; animation-timing-function: ease-in-out; }
+
+  @keyframes pm-spin { to { transform: rotate(360deg); } }
+  @keyframes pm-swing { from { transform: rotate(-70deg); } to { transform: rotate(70deg); } }
+  @keyframes pm-hue { to { filter: hue-rotate(360deg); } }
+  @keyframes pm-twinkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.5) rotate(0deg); }
+    50% { opacity: 1; transform: scale(1) rotate(45deg); }
+  }
+  @keyframes pm-blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+
+  @keyframes pm-type {
+    0% { transform: scaleX(0); }
+    20%, 85% { transform: scaleX(1); opacity: 1; }
+    100% { transform: scaleX(1); opacity: 0; }
+  }
+  @keyframes pm-fall {
+    from { transform: translateY(-560px); }
+    to { transform: translateY(560px); }
+  }
+  @keyframes pm-dash { to { stroke-dashoffset: -1; } }
+  @keyframes pm-draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: -1; }
+  }
+  @keyframes pm-shoot {
+    0% { transform: translate(0, 0); opacity: 0; }
+    5% { opacity: 1; }
+    40%, 100% { transform: translate(-520px, 260px); opacity: 0; }
+  }
+  @keyframes pm-drift {
+    from { transform: translate(-60px, -10px) scale(1); }
+    to { transform: translate(90px, 20px) scale(1.15); }
+  }
+  @keyframes pm-eq {
+    from { transform: scaleY(0.15); }
+    to { transform: scaleY(1); }
+  }
+  @keyframes pm-rise {
+    0% { transform: translateY(0); opacity: 0; }
+    15% { opacity: 1; }
+    100% { transform: translateY(-320px); opacity: 0; }
+  }
+  @keyframes pm-scan {
+    from { transform: translateY(-120px); }
+    to { transform: translateY(520px); }
+  }
+  @keyframes pm-wave { to { transform: translateX(-300px); } }
+  @keyframes pm-warp {
+    0% { transform: translateX(0) scaleX(0.2); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: translateX(720px) scaleX(1.6); opacity: 0; }
+  }
+  @keyframes pm-ping {
+    0% { transform: scale(0.4); opacity: 0.9; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+
+  @keyframes pm-glint { from { opacity: 0.12; } to { opacity: 1; } }
+
+  @keyframes pm-breathe {
+    0%, 100% { box-shadow: 0 0 2px 0 rgb(34 211 238 / 0.35); }
+    50% { box-shadow: 0 0 18px 5px rgb(34 211 238 / 0.7); }
+  }
+  @keyframes pm-heartbeat {
+    0%, 40%, 100% { transform: scale(1); }
+    10%, 30% { transform: scale(1.09); }
+    20% { transform: scale(1.02); }
+  }
+  @keyframes pm-ripple {
+    from { transform: scale(1); opacity: 0.8; }
+    to { transform: scale(1.55); opacity: 0; }
+  }
+  @keyframes pm-shimmer {
+    0% { background-position: 150% 0; }
+    60%, 100% { background-position: -50% 0; }
+  }
+  @keyframes pm-flicker {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    20% { transform: scale(1.06) rotate(4deg); opacity: 1; }
+    35% { transform: scale(0.98) rotate(-3deg); opacity: 0.75; }
+    55% { transform: scale(1.08) rotate(2deg); opacity: 1; }
+    75% { transform: scale(1.01) rotate(-2deg); opacity: 0.85; }
+  }
+  @keyframes pm-glitch {
+    0%, 86%, 100% { transform: translate(0, 0); opacity: 0; }
+    88% { transform: translate(-3px, 1px); opacity: 0.9; }
+    91% { transform: translate(3px, -1px); opacity: 0.9; }
+    94% { transform: translate(-1px, -2px); opacity: 0.9; }
+  }
+
+  @keyframes pm-live {
+    0%, 100% { filter: drop-shadow(0 0 0 rgb(248 113 113 / 0)); opacity: 1; }
+    50% { filter: drop-shadow(0 0 5px rgb(248 113 113 / 0.9)); opacity: 0.65; }
+  }
+  @keyframes pm-bob {
+    0%, 100% { transform: translateY(0) scale(1, 1); }
+    30% { transform: translateY(-3px) scale(0.96, 1.05); }
+    60% { transform: translateY(0) scale(1.06, 0.94); }
+  }
+  @keyframes pm-flip {
+    0%, 60% { transform: perspective(60px) rotateY(0deg); }
+    100% { transform: perspective(60px) rotateY(360deg); }
+  }
+  @keyframes pm-wiggle {
+    0%, 55%, 100% { transform: rotate(0deg) translateY(0); }
+    65% { transform: rotate(-16deg) translateY(-2px); }
+    75% { transform: rotate(8deg) translateY(-1px); }
+    85% { transform: rotate(-4deg); }
+  }
+  @keyframes pm-glow {
+    0%, 100% { filter: drop-shadow(0 0 0 currentColor); }
+    50% { filter: drop-shadow(0 0 4px currentColor); }
+  }
+  @keyframes pm-orbit {
+    from { transform: rotate(0deg) translateX(2px) rotate(0deg); }
+    to { transform: rotate(360deg) translateX(2px) rotate(-360deg); }
+  }
+  @keyframes pm-zap {
+    0%, 100% { opacity: 1; }
+    82% { opacity: 0.25; }
+    86% { opacity: 1; }
+    90% { opacity: 0.4; }
+  }
+  @keyframes pm-float {
+    0%, 100% { transform: translateY(1px); filter: drop-shadow(0 0 1px currentColor); }
+    50% { transform: translateY(-2px); filter: drop-shadow(0 0 5px currentColor); }
+  }
+  @keyframes pm-sway {
+    0%, 100% { transform: rotate(-12deg); }
+    50% { transform: rotate(12deg); }
+  }
+  @keyframes pm-pop {
+    0%, 70%, 100% { transform: scale(1); }
+    80% { transform: scale(1.25); }
+    90% { transform: scale(0.92); }
+  }
+  @keyframes pm-nod {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-1.5px) rotate(-6deg); }
+    50% { transform: translateY(0) rotate(0deg); }
+    75% { transform: translateY(-1.5px) rotate(6deg); }
+  }
+
+  /* Cores animadas: uma keyframe por cor (paradas iguais a ACCENT_MOTION em profile-style.ts). */
+  @keyframes pm-accent-mar { 0% { --accent-anim: #2563eb; } 100% { --accent-anim: #22d3ee; } }
+  @keyframes pm-accent-boreal { 0% { --accent-anim: #22d3ee; } 50% { --accent-anim: #34d399; } 100% { --accent-anim: #8b5cf6; } }
+  @keyframes pm-accent-neon { 0% { --accent-anim: #22d3ee; } 100% { --accent-anim: #a5f3fc; } }
+  @keyframes pm-accent-poente { 0% { --accent-anim: #f59e0b; } 50% { --accent-anim: #f97316; } 100% { --accent-anim: #ec4899; } }
+  @keyframes pm-accent-plasma { 0% { --accent-anim: #8b5cf6; } 100% { --accent-anim: #ec4899; } }
+  @keyframes pm-accent-glacial { 0% { --accent-anim: #7dd3fc; } 50% { --accent-anim: #e0f2fe; } 100% { --accent-anim: #22d3ee; } }
+  @keyframes pm-accent-brasa { 0% { --accent-anim: #ef4444; } 50% { --accent-anim: #f97316; } 100% { --accent-anim: #fbbf24; } }
+  @keyframes pm-accent-floresta { 0% { --accent-anim: #22c55e; } 50% { --accent-anim: #14b8a6; } 100% { --accent-anim: #84cc16; } }
+  @keyframes pm-accent-espectro {
+    0% { --accent-anim: #2563eb; } 20% { --accent-anim: #22d3ee; } 40% { --accent-anim: #22c55e; }
+    60% { --accent-anim: #f59e0b; } 80% { --accent-anim: #ec4899; } 100% { --accent-anim: #8b5cf6; }
+  }
+  @keyframes pm-accent-galaxia { 0% { --accent-anim: #6366f1; } 50% { --accent-anim: #8b5cf6; } 100% { --accent-anim: #2563eb; } }
+  @keyframes pm-accent-ouro { 0% { --accent-anim: #f59e0b; } 100% { --accent-anim: #fde68a; } }
+  @keyframes pm-accent-retro { 0% { --accent-anim: #ec4899; } 100% { --accent-anim: #22d3ee; } }
+}

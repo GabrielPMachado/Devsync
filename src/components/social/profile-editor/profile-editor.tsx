@@ -147,11 +147,12 @@ export function ProfileEditor({ initial, username, userId, tags, avatarUrl, bann
               // O banner enviado vence o pronto; escolher um pronto é trocar o banner.
               if (shownBanner) setImage("banner", { kind: "remove" });
             }}
+            unlockedBadges={unlockedBadges}
           />
           <ProfileImageField kind="banner" currentUrl={bannerUrl} value={images.banner} onChange={(p) => setImage("banner", p)} />
           <ProfileImageField kind="avatar" currentUrl={avatarUrl} value={images.avatar} onChange={(p) => setImage("avatar", p)} />
           <FramePicker name={v.displayName || username} avatarUrl={shownAvatar} value={v.avatarFrame} onChange={(f) => set("avatarFrame", f)} unlockedBadges={unlockedBadges} />
-          <AccentPicker value={v.accent} onChange={(a) => set("accent", a)} />
+          <AccentPicker value={v.accent} onChange={(a) => set("accent", a)} unlockedBadges={unlockedBadges} />
           {appearanceError ? <p className="text-xs text-status-danger-text">{t("appearanceError")}</p> : null}
           <input type="hidden" name="bannerPreset" value={v.bannerPreset} />
           <input type="hidden" name="avatarFrame" value={v.avatarFrame} />
