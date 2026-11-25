@@ -574,7 +574,10 @@
     "countUnlocked": "{unlocked} de {total} liberadas",
     "framesFree": "Livres",
     "framesEarned": "Por conquista",
-    "selected": "Escolhido: {name}"
+    "selected": "Escolhido: {name}",
+    "available": "Liberada",
+    "availableToAll": "Disponível para todos",
+    "frameUnlocked": "Liberada pela insígnia {badge}. Requisito cumprido: {how}"
   },
   "Notifications": {
     "title": "Notificações",
@@ -787,7 +790,7 @@
     "achievementsCount": "{count, plural, one {1 insígnia} other {# insígnias}}",
     "earnedOn": "Conquistada em {date}",
     "sectionTitle": "Insígnias",
-    "sectionHint": "Toque nas que você conquistou para exibir até 3 ao lado do seu nome. Passe o mouse (ou toque) numa bloqueada para ver como ganhar.",
+    "sectionHint": "Toque nas que você conquistou para exibir até 3 ao lado do seu nome. Passe o mouse (ou toque) numa insígnia para ver o requisito: o que você já cumpriu ou o que falta.",
     "locked": "Ainda não conquistada",
     "howTo": "Como ganhar: {how}",
     "limit": "Você já marcou 3. Desmarque uma para trocar.",
@@ -815,7 +818,10 @@
     "group_projects": "Projetos",
     "group_answers": "Perguntas e respostas",
     "group_community": "Comunidade",
-    "groupCount": "{earned} de {total}"
+    "groupCount": "{earned} de {total}",
+    "earned": "Conquistada",
+    "lockedShort": "Bloqueada",
+    "done": "Requisito cumprido: {how}"
   },
   "ProfileStyle": {
     "status_open_to_work": "Aberto a oportunidades",

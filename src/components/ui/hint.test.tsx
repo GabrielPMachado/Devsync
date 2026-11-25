@@ -63,4 +63,11 @@ describe("Hint", () => {
     fireEvent.blur(trigger);
     expect(isOpen()).toBe(false);
   });
+
+  it("fechada, sai do layout (escondida mas posicionada, alargaria a página no celular)", () => {
+    const { trigger, tip } = setup();
+    expect(tip).toHaveClass("hidden");
+    fireEvent.pointerEnter(trigger, { pointerType: "mouse" });
+    expect(tip).not.toHaveClass("hidden");
+  });
 });

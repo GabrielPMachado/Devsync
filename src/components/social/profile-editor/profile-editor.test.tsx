@@ -88,6 +88,36 @@ describe("<ProfileEditor />", () => {
     expect(screen.getByRole("radio", { name: "Borda colchetes" })).toBeEnabled();
   });
 
+  it("bordas liberadas por conquista mostram na dica a insígnia e o requisito cumprido", () => {
+    renderEditor({ unlockedBadges: ["mentor"] });
+    const neon = screen.getByRole("radio", { name: "Borda néon" });
+    expect(neon).toHaveAccessibleDescription(/Liberada pela insígnia Mentor.*Requisito cumprido: ter 10 respostas aceitas/);
+    const tip = document.getElementById(neon.getAttribute("aria-describedby")!)!;
+    expect(tip.querySelector('[data-lock="open"]')).not.toBeNull();
+    expect(tip).toHaveAttribute("data-open", "false");
+    fireEvent.pointerEnter(neon.closest("label")!, { pointerType: "mouse" });
+    expect(tip).toHaveAttribute("data-open", "true");
+  });
+
+  it("bordas livres, banners e cores dizem que estão disponíveis para todos", () => {
+    renderEditor();
+    for (const name of ["Borda gradiente", "Sem borda", "Circuito", "Ciano"]) {
+      const radio = screen.getByRole("radio", { name });
+      expect(radio, name).toHaveAccessibleDescription(/Disponível para todos/);
+    }
+  });
+
+  it("no toque, a dica de uma opção abre uma vez por toque (mesmo com o clique repassado ao rádio)", () => {
+    renderEditor();
+    const radio = screen.getByRole("radio", { name: "Circuito" });
+    const label = radio.closest("label")!;
+    const tip = document.getElementById(radio.getAttribute("aria-describedby")!)!;
+    fireEvent.pointerDown(label, { pointerType: "touch" });
+    // Tocar no rótulo gera dois cliques: um no rótulo e outro repassado ao rádio.
+    fireEvent.click(label);
+    expect(tip).toHaveAttribute("data-open", "true");
+  });
+
   it("mostra quantas opções há de cada coisa e quantas bordas estão liberadas", () => {
     renderEditor({ unlockedBadges: ["builder", "founder"] });
     expect(screen.getByRole("group", { name: /Banner/ })).toHaveTextContent("14 opções");
