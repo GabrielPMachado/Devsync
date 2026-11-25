@@ -1,13 +1,25 @@
 /**
  * Insígnias conquistadas e as bordas de avatar que elas liberam.
- * Espelha o banco (supabase/migrations/20261124900000_badges.sql): public.badge_keys()
+ * Espelha o banco (supabase/migrations/20261124900000_badges.sql e 20261125100000_profile_catalog_v2.sql): public.badge_keys()
  * e public.frame_required_badge(). O banco é quem garante; aqui é só para a tela.
  * Nomes e "como ganhar" ficam em messages/*.json, no grupo "Badges".
  */
 
 import { FRAMES } from "./profile-style";
 
-export const BADGE_KEYS = ["founder", "first_project", "builder", "curious", "first_accepted", "mentor", "popular"] as const;
+export const BADGE_KEYS = [
+  "founder",
+  "first_project", "builder", "architect", "loved",
+  "curious", "investigator", "first_answer", "helper", "first_accepted", "mentor", "sage",
+  "commenter", "popular", "influencer",
+] as const;
+
+/** Grupos para a tela (a ordem de BADGE_KEYS já segue estes grupos). */
+export const BADGE_GROUPS: readonly { key: "community" | "projects" | "answers"; badges: readonly BadgeKey[] }[] = [
+  { key: "projects", badges: ["first_project", "builder", "architect", "loved"] },
+  { key: "answers", badges: ["curious", "investigator", "first_answer", "helper", "first_accepted", "mentor", "sage"] },
+  { key: "community", badges: ["founder", "commenter", "popular", "influencer"] },
+];
 export type BadgeKey = (typeof BADGE_KEYS)[number];
 
 export type EarnedBadge = { badge: BadgeKey; awardedAt: string };

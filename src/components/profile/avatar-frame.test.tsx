@@ -1,3 +1,4 @@
+import { FRAMES } from "@/lib/social/profile-style";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { AvatarFrame, FRAME_ART } from "./avatar-frame";
@@ -16,8 +17,8 @@ describe("AvatarFrame", () => {
     expect(container.querySelector("[data-frame]")).toBeNull();
   });
 
-  it("tem desenho para as 7 bordas", () => {
-    expect(Object.keys(FRAME_ART).sort()).toEqual(["azul", "ciano", "colchetes", "dourada", "gradiente", "neon", "neutra"]);
+  it("tem desenho para as 18 bordas do catálogo", () => {
+    expect(Object.keys(FRAME_ART).sort()).toEqual(FRAMES.map((f) => f.key).sort());
   });
 
   it("envolve o avatar com a borda escolhida", () => {
