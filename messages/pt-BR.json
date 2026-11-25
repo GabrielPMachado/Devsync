@@ -319,7 +319,21 @@
     "tech": "Tecnologias",
     "notFound": "Projeto não encontrado.",
     "notFoundTitle": "Projeto não encontrado · Devsync",
-    "metaProject": "{title} · Devsync"
+    "metaProject": "{title} · Devsync",
+    "edited": "Alterações salvas.",
+    "deleted": "Projeto excluído.",
+    "edit": "Editar",
+    "editProject": "Editar projeto",
+    "delete": "Excluir",
+    "deleteProject": "Excluir projeto",
+    "deleteTitle": "Excluir “{title}”?",
+    "deleteText": "O projeto some da Devsync com a demo, as curtidas e os comentários. Não dá para desfazer.",
+    "deleteConfirm": "Excluir de vez",
+    "deleting": "Excluindo…",
+    "deleteCancel": "Cancelar",
+    "deleteClose": "Fechar",
+    "deleteError": "Não deu para excluir agora. Tente de novo.",
+    "deleteNotFound": "Este projeto já foi excluído ou não é seu."
   },
   "Comments": {
     "title": "{count, plural, =0 {Comentários} one {# comentário} other {# comentários}}",
@@ -864,5 +878,15 @@
     "link_site": "Site",
     "followers": "{count, plural, =1 {# seguidor} other {# seguidores}}",
     "following": "{count, number} seguindo"
+  },
+  "EditProject": {
+    "metaTitle": "Editar projeto · Devsync",
+    "title": "Editar projeto",
+    "subtitle": "Mude o texto, as tags e os links. O endereço do projeto continua o mesmo.",
+    "demoNote": "A demo continua a mesma: por enquanto ela não muda por aqui.",
+    "submit": "Salvar alterações",
+    "submitting": "Salvando…",
+    "unknown": "Não deu para salvar agora. Tente de novo.",
+    "notFound": "Este projeto já foi excluído ou não é seu."
   }
 }

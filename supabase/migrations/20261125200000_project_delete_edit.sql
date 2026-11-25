@@ -42,6 +42,8 @@ end $$;
 
 -- Fica aberta como as outras funções da API (private.apply_api_grants só reabre
 -- para anon/authenticated o que public executa). Visitante cai no 42501 acima.
+-- Grant por extenso: o projeto remoto não dá permissões automáticas.
+grant execute on function public.set_project_tags(uuid, text[]) to anon, authenticated, service_role;
 
 -- 2. Excluir o projeto apaga a demo dele -------------------------------------------
 -- Só se nenhum outro projeto usar a mesma demo.
@@ -56,13 +58,14 @@ end $$;
 
 revoke execute on function private.projects_delete_demo() from public, anon, authenticated;
 
+drop trigger if exists projects_delete_demo on public.projects;
 create trigger projects_delete_demo after delete on public.projects
   for each row execute function private.projects_delete_demo();
 
 -- 3. Fila de limpeza do R2 --------------------------------------------------------
 -- Fora da API (schema private). O serviço de demos lê e baixa pelas duas
 -- funções abaixo, que só a service_role executa.
-create table private.demo_deletions (
+create table if not exists private.demo_deletions (
   demo_id uuid primary key,
   deleted_at timestamptz not null default now()
 );
@@ -80,6 +83,7 @@ end $$;
 
 revoke execute on function private.demos_queue_deletion() from public, anon, authenticated;
 
+drop trigger if exists demos_queue_deletion on public.demos;
 create trigger demos_queue_deletion after delete on public.demos
   for each row execute function private.demos_queue_deletion();
 

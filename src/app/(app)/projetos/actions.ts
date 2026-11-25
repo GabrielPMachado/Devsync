@@ -53,6 +53,52 @@ export async function publishProject(input: ProjectInput & { demoId: string }): 
   redirect(`/projetos/${project.slug}?publicado=1`);
 }
 
+export type UpdateResult = { error: "invalid"; errors: ProjectErrors } | { error: "notFound" | "unknown" };
+
+/** Edita textos, links e tags (a demo não muda aqui). O endereço (slug) continua o mesmo. */
+export async function updateProject(projectId: string, input: ProjectInput): Promise<UpdateResult> {
+  await requireViewer("/projetos");
+  const check = validateProject(input);
+  if (!check.ok) return { error: "invalid", errors: check.errors };
+  const v = check.value;
+
+  const supabase = await createClient();
+  // A RLS só deixa o autor editar: de outra pessoa, nenhuma linha volta.
+  const { data: project, error } = await supabase
+    .from("projects")
+    .update({ title: v.title, description_md: v.description, repo_url: v.repoUrl || null, site_url: v.siteUrl || null })
+    .eq("id", projectId)
+    .select("slug")
+    .maybeSingle();
+  if (error) return { error: "unknown" };
+  if (!project) return { error: "notFound" };
+
+  const { error: tagError } = await supabase.rpc("set_project_tags", { project_id: projectId, tag_slugs: v.tags });
+  if (tagError) {
+    if (tagError.code === "DS003") return { error: "invalid", errors: { tags: "max" } };
+    if (tagError.code === "22023") return { error: "invalid", errors: { tags: "min" } };
+    return { error: "unknown" };
+  }
+
+  revalidatePath("/projetos");
+  revalidatePath(`/projetos/${project.slug}`);
+  redirect(`/projetos/${project.slug}?editado=1`);
+}
+
+/**
+ * Exclui o projeto. O banco apaga junto tags, curtidas, comentários, notificações e a
+ * demo; os arquivos da demo saem do R2 no próximo ciclo do serviço de demos.
+ */
+export async function deleteProject(projectId: string): Promise<{ error: "notFound" | "unknown" }> {
+  await requireViewer("/projetos");
+  const supabase = await createClient();
+  const { error, count } = await supabase.from("projects").delete({ count: "exact" }).eq("id", projectId);
+  if (error) return { error: "unknown" };
+  if (!count) return { error: "notFound" };
+  revalidatePath("/projetos");
+  redirect("/projetos?excluido=1");
+}
+
 /** Curte ou descurte. Devolve o estado novo e o contador do banco; lança erro se o banco recusar. */
 export async function toggleLike(projectId: string, rawPath: string): Promise<{ liked: boolean; count: number }> {
   const path = projectPath(rawPath);

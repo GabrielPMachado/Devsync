@@ -97,3 +97,51 @@ test("curtir, comentar e responder", async ({ page, browser }) => {
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page).toHaveURL(/\/projetos\/[a-z0-9-]+#comentarios$/);
 });
+
+test("dono edita e exclui o projeto (com confirmação)", async ({ page, browser }) => {
+  await signUp(page, "edt", "Edu Dev");
+  const title = `Editar E2E ${Date.now().toString(36)}`;
+  await publishWithZip(page, title, { "index.html": "<h1>Oi</h1>" });
+  await expect(page).toHaveURL(/\?publicado=1$/, { timeout: 60_000 });
+  const projectUrl = page.url().replace(/\?.*$/, "");
+
+  // Outra pessoa não vê Editar/Excluir e não abre a tela de editar.
+  const other = await browser.newPage();
+  await other.goto(projectUrl);
+  await expect(other.getByRole("heading", { level: 1, name: title })).toBeVisible();
+  await expect(other.getByRole("link", { name: "Editar projeto" })).toHaveCount(0);
+  await expect(other.getByRole("button", { name: "Excluir projeto" })).toHaveCount(0);
+  await other.close();
+
+  await page.getByRole("link", { name: "Editar projeto" }).click();
+  await expect(page).toHaveURL(/\/editar$/);
+  await expect(page.getByRole("textbox", { name: "Título" })).toHaveValue(title);
+  await page.getByRole("textbox", { name: "Título" }).fill(`${title} v2`);
+  await page.getByRole("checkbox", { name: "css", exact: true }).uncheck({ force: true });
+  await page.getByRole("checkbox", { name: "typescript", exact: true }).check({ force: true });
+  await page.getByRole("textbox", { name: "Site do projeto" }).fill("https://exemplo.dev");
+  await page.getByRole("button", { name: "Salvar alterações" }).click();
+
+  await expect(page).toHaveURL(`${projectUrl}?editado=1`);
+  await expect(page.getByText("Alterações salvas.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: `${title} v2` })).toBeVisible();
+  await expect(page.getByText("typescript", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "exemplo.dev" })).toBeVisible();
+
+  // No celular os botões continuam à mão.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Excluir projeto" }).click();
+  const confirm = page.getByRole("dialog", { name: `Excluir “${title} v2”?` });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Cancelar" }).click();
+  await expect(confirm).toBeHidden();
+
+  await page.getByRole("button", { name: "Excluir projeto" }).click();
+  await page.getByRole("button", { name: "Excluir de vez" }).click();
+  await expect(page).toHaveURL(/\/projetos\?excluido=1$/);
+  await expect(page.getByText("Projeto excluído.")).toBeVisible();
+  await expect(page.getByRole("link", { name: `Ver demo de ${title} v2` })).toHaveCount(0);
+
+  await page.goto(projectUrl);
+  await expect(page.getByRole("heading", { name: "Página não encontrada" })).toBeVisible();
+});
