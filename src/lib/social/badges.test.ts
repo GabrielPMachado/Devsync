@@ -1,19 +1,24 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { BADGE_GROUPS, BADGE_KEYS, FRAME_UNLOCKS, SHOWN_BADGES_MAX, frameLocked, isBadgeKey, sanitizeShownBadges } from "./badges";
+import { ACCENT_UNLOCKS, BANNER_UNLOCKS } from "./profile-style";
+import { ANIMATED_BADGES, BADGE_GROUPS, BADGE_KEYS, FRAME_UNLOCKS, SHOWN_BADGES_MAX, accentRequiredBadge, bannerRequiredBadge, frameLocked, isBadgeKey, sanitizeShownBadges } from "./badges";
+
+/** Pares "item -> insígnia" de uma função "case" do banco. */
+function sqlCase(sql: string, fn: string) {
+  const body = sql.split(`function public.${fn}(`)[1].split("end\n$$")[0];
+  return Object.fromEntries([...body.matchAll(/when '([a-z_]+)' then '([a-z_]+)'/g)].map((m) => [m[1], m[2]]));
+}
 
 describe("catálogo de insígnias", () => {
   it("espelha o catálogo do banco", () => {
-    const sql = readFileSync("supabase/migrations/20261125150000_profile_catalog_v2.sql", "utf8");
+    const sql = readFileSync("supabase/migrations/20261125300000_profile_catalog_v3.sql", "utf8");
     const inSql = sql.match(/select array\[([^\]]+)\]/)![1].match(/'([a-z_]+)'/g)!.map((s) => s.slice(1, -1));
     expect(inSql).toEqual([...BADGE_KEYS]);
-    expect(BADGE_KEYS).toHaveLength(15);
+    expect(BADGE_KEYS).toHaveLength(30);
     expect(BADGE_GROUPS.flatMap((g) => g.badges).sort()).toEqual([...BADGE_KEYS].sort());
-    const unlocks = [...sql.matchAll(/when '([a-z_]+)' then '([a-z_]+)'/g)].map((m) => [m[1], m[2]]);
-    expect(Object.fromEntries(unlocks)).toEqual(FRAME_UNLOCKS);
-    for (const [frame, badge] of Object.entries(FRAME_UNLOCKS)) {
-      expect(sql).toContain(`when '${frame}' then '${badge}'`);
-    }
+    expect(sqlCase(sql, "frame_required_badge")).toEqual(FRAME_UNLOCKS);
+    expect(sqlCase(sql, "banner_required_badge")).toEqual(BANNER_UNLOCKS);
+    expect(sqlCase(sql, "accent_required_badge")).toEqual(ACCENT_UNLOCKS);
   });
 
   it("reconhece chaves válidas", () => {
@@ -35,11 +40,31 @@ describe("catálogo de insígnias", () => {
   });
 });
 
-describe("bordas por conquista", () => {
-  it("as nove bordas bloqueadas vêm do catálogo de aparência, cada uma com sua insígnia", () => {
-    expect(Object.keys(FRAME_UNLOCKS)).toHaveLength(9);
-    expect(new Set(Object.values(FRAME_UNLOCKS)).size).toBe(9);
-    expect(FRAME_UNLOCKS).toMatchObject({ neon: "mentor", colchetes: "builder", dourada: "founder" });
+describe("itens por conquista", () => {
+  it("27 bordas bloqueadas, cada uma ligada a uma insígnia que existe", () => {
+    expect(Object.keys(FRAME_UNLOCKS)).toHaveLength(27);
+    expect(FRAME_UNLOCKS).toMatchObject({ neon: "mentor", colchetes: "builder", dourada: "founder", lendaria: "legend" });
+    for (const b of Object.values(FRAME_UNLOCKS)) expect(isBadgeKey(b), b).toBe(true);
+  });
+
+  it("os 14 banners e as 12 cores novas são por conquista; os antigos continuam livres", () => {
+    expect(Object.keys(BANNER_UNLOCKS)).toHaveLength(14);
+    expect(Object.keys(ACCENT_UNLOCKS)).toHaveLength(12);
+    for (const b of [...Object.values(BANNER_UNLOCKS), ...Object.values(ACCENT_UNLOCKS)]) expect(isBadgeKey(b), b).toBe(true);
+    expect(bannerRequiredBadge("hiperespaco")).toBe("icon");
+    expect(bannerRequiredBadge("aurora")).toBeNull();
+    expect(accentRequiredBadge("retro")).toBe("founder");
+    expect(accentRequiredBadge("azul")).toBeNull();
+    expect(accentRequiredBadge(null)).toBeNull();
+  });
+
+  it("toda insígnia nova libera ao menos um item e tem ícone animado", () => {
+    expect(ANIMATED_BADGES).toHaveLength(15);
+    const unlocks = new Set([...Object.values(FRAME_UNLOCKS), ...Object.values(BANNER_UNLOCKS), ...Object.values(ACCENT_UNLOCKS)]);
+    for (const b of ANIMATED_BADGES) {
+      expect(isBadgeKey(b), b).toBe(true);
+      expect(unlocks.has(b as never), b).toBe(true);
+    }
   });
 });
 

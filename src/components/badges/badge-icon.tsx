@@ -1,8 +1,24 @@
+import type { CSSProperties } from "react";
 import {
+  Award,
   Brain,
   Building2,
   CircleCheck,
   Crown,
+  Gem,
+  HandHeart,
+  Layers,
+  MessageCircleMore,
+  Microscope,
+  Network,
+  Radio,
+  Scale,
+  Sparkles,
+  Star,
+  ThumbsUp,
+  Trophy,
+  UserPlus,
+  Zap,
   GraduationCap,
   Hammer,
   HandHelping,
@@ -23,7 +39,15 @@ import type { BadgeKey } from "@/lib/social/badges";
  * 1 = aro simples, 2 = aro na cor da insígnia, 3 = aro em gradiente com brilho.
  * Cores sóbrias, dentro do azul/ciano; o dourado fica só para o fundador.
  */
-export const BADGE_STYLE: Record<BadgeKey, { Icon: LucideIcon; color: string; tier: 1 | 2 | 3 }> = {
+type BadgeStyle = {
+  Icon: LucideIcon;
+  color: string;
+  tier: 1 | 2 | 3;
+  /** Insígnias novas: efeito do ícone (src/styles/profile-motion.css) e duração em segundos. */
+  motion?: { effect: string; seconds: number };
+};
+
+export const BADGE_STYLE: Record<BadgeKey, BadgeStyle> = {
   founder: { Icon: Crown, color: "text-amber-300", tier: 3 },
   first_project: { Icon: Rocket, color: "text-cyan-400", tier: 1 },
   builder: { Icon: Hammer, color: "text-blue-400", tier: 2 },
@@ -39,6 +63,22 @@ export const BADGE_STYLE: Record<BadgeKey, { Icon: LucideIcon; color: string; ti
   commenter: { Icon: MessagesSquare, color: "text-[#93C5FD]", tier: 1 },
   popular: { Icon: Users, color: "text-[#93C5FD]", tier: 2 },
   influencer: { Icon: Megaphone, color: "text-cyan-300", tier: 3 },
+  // Segunda leva: cada uma com um movimento próprio.
+  demo_live: { Icon: Radio, color: "text-[#F87171]", tier: 1, motion: { effect: "live", seconds: 1.6 } },
+  prolific: { Icon: Layers, color: "text-[#93C5FD]", tier: 3, motion: { effect: "bob", seconds: 1.4 } },
+  star: { Icon: Star, color: "text-amber-300", tier: 3, motion: { effect: "flip", seconds: 4 } },
+  well_voted: { Icon: ThumbsUp, color: "text-[#5EEAD4]", tier: 2, motion: { effect: "wiggle", seconds: 2.6 } },
+  reference: { Icon: Award, color: "text-[#7DD3FC]", tier: 3, motion: { effect: "glow", seconds: 2.4 } },
+  researcher: { Icon: Microscope, color: "text-[#A5B4FC]", tier: 3, motion: { effect: "orbit", seconds: 3 } },
+  tireless: { Icon: Zap, color: "text-amber-300", tier: 3, motion: { effect: "zap", seconds: 2.2 } },
+  legend: { Icon: Trophy, color: "text-amber-300", tier: 3, motion: { effect: "float", seconds: 3.2 } },
+  reviewer: { Icon: Scale, color: "text-[#93C5FD]", tier: 2, motion: { effect: "sway", seconds: 2.8 } },
+  first_follower: { Icon: UserPlus, color: "text-cyan-300", tier: 1, motion: { effect: "pop", seconds: 2.5 } },
+  connected: { Icon: Network, color: "text-cyan-400", tier: 2, motion: { effect: "spin", seconds: 8 } },
+  supporter: { Icon: HandHeart, color: "text-[#FB7185]", tier: 2, motion: { effect: "heartbeat", seconds: 1.4 } },
+  fan: { Icon: Sparkles, color: "text-[#F9A8D4]", tier: 3, motion: { effect: "twinkle", seconds: 2 } },
+  debater: { Icon: MessageCircleMore, color: "text-[#93C5FD]", tier: 3, motion: { effect: "nod", seconds: 1.8 } },
+  icon: { Icon: Gem, color: "text-cyan-300", tier: 3, motion: { effect: "hue", seconds: 6 } },
 };
 
 const SIZES = { sm: "size-6 [&_svg]:size-3.5", md: "size-9 [&_svg]:size-4.5", lg: "size-12 [&_svg]:size-6" } as const;
@@ -55,7 +95,9 @@ type Props = { badge: BadgeKey; size?: keyof typeof SIZES; muted?: boolean };
 
 /** O ícone redondo da insígnia. Decorativo: quem usa dá o nome (aria-label ou texto ao lado). */
 export function BadgeIcon({ badge, size = "sm", muted = false }: Props) {
-  const { Icon, color, tier } = BADGE_STYLE[badge];
+  const { Icon, color, tier, motion } = BADGE_STYLE[badge];
+  // Bloqueada fica parada; conquistada se mexe (menos para quem pede menos movimento).
+  const moving = motion && !muted;
   const ring = badge === "founder" ? FOUNDER_RING : TIER_RING[tier];
   return (
     <span
@@ -65,7 +107,10 @@ export function BadgeIcon({ badge, size = "sm", muted = false }: Props) {
       }`}
       aria-hidden="true"
     >
-      <Icon />
+      <Icon
+        className={moving ? `pm pm-${motion.effect}` : undefined}
+        style={moving ? ({ "--d": `${motion.seconds}s` } as CSSProperties) : undefined}
+      />
     </span>
   );
 }
