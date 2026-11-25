@@ -232,11 +232,11 @@ describe("PUT /builds/:id/zip", () => {
     expect(build).toMatchObject({ stage: "validating", run_id: 4242 });
   });
 
-  it("acima de 25 MB é 413 e de outro run é 403", async () => {
+  it("acima de 64 MB é 413 e de outro run é 403", async () => {
     const res = await receiveBuildZip(
       new Request(`https://demos.test/builds/${BUILD}/zip`, {
         method: "PUT",
-        headers: { ...(await runnerHeaders()), "content-length": String(26 * 1024 * 1024) },
+        headers: { ...(await runnerHeaders()), "content-length": String(65 * 1024 * 1024) },
         body: zip,
       }),
       e, BUILD, deps,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { openDemoZip, readDemoZip, type ZipRejection } from "../src/zip";
+import { LIMITS, openDemoZip, readDemoZip, type ZipRejection } from "../src/zip";
 import { makeZip, SITE, type ZipEntry } from "./helpers";
 
 const text = (d: Uint8Array) => new TextDecoder().decode(d);
@@ -98,7 +98,29 @@ describe("readDemoZip", () => {
     expect(readDemoZip(crypto.getRandomValues(new Uint8Array(1000)))).toEqual({ ok: false, reason: "not_a_zip" });
   });
 
-  it("recusa zip maior que 25 MB", () => {
-    expect(readDemoZip(new Uint8Array(25 * 1024 * 1024 + 1))).toEqual({ ok: false, reason: "too_large" });
+  it("recusa zip maior que 64 MB (o zip sem compressão do site cabe)", () => {
+    expect(LIMITS.maxZipBytes).toBe(64 * 1024 * 1024);
+    expect(readDemoZip(new Uint8Array(64 * 1024 * 1024 + 1))).toEqual({ ok: false, reason: "too_large" });
+  });
+});
+
+describe("zip sem compressão (plano grátis)", () => {
+  it("arquivo guardado sem compressão é lido sem inflar nem conferir CRC (CPU quase zero)", () => {
+    const zip = makeZip([{ name: "index.html", data: "<h1>oi</h1>", method: 0 }, { name: "app.js", data: "x()", method: 0 }]);
+    // Corrompe o CRC do app.js no diretório central e no cabeçalho local: continua aceito.
+    const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+    for (let i = 0; i < zip.length - 4; i++) {
+      const sig = view.getUint32(i, true);
+      if (sig === 0x04034b50) view.setUint32(i + 14, 0, true);
+      if (sig === 0x02014b50) view.setUint32(i + 16, 0, true);
+    }
+    const result = readDemoZip(zip);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(new TextDecoder().decode(result.files.find((f) => f.path === "app.js")!.data)).toBe("x()");
+  });
+
+  it("arquivo guardado com tamanho mentido continua recusado", () => {
+    const zip = makeZip([{ name: "index.html", data: "<h1>oi</h1>", method: 0, declaredSize: 3 }]);
+    expect(readDemoZip(zip)).toEqual({ ok: false, reason: "corrupt" });
   });
 });

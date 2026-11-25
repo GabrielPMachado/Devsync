@@ -94,8 +94,8 @@ describe("PUT do arquivo", () => {
     expect((await put("x", { version: 2 })).status).toBe(403);
   });
 
-  it("acima de 25 MB é 413", async () => {
-    expect((await put("x", { length: 25 * 1024 * 1024 + 1 })).status).toBe(413);
+  it("acima de 64 MB é 413", async () => {
+    expect((await put("x", { length: 64 * 1024 * 1024 + 1 })).status).toBe(413);
   });
 
   it("não sobrescreve um envio", async () => {

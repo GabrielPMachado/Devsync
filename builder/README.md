@@ -14,7 +14,7 @@ O workflow baixa `run.mjs` e `lib.mjs` da `main` deste repositório a cada build
 
 `queued` (na fila) → `cloning` → `installing` → `building` → `uploading` → `validating` (serviço de demos) → `ready`, ou `failed` com um código e o fim do log:
 
-`clone_failed`, `no_package_json`, `no_build_script`, `install_failed`, `install_timeout` (6 min), `build_failed`, `build_timeout` (8 min), `no_output`, `next_server` (Next sem `output: 'export'`), `too_many_files` (500), `too_big` (60 MB, ou 25 MB compactado), `upload_failed`, `dispatch_failed`, `stalled` (sem notícia por 40 min, encerrado pelo cron do serviço de demos), `invalid_input`, `internal`, ou um motivo de recusa do zip (`no_index`, `extension_not_allowed`…).
+`clone_failed`, `no_package_json`, `no_build_script`, `install_failed`, `install_timeout` (6 min), `build_failed`, `build_timeout` (8 min), `no_output`, `next_server` (Next sem `output: 'export'`), `too_many_files` (500), `too_big` (60 MB de arquivos; o zip vai sem compressão, até 64 MB), `upload_failed`, `dispatch_failed`, `stalled` (sem notícia por 40 min, encerrado pelo cron do serviço de demos), `invalid_input`, `internal`, ou um motivo de recusa do zip (`no_index`, `extension_not_allowed`…).
 
 ## Segurança
 

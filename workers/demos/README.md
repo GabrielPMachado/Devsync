@@ -19,9 +19,15 @@ No `wrangler dev`, a API responde no host `demos.localhost` e cada demo em `<dem
 | Host | O quê |
 |---|---|
 | `DEMOS_HOST` | API (abaixo) |
-| `<demo_id>.DEMOS_HOST` | Arquivos da demo |
+| `<demo_id>.DEMOS_HOST` | Arquivos da demo (modo `subdomain`, padrão) |
+| `DEMOS_HOST/d/<demo_id>/` | Arquivos da demo (modo `path`, `DEMOS_MODE=path`) |
 
-O `workers.dev` grátis não aceita um subdomínio por demo. Para publicar, é preciso um domínio próprio com rota curinga `*.<domínio>/*` apontando para o Worker (decisão de 2026-11-23: comprar o domínio no lançamento).
+Dois modos, escolhidos por `DEMOS_MODE`:
+
+- **`path` (plano grátis, `workers.dev`).** O `workers.dev` não aceita um subdomínio por demo, então cada demo fica numa pasta. `/d/<id>` redireciona para `/d/<id>/`. Pedido de caminho absoluto (`/assets/x.js`) vindo de uma página `/d/<id>/...` do mesmo endereço (pelo `Referer`) recebe `307` para `/d/<id>/assets/x.js`, então builds com `base: "/"` funcionam. Risco aceito: as demos dividem a mesma origem entre si (uma lê o `localStorage` e os cookies da outra). O site da Devsync continua noutra origem, isolado.
+- **`subdomain` (domínio próprio).** Cada demo na sua origem. Precisa de rota curinga `*.<domínio>/*` (ambiente `production-domain`).
+
+Os arquivos no R2 são os mesmos nos dois modos: trocar de modo é só configuração.
 
 ## API
 
@@ -68,6 +74,7 @@ Limites: 25 MB compactado, 500 arquivos, 60 MB descompactado (cabe na memória d
 
 - O iframe da spec tem `allow-popups`: uma demo pode abrir uma janela nova e escrever HTML nela com a origem da demo, sem passar pelo redirecionamento. Fica como está porque muitas demos abrem links; reavaliar se aparecer abuso (tirar `allow-popups` ou usar `allow-popups-to-escape-sandbox` sem `allow-same-origin`).
 - Limite de chamadas: em produção, 30 chamadas da API por minuto por IP (binding `API_LIMITER`), com `429` e `Retry-After: 60`. Fora de produção (dev e testes) não há limite. O limite de 5 envios por dia continua valendo na criação.
+- Plano grátis (10 ms de CPU): o site reempacota o zip sem compressão (`src/lib/demos/repack.ts`) e o build usa `zip -0`. Entrada guardada sem compressão vira só um recorte do zip, sem conferir CRC (bytes errados só estragariam a própria demo). Entrada comprimida continua aceita e conferida, mas um zip comprimido grande pode estourar a CPU do plano grátis.
 - Zips enviados e não concluídos ficam em `uploads/`: configurar uma regra de ciclo de vida no R2 (apagar após 1 dia).
 
 ## Checagem diária
@@ -78,7 +85,8 @@ O cron (`0 6 * * *`, 03:00 em São Paulo) enfileira os links `live` e `unavailab
 
 | Nome | Tipo | Exemplo |
 |---|---|---|
-| `DEMOS_HOST` | var | `devsync-demos.app` |
+| `DEMOS_HOST` | var | `devsync-demos.app` ou `devsync-demos.<sub>.workers.dev` |
+| `DEMOS_MODE` | var (opcional) | `subdomain` (padrão) ou `path` |
 | `SITE_URL` | var | `https://devsync.app` |
 | `FRAME_ANCESTORS` | var (opcional) | `https://devsync.app https://devsync.vercel.app` |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | var | painel do Supabase |
@@ -95,9 +103,10 @@ Bindings: R2 `DEMOS_BUCKET` (`devsync-demos`), filas `demo-zips` e `demo-links`.
 
 Nada foi publicado na conta Cloudflare ainda. A configuração de produção está pronta em `wrangler.jsonc` (`env.production`) e a publicação é feita pelo workflow **Publicar serviço de demos** (`.github/workflows/deploy-demos.yml`), rodado à mão no GitHub. O passo a passo completo, com o que comprar, está em [`docs/lancamento.md`](../../docs/lancamento.md).
 
-Resumo do que precisa existir antes:
+Resumo do que precisa existir antes (plano grátis, ambiente `production`):
 
-1. Domínio próprio na Cloudflare, com DNS curinga `*` (e o raiz) com proxy ligado. O workflow troca `DOMINIO_DAS_DEMOS` por ele.
-2. Workers Paid (US$ 5/mês): filas e descompactar zip grande (limite de CPU e de subrequests do grátis).
-3. Segredos e a variável `DEMOS_DOMAIN` no GitHub. Na primeira vez, marque "Criar bucket R2 e filas".
-4. No site (Vercel): `NEXT_PUBLIC_DEMOS_URL=https://<domínio>` e um novo deploy (a CSP do site libera o domínio das demos no build).
+1. Conta Cloudflare grátis com R2 ativado e um subdomínio `workers.dev`. O workflow troca `SUBDOMINIO_WORKERS` pela variável `WORKERS_SUBDOMAIN`.
+2. Segredos no GitHub. Na primeira vez, marque "Criar bucket R2 e filas".
+3. No site (Vercel): `NEXT_PUBLIC_DEMOS_URL=https://devsync-demos.<sub>.workers.dev` e um novo deploy.
+
+Com domínio próprio (ambiente `production-domain`): variável `DEMOS_DOMAIN`, DNS curinga `*` e o raiz com proxy ligado. O workflow troca `DOMINIO_DAS_DEMOS` por ele.

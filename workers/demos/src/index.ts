@@ -3,7 +3,7 @@ import { errorResponse, withCors } from "./http";
 import { buildProgress, failStaleBuilds, receiveBuildZip, startBuild } from "./builds";
 import { embedCheck, recheckLink, scheduleLinkChecks, verifyDemo } from "./links";
 import { processZip } from "./process-zip";
-import { parseDemoHost, serveDemo } from "./serve";
+import { parseDemoHost, routeDemoPath, serveDemo } from "./serve";
 import { completeUpload, createUpload, receiveUpload } from "./uploads";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
@@ -53,6 +53,10 @@ export async function handleFetch(req: Request, env: Env, deps: Deps): Promise<R
   const demoId = parseDemoHost(host, env.DEMOS_HOST);
   if (demoId) return serveDemo(req, env, demoId, deps);
   if (host !== env.DEMOS_HOST.toLowerCase()) return new Response("Not found", { status: 404 });
+  if (env.DEMOS_MODE === "path") {
+    const demo = await routeDemoPath(req, env, deps);
+    if (demo) return demo;
+  }
   const res = await api(req, env, deps).catch((err) => {
     console.error("Erro na API de demos", err);
     return errorResponse(500, "Erro interno. Tente de novo em instantes.");

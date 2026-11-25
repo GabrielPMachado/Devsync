@@ -2,9 +2,10 @@ import { Inflate } from "fflate";
 import { ALLOWED_EXTENSIONS, extensionOf } from "./content-types";
 
 export const LIMITS = {
-  maxZipBytes: 25 * 1024 * 1024,
+  // O site reempacota o zip sem compressão (até 60 MB de arquivos + cabeçalhos).
+  maxZipBytes: 64 * 1024 * 1024,
   maxFiles: 500,
-  // Tudo cabe na memória do isolate (128 MB) junto com o zip de 25 MB.
+  // Cabe na memória do isolate (128 MB): arquivos sem compressão são recortes do próprio zip.
   maxTotalBytes: 60 * 1024 * 1024,
 } as const;
 
@@ -29,7 +30,7 @@ export interface DemoFile {
 
 export type ZipResult = { ok: true; files: DemoFile[] } | { ok: false; reason: ZipRejection };
 
-/** Arquivo já validado pelo diretório central; `read()` infla e confere o CRC (lança ZipReadError). */
+/** Arquivo já validado pelo diretório central; `read()` infla e confere o CRC quando comprimido (lança ZipReadError). */
 export interface LazyDemoFile {
   path: string;
   read(): Uint8Array;
@@ -167,7 +168,14 @@ function inflate(bytes: Uint8Array, e: Entry): Uint8Array {
   const start = e.offset + 30 + view.getUint16(e.offset + 26, true) + view.getUint16(e.offset + 28, true);
   if (start + e.csize > bytes.length) throw new ZipReadError("corrupt");
   const raw = bytes.subarray(start, start + e.csize);
-  const data = e.method === 0 ? raw : inflateLimited(raw, e.usize);
+  // Guardado sem compressão (o que o site e o build enviam): só um recorte, sem
+  // inflar nem calcular CRC. Cabe nos 10 ms de CPU do plano grátis do Workers.
+  // CRC errado aqui só serviria bytes errados para a própria demo.
+  if (e.method === 0) {
+    if (e.csize !== e.usize) throw new ZipReadError("corrupt");
+    return raw;
+  }
+  const data = inflateLimited(raw, e.usize);
   if (data.length !== e.usize || crc32(data) !== e.crc) throw new ZipReadError("corrupt");
   return data;
 }

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { publishProject } from "@/app/(app)/projetos/actions";
 import { completeUpload, createUpload, embedCheck, putZip, startBuild, verifyDemo, type BuildRow, type DemoRow } from "@/lib/demos/client";
+import { repackStored } from "@/lib/demos/repack";
 import { demosBaseUrl } from "@/lib/demos/url";
 import { listRepos, repoDetails } from "@/lib/projects/github";
 import { buildDemoZip, findSiteSource } from "@/lib/projects/github-demo";
@@ -17,7 +18,8 @@ export function ConnectedPublishForm({ tags, githubUser }: { tags: { slug: strin
       base: demosBaseUrl(),
       token: async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
       createUpload,
-      putZip: (url, file) => putZip(url, file),
+      // Sem compressão: o serviço de demos (plano grátis) só recorta os arquivos.
+      putZip: async (url, file) => putZip(url, await repackStored(file)),
       completeUpload,
       embedCheck,
       verifyDemo,

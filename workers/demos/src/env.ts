@@ -1,6 +1,11 @@
 export interface Env {
   /** Host base das demos. A API fica nele e cada demo em `<demo_id>.<DEMOS_HOST>`. */
   DEMOS_HOST: string;
+  /**
+   * "subdomain" (padrão): cada demo em `<id>.<DEMOS_HOST>`, origem própria (precisa de domínio com DNS curinga).
+   * "path": cada demo em `<DEMOS_HOST>/d/<id>/`, para o workers.dev grátis. As demos dividem a origem entre si.
+   */
+  DEMOS_MODE?: string;
   /** Origem do site, ex.: https://devsync.app. Destino dos redirecionamentos. */
   SITE_URL: string;
   /** Origens (separadas por espaço) que podem embutir demos e chamar a API. Padrão: SITE_URL. */

@@ -24,6 +24,8 @@ Feita no subprojeto 8, sobre a `main` com os subprojetos 0 a 7. Situação: **se
 - **CSP com `'unsafe-inline'` em `script-src`.** Nonce obrigaria a renderizar tudo por pedido. A defesa principal contra XSS continua sendo o React (escapa tudo) e o Markdown sem HTML cru.
 - **`frame-src https:`.** Demos por link podem estar em qualquer site https. O iframe usa `sandbox` sem `allow-top-navigation`.
 - **`allow-popups` no iframe da demo** (já registrado no README do Worker).
+- **Demos em pastas no `workers.dev` (plano grátis, 2026-11-25).** Sem domínio próprio, todas as demos ficam em `devsync-demos.<sub>.workers.dev/d/<id>/` e dividem a mesma origem: uma demo consegue ler o `localStorage`, os cookies e o IndexedDB de outra, e abrir outra demo por `fetch`. O site e o login da Devsync ficam noutra origem e não são afetados. Demos não guardam dados de conta. Fecha ao passar para domínio próprio (`DEMOS_DOMAIN`, seção 2.2 de `docs/lancamento.md`).
+- **Zip sem compressão sem CRC.** No plano grátis o Worker só recorta as entradas guardadas sem compressão e não confere o CRC (custaria CPU). Um CRC errado só serve bytes errados para a própria demo.
 
 ## Pendências de configuração (painel, não código)
 

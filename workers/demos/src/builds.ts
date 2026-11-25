@@ -141,7 +141,7 @@ export async function receiveBuildZip(req: Request, env: Env, buildId: string, d
 
   const length = Number(req.headers.get("content-length"));
   if (!Number.isInteger(length) || length <= 0 || !req.body) return errorResponse(411, "Envie o arquivo com Content-Length");
-  if (length > LIMITS.maxZipBytes) return errorResponse(413, "O zip pode ter no máximo 25 MB");
+  if (length > LIMITS.maxZipBytes) return errorResponse(413, "O zip pode ter no máximo 64 MB");
 
   const db = serviceRest(env, deps.fetch);
   const [demo] = await db.select<{ status: string; version: number }>("demos", `id=eq.${build.demo_id}&select=status,version`);
