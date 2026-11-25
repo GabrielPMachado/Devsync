@@ -1,6 +1,6 @@
 /**
  * Insígnias conquistadas e as bordas de avatar que elas liberam.
- * Espelha o banco (supabase/migrations/20261124900000_badges.sql e 20261125100000_profile_catalog_v2.sql): public.badge_keys()
+ * Espelha o banco (supabase/migrations/20261124900000_badges.sql e 20261125150000_profile_catalog_v2.sql): public.badge_keys()
  * e public.frame_required_badge(). O banco é quem garante; aqui é só para a tela.
  * Nomes e "como ganhar" ficam em messages/*.json, no grupo "Badges".
  */

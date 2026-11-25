@@ -4,7 +4,7 @@ import { BADGE_GROUPS, BADGE_KEYS, FRAME_UNLOCKS, SHOWN_BADGES_MAX, frameLocked,
 
 describe("catálogo de insígnias", () => {
   it("espelha o catálogo do banco", () => {
-    const sql = readFileSync("supabase/migrations/20261125100000_profile_catalog_v2.sql", "utf8");
+    const sql = readFileSync("supabase/migrations/20261125150000_profile_catalog_v2.sql", "utf8");
     const inSql = sql.match(/select array\[([^\]]+)\]/)![1].match(/'([a-z_]+)'/g)!.map((s) => s.slice(1, -1));
     expect(inSql).toEqual([...BADGE_KEYS]);
     expect(BADGE_KEYS).toHaveLength(15);

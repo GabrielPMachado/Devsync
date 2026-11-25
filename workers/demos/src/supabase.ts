@@ -15,6 +15,7 @@ export interface Rest {
   select<T>(table: string, query: string): Promise<T[]>;
   insert<T>(table: string, row: Record<string, unknown>): Promise<T>;
   update(table: string, query: string, patch: Record<string, unknown>): Promise<void>;
+  rpc<T>(fn: string, args: Record<string, unknown>): Promise<T>;
 }
 
 function rest(env: Env, apikey: string, token: string, f: typeof fetch): Rest {
@@ -45,6 +46,11 @@ function rest(env: Env, apikey: string, token: string, f: typeof fetch): Rest {
     },
     async update(table: string, query: string, patch: Record<string, unknown>) {
       await call("PATCH", `${table}?${query}`, patch, { prefer: "return=minimal" });
+    },
+    async rpc<T>(fn: string, args: Record<string, unknown>) {
+      const res = await call("POST", `rpc/${fn}`, args);
+      const text = await res.text();
+      return (text ? JSON.parse(text) : null) as T;
     },
   };
 }

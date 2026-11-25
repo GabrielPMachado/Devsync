@@ -1,6 +1,6 @@
 /**
  * Catálogo da aparência do perfil. As listas espelham as checagens do banco
- * (supabase/migrations/20261124500000_profile_customization.sql e 20261125100000_profile_catalog_v2.sql): mudou aqui,
+ * (supabase/migrations/20261124500000_profile_customization.sql e 20261125150000_profile_catalog_v2.sql): mudou aqui,
  * muda lá também.
  */
 
