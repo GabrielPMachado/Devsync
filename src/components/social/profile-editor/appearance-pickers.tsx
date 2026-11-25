@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { ACCENT_COLORS, ACCENTS, BANNER_PRESETS, isAccent } from "@/lib/social/profile-style";
 import { ProfileBanner } from "@/components/profile/profile-banner";
 import { PickerHeader } from "./picker-header";
+import { UnlockInfo } from "@/components/badges/unlock-info";
+import { Hint, splitHint } from "@/components/ui/hint";
 
 const FOCUS = "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-border-focus";
 
@@ -31,15 +33,22 @@ export function BannerPicker({ value, onChange, disabled }: { value: string; onC
         {options.map((o) => {
           const on = value === o.key;
           return (
-            <label key={o.key || "padrao"} className={`group relative flex cursor-pointer flex-col gap-1.5 ${FOCUS} rounded-lg`}>
-              <input type="radio" name="bannerPresetChoice" className="sr-only top-1/2 left-1/2" checked={on} onChange={() => onChange(o.key)} aria-label={o.label} />
-              <ProfileBanner
-                preset={o.key || null}
-                className={`aspect-[3/1] w-full rounded-lg border transition ${on ? "border-brand-accent ring-2 ring-brand-accent/60" : "border-border-default group-hover:border-border-strong"}`}
-              />
-              {on ? <Picked /> : null}
-              <span className={`px-0.5 text-xs ${on ? "font-medium text-text-primary" : "text-text-muted"}`}>{o.label}</span>
-            </label>
+            <Hint key={o.key || "padrao"} className="flex" content={<UnlockInfo title={o.label} unlocked status={t("availableToAll")} />}>
+              {(hint) => {
+                const parts = splitHint(hint);
+                return (
+                  <label {...parts.label} className={`group relative flex w-full cursor-pointer flex-col gap-1.5 ${FOCUS} rounded-lg`}>
+                    <input type="radio" name="bannerPresetChoice" className="sr-only top-1/2 left-1/2" checked={on} onChange={() => onChange(o.key)} aria-label={o.label} {...parts.input} />
+                    <ProfileBanner
+                      preset={o.key || null}
+                      className={`aspect-[3/1] w-full rounded-lg border transition ${on ? "border-brand-accent ring-2 ring-brand-accent/60" : "border-border-default group-hover:border-border-strong"}`}
+                    />
+                    {on ? <Picked /> : null}
+                    <span className={`px-0.5 text-xs ${on ? "font-medium text-text-primary" : "text-text-muted"}`}>{o.label}</span>
+                  </label>
+                );
+              }}
+            </Hint>
           );
         })}
       </div>
@@ -60,16 +69,23 @@ export function AccentPicker({ value, onChange }: { value: string; onChange: (v:
         {ACCENTS.map((a) => {
           const on = current === a;
           return (
-            <label key={a} title={style(`accent_${a}`)} className={`relative flex cursor-pointer justify-center rounded-full ${FOCUS}`}>
-              <input type="radio" name="accentChoice" className="sr-only top-1/2 left-1/2" checked={on} onChange={() => onChange(a)} aria-label={style(`accent_${a}`)} />
-              <span
-                aria-hidden="true"
-                className={`flex size-10 items-center justify-center rounded-full transition ${on ? "ring-2 ring-text-primary ring-offset-2 ring-offset-bg-surface" : "hover:scale-105"}`}
-                style={{ background: `linear-gradient(145deg, ${ACCENT_COLORS[a]}, color-mix(in srgb, ${ACCENT_COLORS[a]} 65%, #000))` }}
-              >
-                {on ? <Check className="size-4 text-white drop-shadow" strokeWidth={3} /> : null}
-              </span>
-            </label>
+            <Hint key={a} className="flex justify-center" content={<UnlockInfo title={style(`accent_${a}`)} unlocked status={t("availableToAll")} />}>
+              {(hint) => {
+                const parts = splitHint(hint);
+                return (
+                  <label {...parts.label} className={`relative flex cursor-pointer justify-center rounded-full ${FOCUS}`}>
+                    <input type="radio" name="accentChoice" className="sr-only top-1/2 left-1/2" checked={on} onChange={() => onChange(a)} aria-label={style(`accent_${a}`)} {...parts.input} />
+                    <span
+                      aria-hidden="true"
+                      className={`flex size-10 items-center justify-center rounded-full transition ${on ? "ring-2 ring-text-primary ring-offset-2 ring-offset-bg-surface" : "hover:scale-105"}`}
+                      style={{ background: `linear-gradient(145deg, ${ACCENT_COLORS[a]}, color-mix(in srgb, ${ACCENT_COLORS[a]} 65%, #000))` }}
+                    >
+                      {on ? <Check className="size-4 text-white drop-shadow" strokeWidth={3} /> : null}
+                    </span>
+                  </label>
+                );
+              }}
+            </Hint>
           );
         })}
       </div>

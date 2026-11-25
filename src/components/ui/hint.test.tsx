@@ -63,4 +63,22 @@ describe("Hint", () => {
     fireEvent.blur(trigger);
     expect(isOpen()).toBe(false);
   });
+
+  it("fechada, sai do layout (escondida mas posicionada, alargaria a página no celular)", () => {
+    const { trigger, tip } = setup();
+    expect(tip).toHaveClass("hidden");
+    fireEvent.pointerEnter(trigger, { pointerType: "mouse" });
+    expect(tip).not.toHaveClass("hidden");
+  });
+
+  it("teclado depois de um toque não fixa a dica", () => {
+    const { trigger, isOpen } = setup();
+    fireEvent.pointerDown(trigger, { pointerType: "touch" });
+    fireEvent.click(trigger);
+    fireEvent.click(trigger);
+    expect(isOpen()).toBe(false);
+    fireEvent.keyDown(trigger, { key: " " });
+    fireEvent.click(trigger);
+    expect(isOpen()).toBe(false);
+  });
 });

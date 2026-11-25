@@ -81,11 +81,27 @@ describe("BadgesSection", () => {
     fireEvent.click(screen.getByRole("button", { name: /Curioso/ }));
     fireEvent.click(screen.getByRole("button", { name: /Mentor/ }));
     expect(hidden()).toEqual(["founder", "curious", "mentor"]);
-    expect(screen.getByRole("button", { name: /Popular/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Popular/ })).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(screen.getByRole("button", { name: /Popular/ }));
+    expect(hidden()).toEqual(["founder", "curious", "mentor"]);
     expect(screen.getByRole("status")).toHaveTextContent("Você já marcou 3");
 
     fireEvent.click(screen.getByRole("button", { name: /Membro fundador/ }));
     expect(hidden()).toEqual(["curious", "mentor"]);
     expect(onChange).toHaveBeenLastCalledWith(["curious", "mentor"]);
+  });
+
+  it("conquistadas mostram na dica o requisito cumprido, com cadeado aberto", () => {
+    wrap(<BadgesSection earned={["builder"]} initial={[]} />);
+    const earned = screen.getByRole("button", { name: /Construtor/ });
+    expect(earned).toHaveAccessibleDescription(/Conquistada.*Requisito cumprido: publicar 5 projetos/);
+    const tip = screen.getByText(/Requisito cumprido: publicar 5 projetos/).closest('[role="tooltip"]')!;
+    expect(tip).toHaveAttribute("data-open", "false");
+    expect(tip.querySelector('[data-lock="open"]')).not.toBeNull();
+    fireEvent.pointerEnter(earned, { pointerType: "mouse" });
+    expect(tip).toHaveAttribute("data-open", "true");
+    // A bloqueada continua com o cadeado fechado.
+    const lockedTip = screen.getByText(/Como ganhar: Publicar 15 projetos/).closest('[role="tooltip"]')!;
+    expect(lockedTip.querySelector('[data-lock="closed"]')).not.toBeNull();
   });
 });
