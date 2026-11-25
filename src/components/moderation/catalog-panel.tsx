@@ -108,7 +108,7 @@ function CatalogItemRow({ item }: { item: CatalogRow }) {
       <button
         type="button"
         disabled={pending}
-        onClick={() => save(!item.active, item.label ?? "")}
+        onClick={() => save(!item.active, label)}
         aria-label={`${item.active ? t("turnOff") : t("turnOn")}: ${name}`}
         className={buttonClasses({ variant: item.active ? "secondary" : "primary", size: "sm" })}
       >

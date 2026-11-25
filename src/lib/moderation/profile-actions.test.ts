@@ -39,6 +39,7 @@ describe("setCatalogItem", () => {
   it("recusa item que não existe no código e nome longo", async () => {
     await expect(setCatalogItem("banner", "arcoiris", true, "")).resolves.toEqual({ error: "invalid" });
     await expect(setCatalogItem("banner", "aurora", true, "x".repeat(41))).resolves.toEqual({ error: "invalid" });
+    await expect(setCatalogItem("banner", "aurora", true, "Aurora {nome}")).resolves.toEqual({ error: "invalid" });
     expect(rpc).not.toHaveBeenCalled();
   });
 });

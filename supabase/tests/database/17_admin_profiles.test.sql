@@ -1,6 +1,6 @@
 begin;
 \ir ../helpers.psql
-select plan(37);
+select plan(42);
 
 -- Moderação de perfis e do catálogo (20261125400000_admin_profiles.sql).
 
@@ -86,6 +86,20 @@ select lives_ok($$ select public.admin_set_catalog_item('badge', 'curious', fals
 reset role;
 insert into public.questions (author_id, title, body_md) values (:'rui', 'Pergunta qualquer aqui', 'corpo da pergunta com texto suficiente');
 select ok(not tests.has_badge(:'rui', 'curious'), 'insígnia desligada não é mais dada pelos gatilhos');
+
+-- Tirar algo não mexe no resto: o banner desligado que lia usa continua.
+select tests.login_as(:'adm');
+select lives_ok(format($$ select public.admin_revoke_badge(%L, 'sage') $$, :'lia'), 'admin tira outra insígnia da lia');
+reset role;
+select is((tests.profile(:'lia')).banner_preset, 'aurora', 'banner desligado em uso não é apagado por outra remoção');
+select is((tests.profile(:'lia')).shown_badges, '{}'::text[], 'a insígnia tirada sai das exibidas');
+
+-- Fundador desligado não gasta vaga.
+select tests.login_as(:'adm');
+select lives_ok($$ select public.admin_set_catalog_item('badge', 'founder', false) $$, 'admin desliga fundador');
+reset role;
+select tests.create_user('novo@x.dev', 'novato') as novo \gset
+select ok(not tests.has_badge(:'novo', 'founder'), 'quem chega com fundador desligado não ganha');
 
 -- Editar dados do perfil --------------------------------------------------------------------
 select tests.login_as(:'adm');

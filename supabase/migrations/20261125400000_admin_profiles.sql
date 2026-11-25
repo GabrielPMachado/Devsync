@@ -36,7 +36,8 @@ create table public.catalog_item_state (
   kind text not null check (kind in ('banner', 'accent', 'frame', 'badge')),
   key text not null check (key ~ '^[a-z0-9_]{1,30}$'),
   active boolean not null default true,
-  label text check (char_length(btrim(label)) between 1 and 40),
+  -- Sem { } < >: o nome entra nas mensagens do site (formato ICU).
+  label text check (char_length(btrim(label)) between 1 and 40 and label !~ '[{}<>]'),
   updated_by uuid references public.profiles (id) on delete set null,
   updated_at timestamptz not null default now(),
   primary key (kind, key)
@@ -111,6 +112,28 @@ begin
 end $$;
 revoke execute on function private.award_badge(uuid, text) from public, anon, authenticated;
 
+-- Fundador desligado não gasta vaga de fundador.
+create or replace function private.badges_on_username() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if tg_op = 'UPDATE' and old.username is not null then
+    return null; -- trocar de @ não conta como chegar agora
+  end if;
+  if not public.catalog_item_active('badge', 'founder') then
+    return null;
+  end if;
+  perform pg_advisory_xact_lock(hashtext('devsync_founder_badge'));
+  if exists (select 1 from public.user_badges where profile_id = new.id and badge = 'founder') then
+    return null;
+  end if;
+  update private.founder_slots set used = used + 1 where used < 1000;
+  if found then
+    perform private.award_badge(new.id, 'founder');
+  end if;
+  return null;
+end $$;
+revoke execute on function private.badges_on_username() from public, anon, authenticated;
+
 -- Escolha no editor: recusa item desligado (DS006) e aceita borda liberada à mão.
 -- Só confere o que mudou: quem já usa um item desligado continua com ele.
 create or replace function private.profiles_check_badges() returns trigger
@@ -153,21 +176,34 @@ create trigger profiles_check_badges
   before update of shown_badges, avatar_frame, banner_preset, accent on public.profiles
   for each row execute function private.profiles_check_badges();
 
--- Se a pessoa perdeu o direito ao que está usando, volta ao padrão.
-create function private.reset_disallowed_items(who uuid) returns void
+-- Depois de tirar uma insígnia ou uma liberação, só o que dependia dela volta ao padrão.
+-- Nada mais é conferido de novo: um item desligado que a pessoa já usava continua com ela.
+create function private.after_badge_revoked(who uuid, badge text) returns void
 language plpgsql security definer set search_path = '' as $$
 begin
   update public.profiles p set
-    avatar_frame = case when private.item_allowed(who, 'frame', p.avatar_frame) then p.avatar_frame end,
-    banner_preset = case when private.item_allowed(who, 'banner', p.banner_preset) then p.banner_preset end,
-    accent = case when private.item_allowed(who, 'accent', p.accent) then p.accent end,
-    shown_badges = array(
-      select b from unnest(p.shown_badges) with ordinality as s(b, n)
-      where exists (select 1 from public.user_badges u where u.profile_id = who and u.badge = s.b)
-      order by s.n)
+    shown_badges = array_remove(p.shown_badges, badge),
+    avatar_frame = case
+      when public.frame_required_badge(p.avatar_frame) = badge
+           and not private.has_item_grant(who, 'frame', p.avatar_frame) then null
+      else p.avatar_frame end
   where p.id = who;
 end $$;
-revoke execute on function private.reset_disallowed_items(uuid) from public, anon, authenticated;
+revoke execute on function private.after_badge_revoked(uuid, text) from public, anon, authenticated;
+
+create function private.after_grant_revoked(who uuid, p_kind text, p_key text) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  update public.profiles p set
+    avatar_frame = case when p_kind = 'frame' and p.avatar_frame = p_key
+                        and not private.item_allowed(who, 'frame', p_key) then null else p.avatar_frame end,
+    banner_preset = case when p_kind = 'banner' and p.banner_preset = p_key
+                         and not private.item_allowed(who, 'banner', p_key) then null else p.banner_preset end,
+    accent = case when p_kind = 'accent' and p.accent = p_key
+                  and not private.item_allowed(who, 'accent', p_key) then null else p.accent end
+  where p.id = who;
+end $$;
+revoke execute on function private.after_grant_revoked(uuid, text, text) from public, anon, authenticated;
 
 -- RPCs da moderação ----------------------------------------------------------------
 
@@ -228,7 +264,7 @@ begin
   if not found then
     return;
   end if;
-  perform private.reset_disallowed_items(p_profile);
+  perform private.after_badge_revoked(p_profile, p_badge);
   perform private.log_admin_action('revoke_badge', p_profile, jsonb_build_object('badge', p_badge));
 end $$;
 
@@ -254,7 +290,7 @@ begin
   if not found then
     return;
   end if;
-  perform private.reset_disallowed_items(p_profile);
+  perform private.after_grant_revoked(p_profile, p_kind, p_key);
   perform private.log_admin_action('revoke_item', p_profile, jsonb_build_object('kind', p_kind, 'key', p_key));
 end $$;
 
@@ -316,15 +352,16 @@ create function public.admin_find_profiles(p_query text default '')
 returns table (id uuid, username text, display_name text, avatar_url text, is_admin boolean, suspended boolean, created_at timestamptz)
 language plpgsql stable security definer set search_path = '' as $$
 declare
-  q text := lower(btrim(coalesce(p_query, '')));
+  term text := ltrim(lower(btrim(coalesce(p_query, ''))), '@');
+  -- Para o LIKE: \, % e _ viram texto comum.
+  q text := replace(replace(replace(term, '\', '\\'), '%', '\%'), '_', '\_');
 begin
   perform public.assert_admin();
-  q := replace(replace(replace(ltrim(q, '@'), '\', '\\'), '%', '\%'), '_', '\_');
   return query
   select p.id, p.username, p.display_name, p.avatar_url, p.role = 'admin', p.suspended_at is not null, p.created_at
   from public.profiles p
   where q = '' or lower(p.username) like '%' || q || '%' or lower(p.display_name) like '%' || q || '%'
-  order by (lower(p.username) = q) desc, p.created_at desc
+  order by (lower(p.username) = term) desc, p.created_at desc
   limit 30;
 end $$;
 

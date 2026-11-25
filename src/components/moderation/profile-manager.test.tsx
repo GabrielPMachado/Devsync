@@ -61,6 +61,17 @@ describe("<ProfileManager />", () => {
     expect(actions.setItemGrant).toHaveBeenCalledWith(profile.id, "frame", "prisma", true);
   });
 
+  it("o aviso desmarcado continua desmarcado depois de dar uma insígnia", async () => {
+    const { rerender } = wrap(<ProfileManager profile={profile} disabledBadges={[]} disabledFrames={[]} />);
+    fireEvent.click(screen.getByLabelText("Avisar a pessoa ao dar"));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Dar: Sábio" })));
+    const updated = { ...profile, badges: [...profile.badges, { badge: "sage", awardedAt: "2026-11-25T10:00:00Z" }] };
+    rerender(<NextIntlClientProvider locale="pt-BR" messages={messages}><ProfileManager profile={updated} disabledBadges={[]} disabledFrames={[]} /></NextIntlClientProvider>);
+    expect(screen.getByLabelText("Avisar a pessoa ao dar")).not.toBeChecked();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Dar: Curioso" })));
+    expect(actions.setBadge).toHaveBeenLastCalledWith(profile.id, "curious", true, false);
+  });
+
   it("salva só os campos que mudaram", async () => {
     wrap(<ProfileManager profile={profile} disabledBadges={[]} disabledFrames={[]} />);
     const save = screen.getByRole("button", { name: "Salvar dados" });

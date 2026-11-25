@@ -38,7 +38,8 @@ async function call(name: string, args: Record<string, unknown>, profileId?: str
 export async function setCatalogItem(kind: string, key: string, active: boolean, label: string): Promise<ProfileAdminResult> {
   if (!(await getViewer())?.isAdmin) return { error: "forbidden" };
   const clean = label.trim();
-  if (!isCatalogKind(kind) || !isCatalogKey(kind, key) || clean.length > 40) return { error: "invalid" };
+  // Chaves e tags do formato de mensagens (ICU) quebrariam o nome no site.
+  if (!isCatalogKind(kind) || !isCatalogKey(kind, key) || clean.length > 40 || /[{}<>]/.test(clean)) return { error: "invalid" };
   const res = await call("admin_set_catalog_item", { p_kind: kind, p_key: key, p_active: active, p_label: clean || null });
   if ("ok" in res) {
     updateTag(CATALOG_TAG);
